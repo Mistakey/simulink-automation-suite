@@ -43,3 +43,10 @@ This repository contains a local CLI bridge from Python to MATLAB/Simulink via `
 ## Notes
 
 - If no shared MATLAB session exists, run `matlab.engine.shareEngine` in MATLAB.
+
+## Project Layout
+
+- `sl_core.py`: CLI entrypoint, argparse definitions, and command dispatch.
+- `sl_session.py`: MATLAB session discovery/selection/persistence and connect logic.
+- `sl_scan.py`: Read-only Simulink operations (`scan`, `inspect`, `highlight`, `list_opened`).
+- `sl_common.py`: Shared CLI helpers (`JsonArgumentParser`, JSON emit, list normalization).
