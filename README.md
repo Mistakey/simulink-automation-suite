@@ -17,6 +17,7 @@ This repository contains a local CLI bridge from Python to MATLAB/Simulink via `
 - `sl-pilot session list`
 - `sl-pilot session current`
 - `sl-pilot session use MATLAB_12345`
+- `sl-pilot session use 62480` (fuzzy match, if unique)
 - `sl-pilot session clear`
 - `sl-pilot scan [--session MATLAB_12345]`
 - `sl-pilot list_opened [--session MATLAB_12345]`
@@ -27,6 +28,12 @@ This repository contains a local CLI bridge from Python to MATLAB/Simulink via `
 
 - stdout: JSON only.
 - stderr: human guidance and warnings.
+
+## Session Behavior
+
+- `session list` and `session current` expose the effective active session.
+- If no session is configured but at least one MATLAB session is open, the first discovered session is auto-selected as active.
+- `session use` accepts exact names and unique fuzzy matches (prefix/contains/close match).
 
 ## Notes
 

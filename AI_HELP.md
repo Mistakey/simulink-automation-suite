@@ -10,9 +10,11 @@ Use this file as machine-facing command guidance.
 ## Session Model
 
 - `sl-pilot session use <name>` sets the active MATLAB session for future commands.
+- `sl-pilot session use <name>` supports fuzzy matching when the input uniquely maps to one session.
 - `sl-pilot scan`, `highlight`, `inspect`, and `list_opened` use the active session automatically.
 - You can override once with `--session <name>` on the command itself.
 - Session priority is: explicit `--session` > saved active session > first discovered session.
+- `session list` and `session current` report the effective active session even when auto-selected.
 
 ## Commands
 
@@ -20,10 +22,13 @@ Use this file as machine-facing command guidance.
   - List available shared MATLAB sessions.
 
 - `sl-pilot session current`
-  - Show current saved session and whether it is available.
+  - Show effective active session, source (`saved` or `auto`), and configured session.
 
 - `sl-pilot session use MATLAB_12345`
   - Save active session for subsequent commands.
+
+- `sl-pilot session use 62480`
+  - Fuzzy example: unique suffix/prefix/contains match to `MATLAB_62480`.
 
 - `sl-pilot session clear`
   - Clear saved active session.
