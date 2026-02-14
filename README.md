@@ -1,22 +1,33 @@
-# Simulink Automation Suite (AI Context)
+# Simulink Automation Suite
 
-This is a CLI toolkit for interacting with a local running MATLAB/Simulink session via Python Engine.
+This repository contains a local CLI bridge from Python to MATLAB/Simulink via `matlab.engine`.
 
-## [CRITICAL] Instructions for AI Agent
+## Purpose
 
-1. Environment:
-   - Just run the 'sl-pilot' command directly.
+- Provide read-only observability commands for AI tooling.
+- Keep machine-facing output parseable as JSON.
 
-2. Commands:
-   - 'sl-pilot scan'
-     > Returns topology JSON.
-   
-   - 'sl-pilot highlight --target "BlockPath"'
-     > Highlights a block.
+## Help for AI Clients
 
-   - 'sl-pilot scan --session MATLAB_12345'
-     > Connects to a specific shared session if multiple MATLABs are open.
+- Run `sl-pilot help` to print `AI_HELP.md`.
+- `AI_HELP.md` is the command contract intended for AI agents.
 
-3. Troubleshooting (Read carefully):
-   - **"No shared MATLAB session found"**: 
-     If you see this error, you MUST ask the user to run `matlab.engine.shareEngine` in their MATLAB Command Window. DO NOT try to fix it yourself.
+## Core Commands
+
+- `sl-pilot session list`
+- `sl-pilot session current`
+- `sl-pilot session use MATLAB_12345`
+- `sl-pilot session clear`
+- `sl-pilot scan [--session MATLAB_12345]`
+- `sl-pilot list_opened [--session MATLAB_12345]`
+- `sl-pilot highlight --target "Model/BlockPath" [--session MATLAB_12345]`
+- `sl-pilot inspect --target "Model/BlockPath" --param "All" [--session MATLAB_12345]`
+
+## Output Rules
+
+- stdout: JSON only.
+- stderr: human guidance and warnings.
+
+## Notes
+
+- If no shared MATLAB session exists, run `matlab.engine.shareEngine` in MATLAB.

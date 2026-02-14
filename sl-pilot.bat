@@ -3,12 +3,16 @@ REM ========================================================
 REM  Simulink Pilot Launcher (Fixed)
 REM ========================================================
 
-REM [Help Mode] Prints the README for AI context
+REM [Help Mode] Prints AI-focused usage context
 IF "%1"=="help" (
     echo.
-    echo [INFO] Loading documentation...
+    echo [INFO] Loading help context...
     echo ---------------------------------------------------
-    type "%~dp0README.md"
+    if exist "%~dp0AI_HELP.md" (
+        type "%~dp0AI_HELP.md"
+    ) else (
+        type "%~dp0README.md"
+    )
     echo.
     echo ---------------------------------------------------
     EXIT /B 0
