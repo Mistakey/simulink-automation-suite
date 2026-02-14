@@ -36,6 +36,9 @@ Use this file as machine-facing command guidance.
 - `sl-pilot scan [--session MATLAB_12345]`
   - Return active model topology JSON.
 
+- `sl-pilot scan --model "gmp_pmsm_sensored_sil_mdl" [--session MATLAB_12345]`
+  - Scan a specific opened model by name.
+
 - `sl-pilot list_opened [--session MATLAB_12345]`
   - List loaded block diagrams.
 
@@ -47,6 +50,9 @@ Use this file as machine-facing command guidance.
 
 - `sl-pilot inspect --target "Model/BlockPath" --param "Gain" [--session MATLAB_12345]`
   - Return one specific parameter value.
+
+- `sl-pilot inspect --model "gmp_pmsm_sensored_sil_mdl" --target "GMP Stanrdard Motor Controller Panel (SIL) Full Edition" --param "All" [--session MATLAB_12345]`
+  - Inspect a target block under a specific opened model.
 
 ## Troubleshooting
 

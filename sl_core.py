@@ -173,20 +173,37 @@ def connect_to_session(target_name=None):
         raise RuntimeError(f"Failed to connect to MATLAB session '{target}': {exc}")
 
 
-def get_model_structure(eng):
+def get_opened_models(eng):
+    return [str(x) for x in as_list(eng.find_system("Type", "block_diagram"))]
+
+
+def get_model_structure(eng, model_name=None):
     try:
-        model_name = eng.bdroot()
-        if not model_name:
+        target_model = model_name
+        if not target_model:
+            target_model = eng.bdroot()
+
+        if not target_model:
             return {"error": "No active model found. Please open a Simulink model."}
 
-        blocks = as_list(eng.find_system(model_name, "SearchDepth", 1, "Type", "block"))
+        if model_name:
+            opened_models = get_opened_models(eng)
+            if model_name not in opened_models:
+                return {
+                    "error": f"Model '{model_name}' is not opened in the current MATLAB session.",
+                    "models": opened_models,
+                }
+
+        blocks = as_list(
+            eng.find_system(target_model, "SearchDepth", 1, "Type", "block")
+        )
         block_list = []
         for blk in blocks:
-            if blk == model_name:
+            if blk == target_model:
                 continue
             block_list.append({"name": blk, "type": eng.get_param(blk, "BlockType")})
 
-        return {"model": model_name, "blocks": block_list, "connections": []}
+        return {"model": target_model, "blocks": block_list, "connections": []}
     except Exception as exc:
         return {"error": str(exc)}
 
@@ -199,28 +216,52 @@ def highlight_block(eng, block_path):
         return {"error": str(exc)}
 
 
-def inspect_block(eng, block_path, param_name):
+def resolve_inspect_target_path(eng, block_path, model_name=None):
+    if not model_name:
+        return {"target": block_path}
+
+    opened_models = get_opened_models(eng)
+    if model_name not in opened_models:
+        return {
+            "error": f"Model '{model_name}' is not opened in the current MATLAB session.",
+            "models": opened_models,
+        }
+
+    prefix = f"{model_name}/"
+    if block_path == model_name or block_path.startswith(prefix):
+        return {"target": block_path}
+
+    return {"target": f"{prefix}{block_path}"}
+
+
+def inspect_block(eng, block_path, param_name, model_name=None):
+    resolved_target = resolve_inspect_target_path(eng, block_path, model_name)
+    if "error" in resolved_target:
+        return resolved_target
+
+    target_path = resolved_target["target"]
+
     try:
-        eng.get_param(block_path, "Handle")
+        eng.get_param(target_path, "Handle")
     except Exception as exc:
-        return {"error": f"Block not found '{block_path}': {exc}"}
+        return {"error": f"Block not found '{target_path}': {exc}"}
 
     try:
         if param_name != "All":
-            value = eng.get_param(block_path, param_name)
-            return {"target": block_path, "param": param_name, "value": value}
+            value = eng.get_param(target_path, param_name)
+            return {"target": target_path, "param": param_name, "value": value}
 
-        dialog_params = eng.get_param(block_path, "DialogParameters")
+        dialog_params = eng.get_param(target_path, "DialogParameters")
         param_keys = [str(x) for x in as_list(eng.fieldnames(dialog_params))]
         values = {}
         for key in param_keys:
             try:
-                values[key] = eng.get_param(block_path, key)
+                values[key] = eng.get_param(target_path, key)
             except Exception as exc:
                 values[key] = f"<unavailable: {exc}>"
 
         return {
-            "target": block_path,
+            "target": target_path,
             "param": "All",
             "available_params": param_keys,
             "values": values,
@@ -231,7 +272,7 @@ def inspect_block(eng, block_path, param_name):
 
 def list_opened_models(eng):
     try:
-        models = [str(x) for x in as_list(eng.find_system("Type", "block_diagram"))]
+        models = get_opened_models(eng)
         return {"models": models}
     except Exception as exc:
         return {"error": str(exc)}
@@ -299,6 +340,9 @@ def build_parser():
     subparsers = parser.add_subparsers(dest="action", required=True)
 
     scan_parser = subparsers.add_parser("scan", help="Read active model topology")
+    scan_parser.add_argument(
+        "--model", help="Optional specific model name from list_opened output"
+    )
     scan_parser.add_argument("--session", help="Session override for this command")
 
     highlight_parser = subparsers.add_parser("highlight", help="Highlight a block")
@@ -308,6 +352,9 @@ def build_parser():
     highlight_parser.add_argument("--session", help="Session override for this command")
 
     inspect_parser = subparsers.add_parser("inspect", help="Inspect block parameters")
+    inspect_parser.add_argument(
+        "--model", help="Optional specific model name from list_opened output"
+    )
     inspect_parser.add_argument("--target", required=True, help="Block path to inspect")
     inspect_parser.add_argument(
         "--param",
@@ -357,11 +404,11 @@ def run_action(args):
     eng = connect_to_session(getattr(args, "session", None))
 
     if args.action == "scan":
-        return get_model_structure(eng)
+        return get_model_structure(eng, getattr(args, "model", None))
     if args.action == "highlight":
         return highlight_block(eng, args.target)
     if args.action == "inspect":
-        return inspect_block(eng, args.target, args.param)
+        return inspect_block(eng, args.target, args.param, getattr(args, "model", None))
     if args.action == "list_opened":
         return list_opened_models(eng)
 
