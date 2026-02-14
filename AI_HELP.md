@@ -39,6 +39,15 @@ Use this file as machine-facing command guidance.
 - `sl-pilot scan --model "gmp_pmsm_sensored_sil_mdl" [--session MATLAB_12345]`
   - Scan a specific opened model by name.
 
+- `sl-pilot scan --model "gmp_pmsm_sensored_sil_mdl" --recursive [--session MATLAB_12345]`
+  - Recursively scan all nested blocks under the scan root.
+
+- `sl-pilot scan --model "gmp_pmsm_sensored_sil_mdl" --subsystem "GMP Stanrdard Motor Controller Panel (SIL) Full Edition" [--session MATLAB_12345]`
+  - Scan a specific subsystem under the selected model.
+
+- `sl-pilot scan --model "gmp_pmsm_sensored_sil_mdl" --hierarchy [--session MATLAB_12345]`
+  - Return hierarchy tree data (implies recursive scan).
+
 - `sl-pilot list_opened [--session MATLAB_12345]`
   - List loaded block diagrams.
 

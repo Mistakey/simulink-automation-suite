@@ -177,33 +177,129 @@ def get_opened_models(eng):
     return [str(x) for x in as_list(eng.find_system("Type", "block_diagram"))]
 
 
-def get_model_structure(eng, model_name=None):
+def resolve_scan_root_path(eng, model_name=None, subsystem_path=None):
+    target_model = model_name
+    if not target_model:
+        target_model = eng.bdroot()
+
+    if not target_model:
+        return {"error": "No active model found. Please open a Simulink model."}
+
+    if model_name:
+        opened_models = get_opened_models(eng)
+        if model_name not in opened_models:
+            return {
+                "error": f"Model '{model_name}' is not opened in the current MATLAB session.",
+                "models": opened_models,
+            }
+
+    if not subsystem_path:
+        return {"model": target_model, "scan_root": target_model}
+
+    if subsystem_path == target_model or subsystem_path.startswith(f"{target_model}/"):
+        full_path = subsystem_path
+    else:
+        full_path = f"{target_model}/{subsystem_path}"
+
     try:
-        target_model = model_name
-        if not target_model:
-            target_model = eng.bdroot()
+        eng.get_param(full_path, "Handle")
+    except Exception as exc:
+        return {
+            "error": f"Subsystem not found '{full_path}': {exc}",
+            "model": target_model,
+        }
 
-        if not target_model:
-            return {"error": "No active model found. Please open a Simulink model."}
-
-        if model_name:
-            opened_models = get_opened_models(eng)
-            if model_name not in opened_models:
+    if full_path != target_model:
+        try:
+            if eng.get_param(full_path, "BlockType") != "SubSystem":
                 return {
-                    "error": f"Model '{model_name}' is not opened in the current MATLAB session.",
-                    "models": opened_models,
+                    "error": f"Path '{full_path}' is not a SubSystem block.",
+                    "model": target_model,
                 }
+        except Exception as exc:
+            return {"error": f"Failed to verify subsystem '{full_path}': {exc}"}
 
-        blocks = as_list(
-            eng.find_system(target_model, "SearchDepth", 1, "Type", "block")
-        )
+    return {"model": target_model, "scan_root": full_path}
+
+
+def build_hierarchy_tree(scan_root, blocks):
+    root_name = scan_root.split("/")[-1]
+    root = {
+        "name": root_name,
+        "path": scan_root,
+        "type": "SubSystem",
+        "children": [],
+    }
+    nodes = {scan_root: root}
+
+    for item in sorted(blocks, key=lambda x: x["name"].count("/")):
+        path = item["name"]
+        parent_path = path.rsplit("/", 1)[0] if "/" in path else scan_root
+        parent = nodes.get(parent_path, root)
+        node = {
+            "name": path.split("/")[-1],
+            "path": path,
+            "type": item["type"],
+            "children": [],
+        }
+        nodes[path] = node
+        children = parent.get("children")
+        if isinstance(children, list):
+            children.append(node)
+
+    return root
+
+
+def get_model_structure(
+    eng,
+    model_name=None,
+    recursive=False,
+    subsystem_path=None,
+    hierarchy=False,
+):
+    try:
+        resolved = resolve_scan_root_path(eng, model_name, subsystem_path)
+        if "error" in resolved:
+            return resolved
+
+        target_model = resolved["model"]
+        scan_root = resolved["scan_root"]
+        use_recursive = recursive or hierarchy
+        search_options = ["FollowLinks", "on", "LookUnderMasks", "all"]
+
+        if use_recursive:
+            blocks = as_list(
+                eng.find_system(scan_root, *search_options, "Type", "block")
+            )
+        else:
+            blocks = as_list(
+                eng.find_system(
+                    scan_root,
+                    *search_options,
+                    "SearchDepth",
+                    1,
+                    "Type",
+                    "block",
+                )
+            )
+
         block_list = []
         for blk in blocks:
-            if blk == target_model:
+            if blk == scan_root:
                 continue
             block_list.append({"name": blk, "type": eng.get_param(blk, "BlockType")})
 
-        return {"model": target_model, "blocks": block_list, "connections": []}
+        output = {
+            "model": target_model,
+            "scan_root": scan_root,
+            "recursive": use_recursive,
+            "blocks": block_list,
+            "connections": [],
+        }
+        if hierarchy:
+            output["hierarchy"] = build_hierarchy_tree(scan_root, block_list)
+
+        return output
     except Exception as exc:
         return {"error": str(exc)}
 
@@ -343,6 +439,20 @@ def build_parser():
     scan_parser.add_argument(
         "--model", help="Optional specific model name from list_opened output"
     )
+    scan_parser.add_argument(
+        "--subsystem",
+        help="Optional subsystem path under the model to scan",
+    )
+    scan_parser.add_argument(
+        "--recursive",
+        action="store_true",
+        help="Recursively scan all nested blocks under the scan root",
+    )
+    scan_parser.add_argument(
+        "--hierarchy",
+        action="store_true",
+        help="Include hierarchy tree in scan output (implies recursive)",
+    )
     scan_parser.add_argument("--session", help="Session override for this command")
 
     highlight_parser = subparsers.add_parser("highlight", help="Highlight a block")
@@ -404,7 +514,13 @@ def run_action(args):
     eng = connect_to_session(getattr(args, "session", None))
 
     if args.action == "scan":
-        return get_model_structure(eng, getattr(args, "model", None))
+        return get_model_structure(
+            eng,
+            model_name=getattr(args, "model", None),
+            recursive=getattr(args, "recursive", False),
+            subsystem_path=getattr(args, "subsystem", None),
+            hierarchy=getattr(args, "hierarchy", False),
+        )
     if args.action == "highlight":
         return highlight_block(eng, args.target)
     if args.action == "inspect":

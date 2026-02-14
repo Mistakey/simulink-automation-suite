@@ -21,6 +21,9 @@ This repository contains a local CLI bridge from Python to MATLAB/Simulink via `
 - `sl-pilot session clear`
 - `sl-pilot scan [--session MATLAB_12345]`
 - `sl-pilot scan --model "gmp_pmsm_sensored_sil_mdl" [--session MATLAB_12345]`
+- `sl-pilot scan --model "gmp_pmsm_sensored_sil_mdl" --recursive [--session MATLAB_12345]`
+- `sl-pilot scan --model "gmp_pmsm_sensored_sil_mdl" --subsystem "GMP Stanrdard Motor Controller Panel (SIL) Full Edition" [--session MATLAB_12345]`
+- `sl-pilot scan --model "gmp_pmsm_sensored_sil_mdl" --hierarchy [--session MATLAB_12345]`
 - `sl-pilot list_opened [--session MATLAB_12345]`
 - `sl-pilot highlight --target "Model/BlockPath" [--session MATLAB_12345]`
 - `sl-pilot inspect --target "Model/BlockPath" --param "All" [--session MATLAB_12345]`
