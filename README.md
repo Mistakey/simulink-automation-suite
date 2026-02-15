@@ -27,12 +27,19 @@ This repository contains a local CLI bridge from Python to MATLAB/Simulink via `
 - `sl-pilot list_opened [--session MATLAB_12345]`
 - `sl-pilot highlight --target "Model/BlockPath" [--session MATLAB_12345]`
 - `sl-pilot inspect --target "Model/BlockPath" --param "All" [--session MATLAB_12345]`
+- `sl-pilot inspect --target "Model/BlockPath" --param "All" --active-only [--session MATLAB_12345]`
+- `sl-pilot inspect --target "Model/BlockPath" --param "All" --summary [--session MATLAB_12345]`
+- `sl-pilot inspect --target "Model/BlockPath" --param "PolePairs" --strict-active [--session MATLAB_12345]`
+- `sl-pilot inspect --target "Model/BlockPath" --param "PolePairs" --resolve-effective [--session MATLAB_12345]`
 - `sl-pilot inspect --model "gmp_pmsm_sensored_sil_mdl" --target "GMP Stanrdard Motor Controller Panel (SIL) Full Edition" --param "All" [--session MATLAB_12345]`
 
 ## Output Rules
 
 - stdout: JSON only.
 - stderr: human guidance and warnings.
+
+For `inspect --param All`, output includes `parameter_meta` with `visible`/`enabled`/`active` so inactive fields are explicit.
+For `inspect --param <name>`, output includes single-parameter `meta` and optional effective mapping hints when inactive.
 
 ## Session Behavior
 

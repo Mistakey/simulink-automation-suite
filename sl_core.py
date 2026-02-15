@@ -54,6 +54,26 @@ def build_parser():
         default="All",
         help="Parameter name to read, or 'All' to read available dialog parameters",
     )
+    inspect_parser.add_argument(
+        "--active-only",
+        action="store_true",
+        help="When used with --param All, return only currently active/effective parameters",
+    )
+    inspect_parser.add_argument(
+        "--strict-active",
+        action="store_true",
+        help="Fail with inactive_parameter error when requested parameter is inactive",
+    )
+    inspect_parser.add_argument(
+        "--resolve-effective",
+        action="store_true",
+        help="When requested parameter is inactive, return known effective source/value mapping",
+    )
+    inspect_parser.add_argument(
+        "--summary",
+        action="store_true",
+        help="When used with --param All, include compact active/inactive/effective summary lists",
+    )
     inspect_parser.add_argument("--session", help="Session override for this command")
 
     list_opened_parser = subparsers.add_parser("list_opened", help="List loaded models")
@@ -107,7 +127,16 @@ def run_action(args):
     if args.action == "highlight":
         return highlight_block(eng, args.target)
     if args.action == "inspect":
-        return inspect_block(eng, args.target, args.param, getattr(args, "model", None))
+        return inspect_block(
+            eng,
+            args.target,
+            args.param,
+            getattr(args, "model", None),
+            active_only=getattr(args, "active_only", False),
+            strict_active=getattr(args, "strict_active", False),
+            resolve_effective=getattr(args, "resolve_effective", False),
+            summary=getattr(args, "summary", False),
+        )
     if args.action == "list_opened":
         return list_opened_models(eng)
 

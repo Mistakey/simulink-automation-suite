@@ -55,10 +55,22 @@ Use this file as machine-facing command guidance.
   - Highlight a block.
 
 - `sl-pilot inspect --target "Model/BlockPath" --param "All" [--session MATLAB_12345]`
-  - Return available dialog parameter keys and values.
+  - Return available dialog parameter keys and values, plus `parameter_meta` (`visible`, `enabled`, `active`, `source`).
+
+- `sl-pilot inspect --target "Model/BlockPath" --param "All" --active-only [--session MATLAB_12345]`
+  - Return only currently active/effective parameters and list dropped inactive fields.
+
+- `sl-pilot inspect --target "Model/BlockPath" --param "PolePairs" --strict-active [--session MATLAB_12345]`
+  - If requested parameter is inactive, return machine-readable `inactive_parameter` error JSON.
+
+- `sl-pilot inspect --target "Model/BlockPath" --param "PolePairs" --resolve-effective [--session MATLAB_12345]`
+  - For known inactive mappings, return effective source and resolved value trace.
+
+- `sl-pilot inspect --target "Model/BlockPath" --param "All" --summary [--session MATLAB_12345]`
+  - Return compact `active_params`, `inactive_params`, and `effective_overrides` lists.
 
 - `sl-pilot inspect --target "Model/BlockPath" --param "Gain" [--session MATLAB_12345]`
-  - Return one specific parameter value.
+  - Return one specific parameter value plus `meta` (`visible`, `enabled`, `active`, `source`).
 
 - `sl-pilot inspect --model "gmp_pmsm_sensored_sil_mdl" --target "GMP Stanrdard Motor Controller Panel (SIL) Full Edition" --param "All" [--session MATLAB_12345]`
   - Inspect a target block under a specific opened model.
