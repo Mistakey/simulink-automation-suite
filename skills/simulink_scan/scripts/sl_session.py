@@ -3,12 +3,22 @@ import json
 import sys
 from pathlib import Path
 
-import matlab.engine
-
-from sl_common import as_list
+from .sl_common import as_list
 
 
-STATE_FILE = Path(__file__).with_name(".sl_pilot_state.json")
+PLUGIN_ROOT = Path(__file__).resolve().parents[3]
+STATE_FILE = PLUGIN_ROOT / ".sl_pilot_state.json"
+
+
+def _get_matlab_engine():
+    try:
+        import importlib
+
+        return importlib.import_module("matlab.engine")
+    except Exception as exc:
+        raise RuntimeError(
+            "MATLAB Engine for Python is not available. Install/configure matlab.engine in this Python environment."
+        ) from exc
 
 
 def load_state():
@@ -63,7 +73,8 @@ def render_no_session_guide():
 
 def discover_sessions():
     try:
-        return as_list(matlab.engine.find_matlab())
+        engine = _get_matlab_engine()
+        return as_list(engine.find_matlab())
     except Exception as exc:
         raise RuntimeError(f"Failed to discover MATLAB sessions: {exc}")
 
@@ -152,7 +163,8 @@ def connect_to_session(target_name=None):
         )
 
     try:
-        return matlab.engine.connect_matlab(target)
+        engine = _get_matlab_engine()
+        return engine.connect_matlab(target)
     except Exception as exc:
         raise RuntimeError(f"Failed to connect to MATLAB session '{target}': {exc}")
 

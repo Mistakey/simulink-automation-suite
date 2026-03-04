@@ -1,11 +1,11 @@
-from sl_common import JsonArgumentParser, emit_json
-from sl_scan import (
+from .sl_common import JsonArgumentParser, emit_json
+from .sl_scan import (
     get_model_structure,
     highlight_block,
     inspect_block,
     list_opened_models,
 )
-from sl_session import (
+from .sl_session import (
     command_session_clear,
     command_session_current,
     command_session_list,

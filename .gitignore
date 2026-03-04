@@ -1,2 +1,6 @@
 .sl_pilot_state.json
 __pycache__/
+.ruff_cache/
+.pytest_cache/
+*.pyc
+tests/

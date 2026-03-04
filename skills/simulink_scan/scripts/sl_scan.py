@@ -1,4 +1,4 @@
-from sl_common import as_list
+from .sl_common import as_list
 
 
 def get_opened_models(eng):
