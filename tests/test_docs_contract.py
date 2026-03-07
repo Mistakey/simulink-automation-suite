@@ -34,6 +34,23 @@ class DocsContractTests(unittest.TestCase):
         for code in required_codes:
             self.assertIn(f"`{code}`", text)
 
+    def test_readme_mentions_schema_and_output_controls(self):
+        text = README_PATH.read_text(encoding="utf-8")
+        self.assertIn("sl_core schema", text)
+        self.assertIn("--max-blocks", text)
+        self.assertIn("--max-params", text)
+
+    def test_scenarios_include_recovery_chain_examples(self):
+        text = SCENARIOS_PATH.read_text(encoding="utf-8")
+        required_tokens = [
+            "session_required",
+            "model_required",
+            "subsystem_not_found",
+            "inactive_parameter",
+        ]
+        for token in required_tokens:
+            self.assertIn(token, text)
+
 
 if __name__ == "__main__":
     unittest.main()

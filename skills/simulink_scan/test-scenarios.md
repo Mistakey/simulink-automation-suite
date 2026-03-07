@@ -52,3 +52,30 @@ Use these scenarios to validate skill behavior with and without the skill loaded
   - Must do shallow scan first
   - Must summarize key results
   - Must avoid full recursive dump unless explicitly requested
+
+## Scenario 7: Session Recovery Chain (`session_required`)
+
+- Prompt: "Scan model m1 now"
+- Setup: 2+ shared MATLAB sessions, no explicit `--session`
+- Expected:
+  - First response returns `session_required`
+  - Recovery step runs `session list`
+  - Retry uses exact `--session` and succeeds
+
+## Scenario 8: Subsystem Recovery Chain (`subsystem_not_found`)
+
+- Prompt: "Scan subsystem controller/internal recursively"
+- Setup: subsystem path is invalid
+- Expected:
+  - First response returns `subsystem_not_found`
+  - Recovery step runs shallow root scan
+  - Retry uses a valid subsystem path and succeeds
+
+## Scenario 9: Inactive Parameter Recovery Chain (`inactive_parameter`)
+
+- Prompt: "Give me the effective PolePairs value"
+- Setup: requested parameter is inactive in current mask config
+- Expected:
+  - `--strict-active` returns `inactive_parameter`
+  - Recovery step reruns with `--resolve-effective`
+  - Output includes resolved effective source/value
