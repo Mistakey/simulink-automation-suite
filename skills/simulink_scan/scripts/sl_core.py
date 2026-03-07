@@ -49,6 +49,7 @@ _ERROR_CODES = [
     "invalid_json",
     "unknown_parameter",
     "json_conflict",
+    "engine_unavailable",
     "no_session",
     "session_required",
     "session_not_found",
@@ -125,11 +126,13 @@ def validate_args(args):
 def map_runtime_error(exc):
     code = str(exc).strip()
     messages = {
+        "engine_unavailable": "MATLAB Engine for Python is not available in the current Python environment.",
         "session_required": "Multiple MATLAB sessions found. Pass --session with an exact session name.",
         "session_not_found": "Session not found. Pass an exact session name from `session list` output.",
         "no_session": "No shared MATLAB session found. Ask user to run matlab.engine.shareEngine in MATLAB.",
     }
     suggested_fixes = {
+        "engine_unavailable": "Install/configure MATLAB Engine for Python for the active interpreter, then retry.",
         "session_required": "Run `session list` and pass --session with an exact name.",
         "session_not_found": "Run `session list` and retry with an exact session name.",
         "no_session": "Run matlab.engine.shareEngine in MATLAB, then retry.",
