@@ -36,6 +36,22 @@ python -m skills.simulink_scan.scripts.sl_core list_opened
 python -m skills.simulink_scan.scripts.sl_core scan --model "gmp_pmsm_sensored_sil_mdl"
 ```
 
+## Strict Mode Defaults (Agent-First)
+
+- Session matching is exact-only. Fuzzy session matching is removed.
+- If multiple MATLAB shared sessions are available, you must pass `--session` explicitly for commands that connect to MATLAB.
+- Invalid text inputs fail fast with stable JSON errors:
+  - `invalid_input`
+  - `session_required`
+  - `session_not_found`
+
+Examples:
+
+```bash
+python -m skills.simulink_scan.scripts.sl_core session list
+python -m skills.simulink_scan.scripts.sl_core scan --session "MATLAB_12345" --model "my_model"
+```
+
 ## Verification
 
 ```bash
@@ -47,3 +63,4 @@ claude plugin validate .
 
 - stdout is JSON; stderr is human guidance.
 - If no MATLAB shared session exists, run `matlab.engine.shareEngine` in MATLAB.
+- This project is in development-stage versioning.

@@ -1,7 +1,7 @@
 {
   "name": "simulink-scan",
   "description": "Simulink scan and inspection workflows powered by local sl-pilot CLI",
-  "version": "1.1.0",
+  "version": "1.0.0-dev.1",
   "author": {
     "name": "kelch"
   }

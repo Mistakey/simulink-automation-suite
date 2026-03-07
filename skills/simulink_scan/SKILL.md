@@ -10,14 +10,19 @@ Canonical skill name is `simulink-scan` (module path `skills.simulink_scan` is i
 Decision flow:
 1. Discover models first:
    - `python -m skills.simulink_scan.scripts.sl_core list_opened`
-2. Choose model:
+2. Resolve session strictly:
+   - Use exact session names only (no fuzzy matching).
+   - If multiple sessions exist for commands that connect to MATLAB, require explicit `--session`.
+   - If exact session does not exist, surface `session_not_found`.
+   - For malformed text inputs, surface `invalid_input`.
+3. Choose model:
    - Use explicit `--model` when provided.
    - If multiple models exist and none is specified, surface `model_required` and ask for explicit `--model`.
-3. Scan with token control:
+4. Scan with token control:
    - Default shallow:
      - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>"`
    - Recursive only if user asks deep/internal/hierarchy or shallow is insufficient.
-4. Parameter safety:
+5. Parameter safety:
    - Prefer `--summary` for overview.
    - Use `--active-only` for effective fields only.
    - Use `--strict-active`/`--resolve-effective` for single-parameter correctness.
@@ -29,6 +34,9 @@ Output rules:
 
 Recovery rules:
 - Missing session: return error and instruct `matlab.engine.shareEngine`.
+- Multiple sessions without explicit `--session`: return `session_required`.
+- Non-exact session name: return `session_not_found`.
+- Invalid text fields (`?`, `#`, `%`, control chars, trim mismatch, overlength): return `invalid_input`.
 - Invalid model: rerun list_opened and provide valid options.
 - Invalid subsystem: suggest likely top-level alternatives.
 - Ambiguous model selection: rerun with explicit `--model`.
