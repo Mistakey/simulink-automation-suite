@@ -17,6 +17,7 @@ from .sl_session import (
 )
 
 _JSON_FIELD_TYPES = {
+    "schema": {},
     "scan": {
         "model": str,
         "subsystem": str,
@@ -39,6 +40,24 @@ _JSON_FIELD_TYPES = {
 }
 
 _SESSION_ACTIONS = {"list", "use", "current", "clear"}
+_ERROR_CODES = [
+    "invalid_input",
+    "invalid_json",
+    "unknown_parameter",
+    "json_conflict",
+    "no_session",
+    "session_required",
+    "session_not_found",
+    "state_write_failed",
+    "state_clear_failed",
+    "model_required",
+    "model_not_found",
+    "subsystem_not_found",
+    "invalid_subsystem_type",
+    "block_not_found",
+    "inactive_parameter",
+    "runtime_error",
+]
 
 
 def _invalid_input(field_name, message):
@@ -260,6 +279,20 @@ def parse_request_args(parser, argv=None):
     return _parse_with_parser(parser, _json_request_to_argv(request))
 
 
+def build_schema_payload():
+    return {
+        "actions": {
+            "schema": {"fields": {}},
+            "scan": {"fields": _JSON_FIELD_TYPES["scan"]},
+            "highlight": {"fields": _JSON_FIELD_TYPES["highlight"]},
+            "inspect": {"fields": _JSON_FIELD_TYPES["inspect"]},
+            "list_opened": {"fields": _JSON_FIELD_TYPES["list_opened"]},
+            "session": {"fields": {"session_action": str, "name": str}},
+        },
+        "error_codes": list(_ERROR_CODES),
+    }
+
+
 def build_parser():
     parser = JsonArgumentParser(description="Simulink AI Bridge Core")
     parser.add_argument(
@@ -268,6 +301,7 @@ def build_parser():
         help="JSON request payload. Use as a standalone entrypoint and do not mix with flags.",
     )
     subparsers = parser.add_subparsers(dest="action", required=True)
+    subparsers.add_parser("schema", help="Return machine-readable command contract")
 
     scan_parser = subparsers.add_parser("scan", help="Read active model topology")
     scan_parser.add_argument(
@@ -354,6 +388,9 @@ def build_parser():
 
 
 def run_action(args):
+    if args.action == "schema":
+        return build_schema_payload()
+
     validation_error = validate_args(args)
     if validation_error:
         return validation_error
