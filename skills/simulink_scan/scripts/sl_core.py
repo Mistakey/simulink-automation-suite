@@ -17,12 +17,15 @@ from .sl_session import (
 )
 
 _JSON_FIELD_TYPES = {
+    "schema": {},
     "scan": {
         "model": str,
         "subsystem": str,
         "recursive": bool,
         "hierarchy": bool,
         "session": str,
+        "max_blocks": int,
+        "fields": list,
     },
     "highlight": {"target": str, "session": str},
     "inspect": {
@@ -34,11 +37,31 @@ _JSON_FIELD_TYPES = {
         "resolve_effective": bool,
         "summary": bool,
         "session": str,
+        "max_params": int,
+        "fields": list,
     },
     "list_opened": {"session": str},
 }
 
 _SESSION_ACTIONS = {"list", "use", "current", "clear"}
+_ERROR_CODES = [
+    "invalid_input",
+    "invalid_json",
+    "unknown_parameter",
+    "json_conflict",
+    "no_session",
+    "session_required",
+    "session_not_found",
+    "state_write_failed",
+    "state_clear_failed",
+    "model_required",
+    "model_not_found",
+    "subsystem_not_found",
+    "invalid_subsystem_type",
+    "block_not_found",
+    "inactive_parameter",
+    "runtime_error",
+]
 
 
 def _invalid_input(field_name, message):
@@ -87,6 +110,15 @@ def validate_args(args):
         result = validate_text_field(field_name, getattr(args, field_name, None))
         if result:
             return result
+
+    if args.action == "scan":
+        max_blocks = getattr(args, "max_blocks", None)
+        if max_blocks is not None and max_blocks <= 0:
+            return _invalid_input("max_blocks", "must be greater than zero")
+    if args.action == "inspect":
+        max_params = getattr(args, "max_params", None)
+        if max_params is not None and max_params <= 0:
+            return _invalid_input("max_params", "must be greater than zero")
     return None
 
 
@@ -153,6 +185,19 @@ def _validate_json_type(action, field_name, value, expected_type):
         raise ValueError(
             f"invalid_json: field '{field_name}' for action '{action}' must be string"
         )
+    if expected_type is int and not isinstance(value, int):
+        raise ValueError(
+            f"invalid_json: field '{field_name}' for action '{action}' must be integer"
+        )
+    if expected_type is list:
+        if not isinstance(value, list):
+            raise ValueError(
+                f"invalid_json: field '{field_name}' for action '{action}' must be an array"
+            )
+        if not all(isinstance(item, str) for item in value):
+            raise ValueError(
+                f"invalid_json: field '{field_name}' for action '{action}' must be an array of strings"
+            )
 
 
 def _parse_json_request(raw_payload):
@@ -231,6 +276,9 @@ def _json_request_to_argv(request):
             if value:
                 argv.append(flag)
             continue
+        if isinstance(value, list):
+            argv.extend([flag, ",".join(str(item) for item in value)])
+            continue
         argv.extend([flag, str(value)])
 
     return argv
@@ -260,6 +308,20 @@ def parse_request_args(parser, argv=None):
     return _parse_with_parser(parser, _json_request_to_argv(request))
 
 
+def build_schema_payload():
+    return {
+        "actions": {
+            "schema": {"fields": {}},
+            "scan": {"fields": _JSON_FIELD_TYPES["scan"]},
+            "highlight": {"fields": _JSON_FIELD_TYPES["highlight"]},
+            "inspect": {"fields": _JSON_FIELD_TYPES["inspect"]},
+            "list_opened": {"fields": _JSON_FIELD_TYPES["list_opened"]},
+            "session": {"fields": {"session_action": str, "name": str}},
+        },
+        "error_codes": list(_ERROR_CODES),
+    }
+
+
 def build_parser():
     parser = JsonArgumentParser(description="Simulink AI Bridge Core")
     parser.add_argument(
@@ -268,6 +330,7 @@ def build_parser():
         help="JSON request payload. Use as a standalone entrypoint and do not mix with flags.",
     )
     subparsers = parser.add_subparsers(dest="action", required=True)
+    subparsers.add_parser("schema", help="Return machine-readable command contract")
 
     scan_parser = subparsers.add_parser("scan", help="Read active model topology")
     scan_parser.add_argument(
@@ -288,6 +351,15 @@ def build_parser():
         help="Include hierarchy tree in scan output (implies recursive)",
     )
     scan_parser.add_argument("--session", help="Session override for this command")
+    scan_parser.add_argument(
+        "--max-blocks",
+        type=int,
+        help="Limit number of block entries returned for scan action",
+    )
+    scan_parser.add_argument(
+        "--fields",
+        help="Comma-separated block fields to return (for example: name,type)",
+    )
 
     highlight_parser = subparsers.add_parser("highlight", help="Highlight a block")
     highlight_parser.add_argument(
@@ -326,6 +398,15 @@ def build_parser():
         help="When used with --param All, include compact active/inactive/effective summary lists",
     )
     inspect_parser.add_argument("--session", help="Session override for this command")
+    inspect_parser.add_argument(
+        "--max-params",
+        type=int,
+        help="Limit number of parameter entries returned when --param All is used",
+    )
+    inspect_parser.add_argument(
+        "--fields",
+        help="Comma-separated top-level response fields to return",
+    )
 
     list_opened_parser = subparsers.add_parser("list_opened", help="List loaded models")
     list_opened_parser.add_argument(
@@ -354,6 +435,9 @@ def build_parser():
 
 
 def run_action(args):
+    if args.action == "schema":
+        return build_schema_payload()
+
     validation_error = validate_args(args)
     if validation_error:
         return validation_error
@@ -376,16 +460,26 @@ def run_action(args):
     eng = connect_to_session(getattr(args, "session", None))
 
     if args.action == "scan":
+        fields = getattr(args, "fields", None)
+        parsed_fields = None
+        if fields:
+            parsed_fields = [item.strip() for item in str(fields).split(",") if item.strip()]
         return get_model_structure(
             eng,
             model_name=getattr(args, "model", None),
             recursive=getattr(args, "recursive", False),
             subsystem_path=getattr(args, "subsystem", None),
             hierarchy=getattr(args, "hierarchy", False),
+            max_blocks=getattr(args, "max_blocks", None),
+            fields=parsed_fields,
         )
     if args.action == "highlight":
         return highlight_block(eng, args.target)
     if args.action == "inspect":
+        fields = getattr(args, "fields", None)
+        parsed_fields = None
+        if fields:
+            parsed_fields = [item.strip() for item in str(fields).split(",") if item.strip()]
         return inspect_block(
             eng,
             args.target,
@@ -395,6 +489,8 @@ def run_action(args):
             strict_active=getattr(args, "strict_active", False),
             resolve_effective=getattr(args, "resolve_effective", False),
             summary=getattr(args, "summary", False),
+            max_params=getattr(args, "max_params", None),
+            fields=parsed_fields,
         )
     if args.action == "list_opened":
         return list_opened_models(eng)

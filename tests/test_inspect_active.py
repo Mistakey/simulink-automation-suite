@@ -141,6 +141,11 @@ class InspectActiveTests(unittest.TestCase):
         self.assertIn("PolePairs", result["inactive_params"])
         self.assertTrue(len(result["effective_overrides"]) >= 1)
 
+    def test_available_params_are_sorted_for_stable_output(self):
+        eng = FakeEngine(values={"B": "2", "A": "1"})
+        result = inspect_block(eng, "m/b", "All")
+        self.assertEqual(result["available_params"], ["A", "B"])
+
     def test_unmasked_block_graceful_behavior(self):
         eng = FakeEngine(values={"Gain": "5", "SampleTime": "0.1"})
         full = inspect_block(eng, "m/b", "All")

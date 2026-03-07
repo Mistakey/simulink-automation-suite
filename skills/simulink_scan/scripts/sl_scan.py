@@ -3,7 +3,8 @@ from .sl_errors import make_error
 
 
 def get_opened_models(eng):
-    return [str(x) for x in as_list(eng.find_system("Type", "block_diagram"))]
+    models = [str(x) for x in as_list(eng.find_system("Type", "block_diagram"))]
+    return sorted(models)
 
 
 def resolve_scan_root_path(eng, model_name=None, subsystem_path=None):
@@ -109,6 +110,8 @@ def get_model_structure(
     recursive=False,
     subsystem_path=None,
     hierarchy=False,
+    max_blocks=None,
+    fields=None,
 ):
     try:
         resolved = resolve_scan_root_path(eng, model_name, subsystem_path)
@@ -142,11 +145,26 @@ def get_model_structure(
                 continue
             block_list.append({"name": blk, "type": eng.get_param(blk, "BlockType")})
 
+        block_list = sorted(block_list, key=lambda item: str(item.get("name", "")))
+        total_count = len(block_list)
+        if isinstance(fields, list) and fields:
+            projected = []
+            for item in block_list:
+                projected.append({key: value for key, value in item.items() if key in fields})
+            block_list = projected
+
+        truncated = False
+        if isinstance(max_blocks, int) and max_blocks >= 0 and total_count > max_blocks:
+            block_list = block_list[:max_blocks]
+            truncated = True
+
         output = {
             "model": target_model,
             "scan_root": scan_root,
             "recursive": use_recursive,
             "blocks": block_list,
+            "total_count": total_count,
+            "truncated": truncated,
         }
         if hierarchy:
             output["hierarchy"] = build_hierarchy_tree(scan_root, block_list)
@@ -331,6 +349,12 @@ def _collect_dialog_values(eng, target_path, param_keys):
     return values
 
 
+def _project_top_level_fields(payload, fields):
+    if not isinstance(fields, list) or not fields:
+        return payload
+    return {key: value for key, value in payload.items() if key in fields}
+
+
 def inspect_block(
     eng,
     block_path,
@@ -340,6 +364,8 @@ def inspect_block(
     strict_active=False,
     resolve_effective=False,
     summary=False,
+    max_params=None,
+    fields=None,
 ):
     resolved_target = resolve_inspect_target_path(eng, block_path, model_name)
     if "error" in resolved_target:
@@ -359,7 +385,7 @@ def inspect_block(
 
     try:
         dialog_params = eng.get_param(target_path, "DialogParameters")
-        param_keys = [str(x) for x in as_list(eng.fieldnames(dialog_params))]
+        param_keys = sorted(str(x) for x in as_list(eng.fieldnames(dialog_params)))
         values = _collect_dialog_values(eng, target_path, param_keys)
 
         mask_names = _safe_get_param_list(eng, target_path, "MaskNames")
@@ -446,7 +472,7 @@ def inspect_block(
             warnings = [item for item in warnings if item]
             if warnings:
                 output["warnings"] = warnings
-            return output
+            return _project_top_level_fields(output, fields)
 
         if active_only:
             active_values = {}
@@ -458,31 +484,53 @@ def inspect_block(
                 else:
                     dropped_inactive.append(key)
 
+            active_keys = sorted(active_values.keys())
+            total_params = len(active_keys)
+            truncated = False
+            if isinstance(max_params, int) and max_params >= 0 and total_params > max_params:
+                clipped_keys = active_keys[:max_params]
+                active_values = {key: active_values[key] for key in clipped_keys}
+                truncated = True
+
             output = {
                 "target": target_path,
                 "param": "All",
                 "active_only": True,
                 "values": active_values,
                 "dropped_inactive": dropped_inactive,
+                "total_params": total_params,
+                "truncated": truncated,
             }
             warnings = meta_warnings + conflict_warnings
             if warnings:
                 output["warnings"] = warnings
-            return output
+            return _project_top_level_fields(output, fields)
 
+        total_params = len(param_keys)
+        truncated = False
+        selected_keys = list(param_keys)
+        if isinstance(max_params, int) and max_params >= 0 and total_params > max_params:
+            selected_keys = selected_keys[:max_params]
+            truncated = True
+        clipped_values = {key: values[key] for key in selected_keys if key in values}
+        clipped_meta = {
+            key: parameter_meta[key] for key in selected_keys if key in parameter_meta
+        }
         output = {
             "target": target_path,
             "param": "All",
-            "available_params": param_keys,
-            "values": values,
-            "parameter_meta": parameter_meta,
+            "available_params": selected_keys,
+            "values": clipped_values,
+            "parameter_meta": clipped_meta,
+            "total_params": total_params,
+            "truncated": truncated,
         }
 
         if summary:
             active_params = []
             inactive_params = []
-            for key in param_keys:
-                if bool(parameter_meta.get(key, {}).get("active", True)):
+            for key in selected_keys:
+                if bool(clipped_meta.get(key, {}).get("active", True)):
                     active_params.append(key)
                 else:
                     inactive_params.append(key)
@@ -505,7 +553,7 @@ def inspect_block(
         warnings = meta_warnings + conflict_warnings
         if warnings:
             output["warnings"] = warnings
-        return output
+        return _project_top_level_fields(output, fields)
     except Exception as exc:
         return make_error(
             "runtime_error",
