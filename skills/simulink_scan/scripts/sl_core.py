@@ -1,3 +1,5 @@
+import json
+
 from .sl_common import JsonArgumentParser, emit_json
 from .sl_scan import (
     get_model_structure,
@@ -72,6 +74,69 @@ def map_runtime_error(exc):
     if code in messages:
         return {"error": code, "message": messages[code]}
     return {"error": "runtime_error", "message": str(exc)}
+
+
+def _parse_json_request(raw_payload):
+    try:
+        request = json.loads(raw_payload)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"invalid_json: {exc.msg}") from exc
+
+    if not isinstance(request, dict):
+        raise ValueError("invalid_json: payload must be a JSON object")
+
+    action = request.get("action")
+    if not isinstance(action, str) or not action.strip():
+        raise ValueError("invalid_json: action is required")
+
+    return request
+
+
+def _json_request_to_argv(request):
+    action = request["action"]
+    argv = [action]
+
+    if action == "session":
+        session_action = request.get("session_action")
+        if not isinstance(session_action, str) or not session_action.strip():
+            raise ValueError("invalid_json: session_action is required for action=session")
+        argv.append(session_action)
+        if session_action == "use":
+            name = request.get("name")
+            if not isinstance(name, str) or not name:
+                raise ValueError("invalid_json: name is required for action=session/use")
+            argv.append(name)
+        return argv
+
+    for key, value in request.items():
+        if key == "action" or value is None:
+            continue
+        flag = f"--{key.replace('_', '-')}"
+        if isinstance(value, bool):
+            if value:
+                argv.append(flag)
+            continue
+        argv.extend([flag, str(value)])
+
+    return argv
+
+
+def parse_request_args(parser, argv=None):
+    if argv is None:
+        import sys
+
+        argv = sys.argv[1:]
+
+    argv = list(argv)
+    if "--json" not in argv:
+        return parser.parse_args(argv)
+
+    json_index = argv.index("--json")
+    if json_index >= len(argv) - 1:
+        raise ValueError("invalid_json: --json requires a payload")
+
+    request = _parse_json_request(argv[json_index + 1])
+    return parser.parse_args(_json_request_to_argv(request))
 
 
 def build_parser():
@@ -212,7 +277,7 @@ if __name__ == "__main__":
 
     try:
         parser = build_parser()
-        parsed = parser.parse_args()
+        parsed = parse_request_args(parser)
         result = run_action(parsed)
         emit_json(result)
         if isinstance(result, dict) and "error" in result:
