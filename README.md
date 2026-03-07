@@ -32,9 +32,9 @@ Invoke:
 ## Direct Python Entry (optional)
 
 ```bash
-python -m skills.simulink_scan.scripts.sl_core schema
-python -m skills.simulink_scan.scripts.sl_core list_opened
-python -m skills.simulink_scan.scripts.sl_core scan --model "gmp_pmsm_sensored_sil_mdl"
+python -m skills.simulink_scan schema
+python -m skills.simulink_scan list_opened
+python -m skills.simulink_scan scan --model "gmp_pmsm_sensored_sil_mdl"
 ```
 
 ## Strict Mode Defaults (Agent-First)
@@ -65,23 +65,23 @@ Error envelope:
 Examples:
 
 ```bash
-python -m skills.simulink_scan.scripts.sl_core session list
-python -m skills.simulink_scan.scripts.sl_core scan --session "MATLAB_12345" --model "my_model"
+python -m skills.simulink_scan session list
+python -m skills.simulink_scan scan --session "MATLAB_12345" --model "my_model"
 ```
 
 JSON request examples:
 
 ```bash
-python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"schema\"}"
-python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"
-python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"scan\",\"model\":\"my_model\",\"recursive\":true,\"session\":\"MATLAB_12345\"}"
+python -m skills.simulink_scan --json "{\"action\":\"schema\"}"
+python -m skills.simulink_scan --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"
+python -m skills.simulink_scan --json "{\"action\":\"scan\",\"model\":\"my_model\",\"recursive\":true,\"session\":\"MATLAB_12345\"}"
 ```
 
 Output controls:
 
 ```bash
-python -m skills.simulink_scan.scripts.sl_core scan --model "my_model" --max-blocks 200 --fields "name,type"
-python -m skills.simulink_scan.scripts.sl_core inspect --model "my_model" --target "my_model/Gain" --param "All" --max-params 50 --fields "target,values"
+python -m skills.simulink_scan scan --model "my_model" --max-blocks 200 --fields "name,type"
+python -m skills.simulink_scan inspect --model "my_model" --target "my_model/Gain" --param "All" --max-params 50 --fields "target,values"
 ```
 
 JSON strictness:
@@ -102,3 +102,4 @@ claude plugin validate .
 - stdout is JSON; stderr is human guidance.
 - If no MATLAB shared session exists, run `matlab.engine.shareEngine` in MATLAB.
 - This project is in development-stage versioning.
+

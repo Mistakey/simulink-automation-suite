@@ -10,10 +10,10 @@ Canonical skill name is `simulink-scan` (module path `skills.simulink_scan` is i
 ## Preflight
 
 1. Discover contract when the caller is uncertain about commands/fields:
-   - `python -m skills.simulink_scan.scripts.sl_core schema`
-   - JSON: `python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"schema\"}"`
+   - `python -m skills.simulink_scan schema`
+   - JSON: `python -m skills.simulink_scan --json "{\"action\":\"schema\"}"`
 2. Discover opened models first:
-   - `python -m skills.simulink_scan.scripts.sl_core list_opened`
+   - `python -m skills.simulink_scan list_opened`
 3. Resolve session strictly:
    - Exact session names only.
    - If multiple sessions exist for MATLAB-bound actions, require explicit `--session`.
@@ -30,17 +30,17 @@ Default to shallow scan first, then escalate to recursive/hierarchy only when re
 ## Execution Templates
 
 - Shallow scan:
-  - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>"`
+  - `python -m skills.simulink_scan scan --model "<model>"`
 - Recursive scan:
-  - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>" --recursive`
+  - `python -m skills.simulink_scan scan --model "<model>" --recursive`
 - Scan with output controls:
-  - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>" --max-blocks 200 --fields "name,type"`
+  - `python -m skills.simulink_scan scan --model "<model>" --max-blocks 200 --fields "name,type"`
 - Inspect all params with summary:
-  - `python -m skills.simulink_scan.scripts.sl_core inspect --model "<model>" --target "<block>" --param "All" --summary`
+  - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "All" --summary`
 - Inspect with output controls:
-  - `python -m skills.simulink_scan.scripts.sl_core inspect --model "<model>" --target "<block>" --param "All" --max-params 50 --fields "target,values"`
+  - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "All" --max-params 50 --fields "target,values"`
 - Resolve inactive parameter source:
-  - `python -m skills.simulink_scan.scripts.sl_core inspect --model "<model>" --target "<block>" --param "<name>" --resolve-effective`
+  - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "<name>" --resolve-effective`
 
 JSON mode is first-class and mutually exclusive with flag-mode action arguments.
 
@@ -71,3 +71,4 @@ For full matrix and examples, read `reference.md`.
 
 - Deep reference: `reference.md`
 - Validation scenarios: `test-scenarios.md`
+

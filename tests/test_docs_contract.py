@@ -36,7 +36,7 @@ class DocsContractTests(unittest.TestCase):
 
     def test_readme_mentions_schema_and_output_controls(self):
         text = README_PATH.read_text(encoding="utf-8")
-        self.assertIn("sl_core schema", text)
+        self.assertIn("skills.simulink_scan schema", text)
         self.assertIn("--max-blocks", text)
         self.assertIn("--max-params", text)
 
