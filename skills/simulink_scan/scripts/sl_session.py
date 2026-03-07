@@ -35,13 +35,23 @@ def load_state():
 
 
 def save_state(state):
-    with STATE_FILE.open("w", encoding="utf-8") as handle:
-        json.dump(state, handle, ensure_ascii=True, indent=2)
+    try:
+        with STATE_FILE.open("w", encoding="utf-8") as handle:
+            json.dump(state, handle, ensure_ascii=True, indent=2)
+    except OSError as exc:
+        raise RuntimeError(
+            f"Failed to write state file '{STATE_FILE}': {exc}"
+        ) from exc
 
 
 def clear_state():
-    if STATE_FILE.exists():
-        STATE_FILE.unlink()
+    try:
+        if STATE_FILE.exists():
+            STATE_FILE.unlink()
+    except OSError as exc:
+        raise RuntimeError(
+            f"Failed to clear state file '{STATE_FILE}': {exc}"
+        ) from exc
 
 
 def get_saved_session_name():
@@ -201,7 +211,14 @@ def command_session_use(name):
     selected = resolved["matched"]
     match_type = resolved.get("match_type", "exact")
 
-    set_saved_session_name(selected)
+    try:
+        set_saved_session_name(selected)
+    except RuntimeError as exc:
+        return {
+            "error": "state_write_failed",
+            "message": str(exc),
+            "active_session": selected,
+        }
     return {
         "status": "success",
         "active_session": selected,
@@ -222,5 +239,8 @@ def command_session_current():
 
 
 def command_session_clear():
-    clear_state()
+    try:
+        clear_state()
+    except RuntimeError as exc:
+        return {"error": "state_clear_failed", "message": str(exc)}
     return {"status": "success", "active_session": None}

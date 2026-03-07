@@ -6,20 +6,29 @@ def get_opened_models(eng):
 
 
 def resolve_scan_root_path(eng, model_name=None, subsystem_path=None):
+    opened_models = get_opened_models(eng)
     target_model = model_name
-    if not target_model:
-        target_model = eng.bdroot()
-
-    if not target_model:
-        return {"error": "No active model found. Please open a Simulink model."}
 
     if model_name:
-        opened_models = get_opened_models(eng)
         if model_name not in opened_models:
             return {
                 "error": f"Model '{model_name}' is not opened in the current MATLAB session.",
                 "models": opened_models,
             }
+    else:
+        if len(opened_models) > 1:
+            return {
+                "error": "model_required",
+                "message": "Multiple opened models found. Pass --model to disambiguate.",
+                "models": opened_models,
+            }
+        if len(opened_models) == 1:
+            target_model = opened_models[0]
+        else:
+            target_model = eng.bdroot()
+
+    if not target_model:
+        return {"error": "No active model found. Please open a Simulink model."}
 
     if not subsystem_path:
         return {"model": target_model, "scan_root": target_model}
@@ -122,7 +131,6 @@ def get_model_structure(
             "scan_root": scan_root,
             "recursive": use_recursive,
             "blocks": block_list,
-            "connections": [],
         }
         if hierarchy:
             output["hierarchy"] = build_hierarchy_tree(scan_root, block_list)

@@ -1,6 +1,8 @@
 # Simulink Automation Suite
 
 This repository is a Claude Code plugin focused on read-only Simulink analysis via MATLAB Engine for Python.
+Canonical plugin/skill name: `simulink-scan`.
+Internal Python module path: `skills.simulink_scan` (underscore is module naming only).
 
 ## Plugin Root
 
@@ -24,7 +26,7 @@ claude plugin install . --scope project
 Invoke:
 
 ```text
-/simulink-scan:simulink_scan Scan gmp_pmsm_sensored_sil_mdl recursively and focus on controller subsystems.
+/simulink-scan:simulink-scan Scan gmp_pmsm_sensored_sil_mdl recursively and focus on controller subsystems.
 ```
 
 ## Direct Python Entry (optional)
@@ -32,6 +34,13 @@ Invoke:
 ```bash
 python -m skills.simulink_scan.scripts.sl_core list_opened
 python -m skills.simulink_scan.scripts.sl_core scan --model "gmp_pmsm_sensored_sil_mdl"
+```
+
+## Verification
+
+```bash
+python -m unittest discover -s tests -p "test_*.py" -v
+claude plugin validate .
 ```
 
 ## Notes

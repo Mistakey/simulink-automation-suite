@@ -1,6 +1,6 @@
 # Simulink Scan Skill Reference
 
-This file is optional deep reference for the `simulink_scan` skill.
+This file is optional deep reference for the `simulink-scan` skill.
 
 ## JSON Contract
 
@@ -18,6 +18,7 @@ This file is optional deep reference for the `simulink_scan` skill.
 
 ## Scan Actions
 
+- If multiple models are opened and `--model` is omitted, the tool returns `model_required` with candidate models.
 - Shallow scan:
   - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>"`
 - Recursive scan:
