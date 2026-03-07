@@ -21,6 +21,19 @@ class DocsContractTests(unittest.TestCase):
         for section in required_sections:
             self.assertIn(section, text)
 
+    def test_reference_has_recovery_matrix_for_key_errors(self):
+        text = REFERENCE_PATH.read_text(encoding="utf-8")
+        self.assertIn("## Recovery Matrix", text)
+        required_codes = [
+            "session_required",
+            "session_not_found",
+            "model_required",
+            "inactive_parameter",
+            "invalid_json",
+        ]
+        for code in required_codes:
+            self.assertIn(f"`{code}`", text)
+
 
 if __name__ == "__main__":
     unittest.main()
