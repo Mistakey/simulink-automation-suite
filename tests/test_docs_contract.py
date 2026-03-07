@@ -40,6 +40,17 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("--max-blocks", text)
         self.assertIn("--max-params", text)
 
+    def test_readme_documents_matlab_prerequisites(self):
+        text = README_PATH.read_text(encoding="utf-8")
+        self.assertIn("MATLAB Engine for Python", text)
+        self.assertIn("matlab.engine.shareEngine", text)
+
+    def test_skill_and_reference_include_engine_unavailable_route(self):
+        skill_text = SKILL_PATH.read_text(encoding="utf-8")
+        reference_text = REFERENCE_PATH.read_text(encoding="utf-8")
+        self.assertIn("engine_unavailable", skill_text)
+        self.assertIn("engine_unavailable", reference_text)
+
     def test_scenarios_include_recovery_chain_examples(self):
         text = SCENARIOS_PATH.read_text(encoding="utf-8")
         required_tokens = [
