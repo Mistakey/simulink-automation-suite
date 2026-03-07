@@ -1,6 +1,7 @@
 import json
 
 from .sl_common import JsonArgumentParser, emit_json
+from .sl_errors import make_error
 from .sl_scan import (
     get_model_structure,
     highlight_block,
@@ -41,10 +42,11 @@ _SESSION_ACTIONS = {"list", "use", "current", "clear"}
 
 
 def _invalid_input(field_name, message):
-    return {
-        "error": "invalid_input",
-        "message": f"Field '{field_name}' {message}.",
-    }
+    return make_error(
+        "invalid_input",
+        f"Field '{field_name}' {message}.",
+        details={"field": field_name},
+    )
 
 
 def validate_text_field(field_name, value, max_len=256):
@@ -95,9 +97,23 @@ def map_runtime_error(exc):
         "session_not_found": "Session not found. Pass an exact session name from `session list` output.",
         "no_session": "No shared MATLAB session found. Ask user to run matlab.engine.shareEngine in MATLAB.",
     }
+    suggested_fixes = {
+        "session_required": "Run `session list` and pass --session with an exact name.",
+        "session_not_found": "Run `session list` and retry with an exact session name.",
+        "no_session": "Run matlab.engine.shareEngine in MATLAB, then retry.",
+    }
     if code in messages:
-        return {"error": code, "message": messages[code]}
-    return {"error": "runtime_error", "message": str(exc)}
+        return make_error(
+            code,
+            messages[code],
+            details={"cause": code},
+            suggested_fix=suggested_fixes[code],
+        )
+    return make_error(
+        "runtime_error",
+        str(exc),
+        details={"cause": str(exc)},
+    )
 
 
 def map_value_error(exc):
@@ -112,8 +128,8 @@ def map_value_error(exc):
             "unknown_parameter",
             "invalid_input",
         }:
-            return {"error": code, "message": message}
-    return {"error": "invalid_input", "message": text}
+            return make_error(code, message, details={"cause": text})
+    return make_error("invalid_input", text, details={"cause": text})
 
 
 def _parse_with_parser(parser, argv):
@@ -351,7 +367,11 @@ def run_action(args):
             return command_session_current()
         if args.session_action == "clear":
             return command_session_clear()
-        return {"error": f"Unsupported session action '{args.session_action}'"}
+        return make_error(
+            "invalid_input",
+            f"Unsupported session action '{args.session_action}'.",
+            details={"session_action": args.session_action},
+        )
 
     eng = connect_to_session(getattr(args, "session", None))
 
@@ -379,7 +399,11 @@ def run_action(args):
     if args.action == "list_opened":
         return list_opened_models(eng)
 
-    return {"error": f"Unsupported action '{args.action}'"}
+    return make_error(
+        "invalid_input",
+        f"Unsupported action '{args.action}'.",
+        details={"action": args.action},
+    )
 
 
 if __name__ == "__main__":
@@ -399,5 +423,11 @@ if __name__ == "__main__":
         emit_json(map_runtime_error(exc))
         sys.exit(1)
     except Exception as exc:
-        emit_json({"error": f"Unexpected error: {exc}"})
+        emit_json(
+            make_error(
+                "runtime_error",
+                "Unexpected error.",
+                details={"cause": str(exc)},
+            )
+        )
         sys.exit(1)
