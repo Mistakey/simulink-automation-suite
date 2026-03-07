@@ -34,7 +34,18 @@ class SessionStateTests(unittest.TestCase):
 
         self.assertEqual(result["error"], "session_not_found")
         self.assertIn("message", result)
-        self.assertEqual(result["sessions"], ["MATLAB_12345"])
+        self.assertIn("details", result)
+        self.assertEqual(result["details"]["sessions"], ["MATLAB_12345"])
+
+    def test_command_session_use_no_session_returns_stable_error_code(self):
+        with mock.patch.object(sl_session, "discover_sessions", return_value=[]):
+            result = sl_session.command_session_use("MATLAB_12345")
+
+        self.assertEqual(result["error"], "no_session")
+        self.assertIn("message", result)
+        self.assertIn("details", result)
+        self.assertEqual(result["details"].get("sessions"), [])
+        self.assertIn("suggested_fix", result)
 
     def test_session_use_write_failure_returns_machine_error(self):
         with mock.patch.object(
@@ -53,6 +64,7 @@ class SessionStateTests(unittest.TestCase):
         self.assertEqual(result["error"], "state_write_failed")
         self.assertEqual(result["active_session"], "MATLAB_12345")
         self.assertIn("write denied", result["message"])
+        self.assertIn("details", result)
 
     def test_session_clear_failure_returns_machine_error(self):
         with mock.patch.object(
@@ -62,6 +74,7 @@ class SessionStateTests(unittest.TestCase):
 
         self.assertEqual(result["error"], "state_clear_failed")
         self.assertIn("clear denied", result["message"])
+        self.assertIn("details", result)
 
 
 if __name__ == "__main__":

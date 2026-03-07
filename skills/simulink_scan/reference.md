@@ -7,6 +7,33 @@ This file is optional deep reference for the `simulink-scan` skill.
 - stdout is machine-readable JSON.
 - stderr is human guidance and warnings.
 
+Error envelope:
+
+```json
+{
+  "error": "<stable_code>",
+  "message": "<human_readable_message>",
+  "details": {},
+  "suggested_fix": "<optional_next_step>"
+}
+```
+
+Common error codes:
+- `invalid_input`
+- `invalid_json`
+- `unknown_parameter`
+- `json_conflict`
+- `no_session`
+- `session_required`
+- `session_not_found`
+- `model_required`
+- `model_not_found`
+- `subsystem_not_found`
+- `invalid_subsystem_type`
+- `block_not_found`
+- `inactive_parameter`
+- `runtime_error`
+
 ## Session Behavior
 
 - Session matching is exact-only.

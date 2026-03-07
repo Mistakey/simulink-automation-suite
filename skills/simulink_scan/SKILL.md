@@ -43,8 +43,10 @@ Recovery rules:
 - JSON and flags mixed in one call: return `json_conflict`.
 - Unknown JSON fields: return `unknown_parameter`.
 - Malformed JSON or wrong JSON value type: return `invalid_json`.
-- Invalid model: rerun list_opened and provide valid options.
-- Invalid subsystem: suggest likely top-level alternatives.
+- Invalid model: return `model_not_found`, then rerun list_opened and provide valid options.
+- Invalid subsystem path: return `subsystem_not_found` and suggest likely top-level alternatives.
+- Non-subsystem path passed as subsystem: return `invalid_subsystem_type`.
+- Invalid inspect target path: return `block_not_found`.
 - Ambiguous model selection: rerun with explicit `--model`.
 - Unknown/inactive param: switch to `--summary`, `--strict-active`, or `--resolve-effective`.
 

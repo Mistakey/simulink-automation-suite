@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 from .sl_common import as_list
+from .sl_errors import make_error
 
 
 PLUGIN_ROOT = Path(__file__).resolve().parents[3]
@@ -145,26 +146,33 @@ def command_session_use(name):
     sessions = discover_sessions()
     if not sessions:
         render_no_session_guide()
-        return {
-            "error": "No shared MATLAB session found. Ask user to run matlab.engine.shareEngine in MATLAB."
-        }
+        return make_error(
+            "no_session",
+            "No shared MATLAB session found.",
+            details={"sessions": []},
+            suggested_fix="Run matlab.engine.shareEngine in MATLAB, then retry.",
+        )
     resolved = resolve_session_alias(name, sessions)
     if resolved["status"] == "missing":
-        return {
-            "error": "session_not_found",
-            "message": f"Session '{name}' not found. Exact session name is required.",
-            "sessions": sessions,
-        }
+        return make_error(
+            "session_not_found",
+            f"Session '{name}' not found. Exact session name is required.",
+            details={"input": name, "sessions": sessions},
+            suggested_fix="Run `session list` and pass an exact session name via --session.",
+        )
 
     selected = resolved["matched"]
     try:
         set_saved_session_name(selected)
     except RuntimeError as exc:
-        return {
-            "error": "state_write_failed",
-            "message": str(exc),
-            "active_session": selected,
-        }
+        payload = make_error(
+            "state_write_failed",
+            str(exc),
+            details={"active_session": selected},
+            suggested_fix="Check state file permissions and retry `session use`.",
+        )
+        payload["active_session"] = selected
+        return payload
     return {
         "status": "success",
         "active_session": selected,
@@ -188,5 +196,10 @@ def command_session_clear():
     try:
         clear_state()
     except RuntimeError as exc:
-        return {"error": "state_clear_failed", "message": str(exc)}
+        return make_error(
+            "state_clear_failed",
+            str(exc),
+            details={},
+            suggested_fix="Check state file permissions and retry `session clear`.",
+        )
     return {"status": "success", "active_session": None}

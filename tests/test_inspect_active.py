@@ -5,15 +5,23 @@ from skills.simulink_scan.scripts.sl_scan import inspect_block
 
 class FakeEngine:
     def __init__(
-        self, values, mask_names=None, mask_visibilities=None, mask_enables=None
+        self,
+        values,
+        mask_names=None,
+        mask_visibilities=None,
+        mask_enables=None,
+        valid_paths=None,
     ):
         self.values = values
         self.mask_names = mask_names
         self.mask_visibilities = mask_visibilities
         self.mask_enables = mask_enables
+        self.valid_paths = set(valid_paths or ["m/b"])
 
     def get_param(self, block_path, param_name):
         if param_name == "Handle":
+            if block_path not in self.valid_paths:
+                raise RuntimeError("not found")
             return 1
         if param_name == "DialogParameters":
             return {key: {} for key in self.values.keys()}
@@ -38,6 +46,12 @@ class FakeEngine:
 
 
 class InspectActiveTests(unittest.TestCase):
+    def test_missing_block_returns_block_not_found(self):
+        eng = FakeEngine(values={"Gain": "5"}, valid_paths={"m/other"})
+        result = inspect_block(eng, "m/b", "All")
+        self.assertEqual(result["error"], "block_not_found")
+        self.assertEqual(result["details"]["target"], "m/b")
+
     def test_masked_block_inactive_params_and_warning(self):
         eng = FakeEngine(
             values={"Mechanical": "[J F p Tf]", "PolePairs": "3"},

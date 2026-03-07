@@ -4,12 +4,21 @@ from skills.simulink_scan.scripts.sl_scan import get_model_structure
 
 
 class FakeScanEngine:
-    def __init__(self, models, active_root, shallow_blocks, recursive_blocks, block_types):
+    def __init__(
+        self,
+        models,
+        active_root,
+        shallow_blocks,
+        recursive_blocks,
+        block_types,
+        valid_handles=None,
+    ):
         self.models = models
         self.active_root = active_root
         self.shallow_blocks = shallow_blocks
         self.recursive_blocks = recursive_blocks
         self.block_types = block_types
+        self.valid_handles = set(valid_handles or [])
 
     def find_system(self, *args):
         if args == ("Type", "block_diagram"):
@@ -27,6 +36,8 @@ class FakeScanEngine:
         if param_name == "BlockType":
             return self.block_types.get(block_path, "SubSystem")
         if param_name == "Handle":
+            if self.valid_handles and block_path not in self.valid_handles:
+                raise RuntimeError("not found")
             return 1
         raise RuntimeError(f"unsupported param {param_name}")
 
@@ -68,8 +79,34 @@ class ScanBehaviorTests(unittest.TestCase):
             block_types={},
         )
         result = get_model_structure(eng, model_name="m2")
-        self.assertIn("error", result)
-        self.assertEqual(result["models"], ["m1"])
+        self.assertEqual(result["error"], "model_not_found")
+        self.assertEqual(result["details"]["models"], ["m1"])
+
+    def test_invalid_subsystem_returns_subsystem_not_found(self):
+        eng = FakeScanEngine(
+            models=["m1"],
+            active_root="m1",
+            shallow_blocks={},
+            recursive_blocks={},
+            block_types={},
+            valid_handles={"m1"},
+        )
+        result = get_model_structure(eng, model_name="m1", subsystem_path="bad/sub")
+        self.assertEqual(result["error"], "subsystem_not_found")
+        self.assertEqual(result["details"]["model"], "m1")
+
+    def test_non_subsystem_path_returns_invalid_subsystem_type(self):
+        eng = FakeScanEngine(
+            models=["m1"],
+            active_root="m1",
+            shallow_blocks={"m1/Gain": ["m1/Gain"]},
+            recursive_blocks={"m1/Gain": ["m1/Gain"]},
+            block_types={"m1/Gain": "Gain"},
+            valid_handles={"m1", "m1/Gain"},
+        )
+        result = get_model_structure(eng, model_name="m1", subsystem_path="Gain")
+        self.assertEqual(result["error"], "invalid_subsystem_type")
+        self.assertEqual(result["details"]["path"], "m1/Gain")
 
 
 if __name__ == "__main__":

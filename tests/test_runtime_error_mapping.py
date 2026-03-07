@@ -9,11 +9,14 @@ class RuntimeErrorMappingTests(unittest.TestCase):
             result = map_runtime_error(RuntimeError(code))
             self.assertEqual(result["error"], code)
             self.assertIn("message", result)
+            self.assertIn("details", result)
+            self.assertIn("suggested_fix", result)
 
     def test_unknown_runtime_error_maps_to_runtime_error(self):
         result = map_runtime_error(RuntimeError("engine crashed"))
         self.assertEqual(result["error"], "runtime_error")
         self.assertEqual(result["message"], "engine crashed")
+        self.assertEqual(result["details"]["cause"], "engine crashed")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 from .sl_common import as_list
+from .sl_errors import make_error
 
 
 def get_opened_models(eng):
@@ -11,10 +12,12 @@ def resolve_scan_root_path(eng, model_name=None, subsystem_path=None):
 
     if model_name:
         if model_name not in opened_models:
-            return {
-                "error": f"Model '{model_name}' is not opened in the current MATLAB session.",
-                "models": opened_models,
-            }
+            return make_error(
+                "model_not_found",
+                f"Model '{model_name}' is not opened in the current MATLAB session.",
+                details={"model": model_name, "models": opened_models},
+                suggested_fix="Run list_opened and pass a model from the returned list.",
+            )
     else:
         if len(opened_models) > 1:
             return {
@@ -28,7 +31,12 @@ def resolve_scan_root_path(eng, model_name=None, subsystem_path=None):
             target_model = eng.bdroot()
 
     if not target_model:
-        return {"error": "No active model found. Please open a Simulink model."}
+        return make_error(
+            "model_not_found",
+            "No active model found. Please open a Simulink model.",
+            details={"model": model_name, "models": opened_models},
+            suggested_fix="Open a Simulink model, then retry with --model if needed.",
+        )
 
     if not subsystem_path:
         return {"model": target_model, "scan_root": target_model}
@@ -41,20 +49,28 @@ def resolve_scan_root_path(eng, model_name=None, subsystem_path=None):
     try:
         eng.get_param(full_path, "Handle")
     except Exception as exc:
-        return {
-            "error": f"Subsystem not found '{full_path}': {exc}",
-            "model": target_model,
-        }
+        return make_error(
+            "subsystem_not_found",
+            f"Subsystem not found '{full_path}'.",
+            details={"model": target_model, "path": full_path, "cause": str(exc)},
+            suggested_fix="Run a shallow scan on the model root and pick an existing subsystem path.",
+        )
 
     if full_path != target_model:
         try:
             if eng.get_param(full_path, "BlockType") != "SubSystem":
-                return {
-                    "error": f"Path '{full_path}' is not a SubSystem block.",
-                    "model": target_model,
-                }
+                return make_error(
+                    "invalid_subsystem_type",
+                    f"Path '{full_path}' is not a SubSystem block.",
+                    details={"model": target_model, "path": full_path},
+                    suggested_fix="Choose a SubSystem block path or omit --subsystem for model root scan.",
+                )
         except Exception as exc:
-            return {"error": f"Failed to verify subsystem '{full_path}': {exc}"}
+            return make_error(
+                "runtime_error",
+                f"Failed to verify subsystem '{full_path}'.",
+                details={"path": full_path, "cause": str(exc)},
+            )
 
     return {"model": target_model, "scan_root": full_path}
 
@@ -137,7 +153,11 @@ def get_model_structure(
 
         return output
     except Exception as exc:
-        return {"error": str(exc)}
+        return make_error(
+            "runtime_error",
+            "Failed to scan model structure.",
+            details={"cause": str(exc)},
+        )
 
 
 def highlight_block(eng, block_path):
@@ -145,7 +165,11 @@ def highlight_block(eng, block_path):
         eng.hilite_system(block_path, "find", nargout=0)
         return {"status": "success", "highlighted": block_path}
     except Exception as exc:
-        return {"error": str(exc)}
+        return make_error(
+            "runtime_error",
+            "Failed to highlight block.",
+            details={"target": block_path, "cause": str(exc)},
+        )
 
 
 def resolve_inspect_target_path(eng, block_path, model_name=None):
@@ -154,10 +178,12 @@ def resolve_inspect_target_path(eng, block_path, model_name=None):
 
     opened_models = get_opened_models(eng)
     if model_name not in opened_models:
-        return {
-            "error": f"Model '{model_name}' is not opened in the current MATLAB session.",
-            "models": opened_models,
-        }
+        return make_error(
+            "model_not_found",
+            f"Model '{model_name}' is not opened in the current MATLAB session.",
+            details={"model": model_name, "models": opened_models},
+            suggested_fix="Run list_opened and pass an opened model name.",
+        )
 
     prefix = f"{model_name}/"
     if block_path == model_name or block_path.startswith(prefix):
@@ -324,7 +350,12 @@ def inspect_block(
     try:
         eng.get_param(target_path, "Handle")
     except Exception as exc:
-        return {"error": f"Block not found '{target_path}': {exc}"}
+        return make_error(
+            "block_not_found",
+            f"Block not found '{target_path}'.",
+            details={"target": target_path, "cause": str(exc)},
+            suggested_fix="Run scan to discover valid block paths, then retry with --target.",
+        )
 
     try:
         dialog_params = eng.get_param(target_path, "DialogParameters")
@@ -476,7 +507,11 @@ def inspect_block(
             output["warnings"] = warnings
         return output
     except Exception as exc:
-        return {"error": str(exc)}
+        return make_error(
+            "runtime_error",
+            "Failed to inspect block parameters.",
+            details={"target": target_path, "cause": str(exc)},
+        )
 
 
 def list_opened_models(eng):
@@ -484,4 +519,8 @@ def list_opened_models(eng):
         models = get_opened_models(eng)
         return {"models": models}
     except Exception as exc:
-        return {"error": str(exc)}
+        return make_error(
+            "runtime_error",
+            "Failed to list opened models.",
+            details={"cause": str(exc)},
+        )

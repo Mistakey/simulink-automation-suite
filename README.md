@@ -44,7 +44,22 @@ python -m skills.simulink_scan.scripts.sl_core scan --model "gmp_pmsm_sensored_s
   - `invalid_input`
   - `session_required`
   - `session_not_found`
+  - `model_not_found`
+  - `subsystem_not_found`
+  - `invalid_subsystem_type`
+  - `block_not_found`
 - `--json` is a first-class request entrypoint and is mutually exclusive with flag-based input.
+
+Error envelope:
+
+```json
+{
+  "error": "<stable_code>",
+  "message": "<human_readable_message>",
+  "details": {},
+  "suggested_fix": "<optional_next_step>"
+}
+```
 
 Examples:
 
