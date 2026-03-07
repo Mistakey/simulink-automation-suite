@@ -502,22 +502,21 @@ def run_action(args):
     )
 
 
-if __name__ == "__main__":
+def main(argv=None):
     import sys
-
     try:
         parser = build_parser()
-        parsed = parse_request_args(parser)
+        parsed = parse_request_args(parser, argv=argv)
         result = run_action(parsed)
         emit_json(result)
         if isinstance(result, dict) and "error" in result:
-            sys.exit(1)
+            return 1
     except ValueError as exc:
         emit_json(map_value_error(exc))
-        sys.exit(1)
+        return 1
     except RuntimeError as exc:
         emit_json(map_runtime_error(exc))
-        sys.exit(1)
+        return 1
     except Exception as exc:
         emit_json(
             make_error(
@@ -526,4 +525,11 @@ if __name__ == "__main__":
                 details={"cause": str(exc)},
             )
         )
-        sys.exit(1)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+
+    sys.exit(main())

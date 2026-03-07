@@ -40,10 +40,10 @@ Common error codes:
 - When multiple shared sessions exist, commands that connect to MATLAB require explicit `--session`.
 - Unknown exact session returns `session_not_found`.
 - Session management actions:
-  - `python -m skills.simulink_scan.scripts.sl_core session list`
-  - `python -m skills.simulink_scan.scripts.sl_core session current`
-  - `python -m skills.simulink_scan.scripts.sl_core session use MATLAB_12345`
-  - `python -m skills.simulink_scan.scripts.sl_core session clear`
+  - `python -m skills.simulink_scan session list`
+  - `python -m skills.simulink_scan session current`
+  - `python -m skills.simulink_scan session use MATLAB_12345`
+  - `python -m skills.simulink_scan session clear`
 
 ## JSON Input Mode
 
@@ -54,51 +54,51 @@ Common error codes:
 - Wrong JSON field types or malformed payload return `invalid_json`.
 
 Examples:
-- `python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"schema\"}"`
-- `python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"`
-- `python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"inspect\",\"model\":\"m\",\"target\":\"m/Gain\",\"param\":\"All\",\"summary\":true,\"session\":\"MATLAB_12345\"}"`
+- `python -m skills.simulink_scan --json "{\"action\":\"schema\"}"`
+- `python -m skills.simulink_scan --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"`
+- `python -m skills.simulink_scan --json "{\"action\":\"inspect\",\"model\":\"m\",\"target\":\"m/Gain\",\"param\":\"All\",\"summary\":true,\"session\":\"MATLAB_12345\"}"`
 
 ## Schema Action
 
-- `python -m skills.simulink_scan.scripts.sl_core schema`
+- `python -m skills.simulink_scan schema`
 - Returns machine-readable action and error-code contracts for agents.
 
 ## Scan Actions
 
 - If multiple models are opened and `--model` is omitted, the tool returns `model_required` with candidate models.
 - Shallow scan:
-  - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>"`
+  - `python -m skills.simulink_scan scan --model "<model>"`
 - Recursive scan:
-  - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>" --recursive`
+  - `python -m skills.simulink_scan scan --model "<model>" --recursive`
 - Subsystem scan:
-  - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>" --subsystem "<subsystem>" --recursive`
+  - `python -m skills.simulink_scan scan --model "<model>" --subsystem "<subsystem>" --recursive`
 - Hierarchy output:
-  - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>" --hierarchy`
+  - `python -m skills.simulink_scan scan --model "<model>" --hierarchy`
 - Output clipping:
-  - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>" --max-blocks 200 --fields "name,type"`
+  - `python -m skills.simulink_scan scan --model "<model>" --max-blocks 200 --fields "name,type"`
 
 ## Inspect Actions
 
 - Full parameter view:
-  - `python -m skills.simulink_scan.scripts.sl_core inspect --model "<model>" --target "<block>" --param "All"`
+  - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "All"`
 - Active-only parameters:
-  - `python -m skills.simulink_scan.scripts.sl_core inspect --model "<model>" --target "<block>" --param "All" --active-only`
+  - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "All" --active-only`
 - Summary mode:
-  - `python -m skills.simulink_scan.scripts.sl_core inspect --model "<model>" --target "<block>" --param "All" --summary`
+  - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "All" --summary`
 - Strict active check:
-  - `python -m skills.simulink_scan.scripts.sl_core inspect --model "<model>" --target "<block>" --param "<name>" --strict-active`
+  - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "<name>" --strict-active`
 - Resolve effective value:
-  - `python -m skills.simulink_scan.scripts.sl_core inspect --model "<model>" --target "<block>" --param "<name>" --resolve-effective`
+  - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "<name>" --resolve-effective`
 - Output clipping:
-  - `python -m skills.simulink_scan.scripts.sl_core inspect --model "<model>" --target "<block>" --param "All" --max-params 50 --fields "target,values"`
+  - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "All" --max-params 50 --fields "target,values"`
 
 ## Recovery Matrix
 
 | Error Code | Likely Cause | Next Command | Expected Success Signal |
 |---|---|---|---|
-| `session_required` | Multiple MATLAB shared sessions and no explicit target | `python -m skills.simulink_scan.scripts.sl_core session list` then retry with `--session` | action returns payload without `error` |
-| `session_not_found` | Session name is not an exact match | `python -m skills.simulink_scan.scripts.sl_core session list` then copy exact name | action connects to requested session |
-| `model_required` | Multiple opened models and no explicit model | `python -m skills.simulink_scan.scripts.sl_core list_opened` then retry with `--model` | scan/inspect returns selected model |
+| `session_required` | Multiple MATLAB shared sessions and no explicit target | `python -m skills.simulink_scan session list` then retry with `--session` | action returns payload without `error` |
+| `session_not_found` | Session name is not an exact match | `python -m skills.simulink_scan session list` then copy exact name | action connects to requested session |
+| `model_required` | Multiple opened models and no explicit model | `python -m skills.simulink_scan list_opened` then retry with `--model` | scan/inspect returns selected model |
 | `inactive_parameter` | Requested parameter is inactive under current mask config | retry with `--resolve-effective` or `--strict-active` | response includes effective mapping or explicit inactive failure |
 | `invalid_json` | Malformed JSON or wrong field type | validate payload using `schema`, then retry | request parses and executes |
 
@@ -106,3 +106,4 @@ Examples:
 
 - If no shared MATLAB session is found, run `matlab.engine.shareEngine` in MATLAB.
 - If `matlab.engine` import fails, install/configure MATLAB Engine for Python in the active environment.
+
