@@ -15,6 +15,30 @@ from .sl_session import (
     connect_to_session,
 )
 
+_JSON_FIELD_TYPES = {
+    "scan": {
+        "model": str,
+        "subsystem": str,
+        "recursive": bool,
+        "hierarchy": bool,
+        "session": str,
+    },
+    "highlight": {"target": str, "session": str},
+    "inspect": {
+        "model": str,
+        "target": str,
+        "param": str,
+        "active_only": bool,
+        "strict_active": bool,
+        "resolve_effective": bool,
+        "summary": bool,
+        "session": str,
+    },
+    "list_opened": {"session": str},
+}
+
+_SESSION_ACTIONS = {"list", "use", "current", "clear"}
+
 
 def _invalid_input(field_name, message):
     return {
@@ -76,6 +100,45 @@ def map_runtime_error(exc):
     return {"error": "runtime_error", "message": str(exc)}
 
 
+def map_value_error(exc):
+    text = str(exc).strip()
+    if ":" in text:
+        code, message = text.split(":", 1)
+        code = code.strip()
+        message = message.strip()
+        if code in {
+            "invalid_json",
+            "json_conflict",
+            "unknown_parameter",
+            "invalid_input",
+        }:
+            return {"error": code, "message": message}
+    return {"error": "invalid_input", "message": text}
+
+
+def _parse_with_parser(parser, argv):
+    try:
+        return parser.parse_args(argv)
+    except ValueError as exc:
+        message = str(exc).strip()
+        if message.startswith("unrecognized arguments:"):
+            raise ValueError(f"unknown_parameter: {message}") from exc
+        raise ValueError(f"invalid_input: {message}") from exc
+
+
+def _validate_json_type(action, field_name, value, expected_type):
+    if value is None:
+        return
+    if expected_type is bool and not isinstance(value, bool):
+        raise ValueError(
+            f"invalid_json: field '{field_name}' for action '{action}' must be boolean"
+        )
+    if expected_type is str and not isinstance(value, str):
+        raise ValueError(
+            f"invalid_json: field '{field_name}' for action '{action}' must be string"
+        )
+
+
 def _parse_json_request(raw_payload):
     try:
         request = json.loads(raw_payload)
@@ -88,6 +151,42 @@ def _parse_json_request(raw_payload):
     action = request.get("action")
     if not isinstance(action, str) or not action.strip():
         raise ValueError("invalid_json: action is required")
+    if action not in _JSON_FIELD_TYPES and action != "session":
+        raise ValueError(f"invalid_json: unsupported action '{action}'")
+
+    allowed_fields = {"action"}
+    if action == "session":
+        allowed_fields.update({"session_action", "name"})
+    else:
+        allowed_fields.update(_JSON_FIELD_TYPES[action].keys())
+
+    for key in request.keys():
+        if key not in allowed_fields:
+            raise ValueError(
+                f"unknown_parameter: field '{key}' is not supported for action '{action}'"
+            )
+
+    if action == "session":
+        session_action = request.get("session_action")
+        if not isinstance(session_action, str) or not session_action.strip():
+            raise ValueError("invalid_json: session_action is required for action=session")
+        if session_action not in _SESSION_ACTIONS:
+            raise ValueError(
+                f"invalid_json: unsupported session_action '{session_action}'"
+            )
+        if session_action == "use":
+            name = request.get("name")
+            if not isinstance(name, str) or not name:
+                raise ValueError("invalid_json: name is required for action=session/use")
+        elif "name" in request:
+            raise ValueError(
+                "unknown_parameter: field 'name' is only supported for action=session/use"
+            )
+        return request
+
+    for field_name, expected_type in _JSON_FIELD_TYPES[action].items():
+        if field_name in request:
+            _validate_json_type(action, field_name, request[field_name], expected_type)
 
     return request
 
@@ -129,14 +228,20 @@ def parse_request_args(parser, argv=None):
 
     argv = list(argv)
     if "--json" not in argv:
-        return parser.parse_args(argv)
+        return _parse_with_parser(parser, argv)
 
-    json_index = argv.index("--json")
+    json_positions = [index for index, token in enumerate(argv) if token == "--json"]
+    if len(json_positions) > 1:
+        raise ValueError("json_conflict: --json can only be provided once")
+
+    json_index = json_positions[0]
     if json_index >= len(argv) - 1:
         raise ValueError("invalid_json: --json requires a payload")
+    if len(argv) != 2 or json_index != 0:
+        raise ValueError("json_conflict: --json cannot be mixed with flags arguments")
 
     request = _parse_json_request(argv[json_index + 1])
-    return parser.parse_args(_json_request_to_argv(request))
+    return _parse_with_parser(parser, _json_request_to_argv(request))
 
 
 def build_parser():
@@ -283,7 +388,7 @@ if __name__ == "__main__":
         if isinstance(result, dict) and "error" in result:
             sys.exit(1)
     except ValueError as exc:
-        emit_json({"error": str(exc)})
+        emit_json(map_value_error(exc))
         sys.exit(1)
     except RuntimeError as exc:
         emit_json(map_runtime_error(exc))

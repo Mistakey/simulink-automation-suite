@@ -26,6 +26,33 @@ class JsonInputModeTests(unittest.TestCase):
             parse_request_args(self.parser, ['--json', '{"model":"demo"}'])
         self.assertIn("action", str(context.exception))
 
+    def test_parse_request_args_rejects_mixed_json_and_flags(self):
+        with self.assertRaises(ValueError) as context:
+            parse_request_args(
+                self.parser,
+                [
+                    "scan",
+                    "--model",
+                    "demo",
+                    "--json",
+                    '{"action":"scan","model":"demo"}',
+                ],
+            )
+        self.assertIn("json_conflict", str(context.exception))
+
+    def test_parse_request_args_rejects_unknown_json_field(self):
+        with self.assertRaises(ValueError) as context:
+            parse_request_args(
+                self.parser,
+                ['--json', '{"action":"scan","model":"demo","unknown":"x"}'],
+            )
+        self.assertIn("unknown_parameter", str(context.exception))
+
+    def test_parse_request_args_rejects_wrong_json_value_type(self):
+        with self.assertRaises(ValueError) as context:
+            parse_request_args(self.parser, ['--json', '{"action":"scan","model":123}'])
+        self.assertIn("invalid_json", str(context.exception))
+
 
 if __name__ == "__main__":
     unittest.main()
