@@ -24,6 +24,8 @@ _JSON_FIELD_TYPES = {
         "recursive": bool,
         "hierarchy": bool,
         "session": str,
+        "max_blocks": int,
+        "fields": list,
     },
     "highlight": {"target": str, "session": str},
     "inspect": {
@@ -106,6 +108,11 @@ def validate_args(args):
         result = validate_text_field(field_name, getattr(args, field_name, None))
         if result:
             return result
+
+    if args.action == "scan":
+        max_blocks = getattr(args, "max_blocks", None)
+        if max_blocks is not None and max_blocks <= 0:
+            return _invalid_input("max_blocks", "must be greater than zero")
     return None
 
 
@@ -172,6 +179,19 @@ def _validate_json_type(action, field_name, value, expected_type):
         raise ValueError(
             f"invalid_json: field '{field_name}' for action '{action}' must be string"
         )
+    if expected_type is int and not isinstance(value, int):
+        raise ValueError(
+            f"invalid_json: field '{field_name}' for action '{action}' must be integer"
+        )
+    if expected_type is list:
+        if not isinstance(value, list):
+            raise ValueError(
+                f"invalid_json: field '{field_name}' for action '{action}' must be an array"
+            )
+        if not all(isinstance(item, str) for item in value):
+            raise ValueError(
+                f"invalid_json: field '{field_name}' for action '{action}' must be an array of strings"
+            )
 
 
 def _parse_json_request(raw_payload):
@@ -250,6 +270,9 @@ def _json_request_to_argv(request):
             if value:
                 argv.append(flag)
             continue
+        if isinstance(value, list):
+            argv.extend([flag, ",".join(str(item) for item in value)])
+            continue
         argv.extend([flag, str(value)])
 
     return argv
@@ -322,6 +345,15 @@ def build_parser():
         help="Include hierarchy tree in scan output (implies recursive)",
     )
     scan_parser.add_argument("--session", help="Session override for this command")
+    scan_parser.add_argument(
+        "--max-blocks",
+        type=int,
+        help="Limit number of block entries returned for scan action",
+    )
+    scan_parser.add_argument(
+        "--fields",
+        help="Comma-separated block fields to return (for example: name,type)",
+    )
 
     highlight_parser = subparsers.add_parser("highlight", help="Highlight a block")
     highlight_parser.add_argument(
@@ -413,12 +445,18 @@ def run_action(args):
     eng = connect_to_session(getattr(args, "session", None))
 
     if args.action == "scan":
+        fields = getattr(args, "fields", None)
+        parsed_fields = None
+        if fields:
+            parsed_fields = [item.strip() for item in str(fields).split(",") if item.strip()]
         return get_model_structure(
             eng,
             model_name=getattr(args, "model", None),
             recursive=getattr(args, "recursive", False),
             subsystem_path=getattr(args, "subsystem", None),
             hierarchy=getattr(args, "hierarchy", False),
+            max_blocks=getattr(args, "max_blocks", None),
+            fields=parsed_fields,
         )
     if args.action == "highlight":
         return highlight_block(eng, args.target)

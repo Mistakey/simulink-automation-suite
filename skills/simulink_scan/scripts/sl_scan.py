@@ -109,6 +109,8 @@ def get_model_structure(
     recursive=False,
     subsystem_path=None,
     hierarchy=False,
+    max_blocks=None,
+    fields=None,
 ):
     try:
         resolved = resolve_scan_root_path(eng, model_name, subsystem_path)
@@ -142,11 +144,26 @@ def get_model_structure(
                 continue
             block_list.append({"name": blk, "type": eng.get_param(blk, "BlockType")})
 
+        block_list = sorted(block_list, key=lambda item: str(item.get("name", "")))
+        total_count = len(block_list)
+        if isinstance(fields, list) and fields:
+            projected = []
+            for item in block_list:
+                projected.append({key: value for key, value in item.items() if key in fields})
+            block_list = projected
+
+        truncated = False
+        if isinstance(max_blocks, int) and max_blocks >= 0 and total_count > max_blocks:
+            block_list = block_list[:max_blocks]
+            truncated = True
+
         output = {
             "model": target_model,
             "scan_root": scan_root,
             "recursive": use_recursive,
             "blocks": block_list,
+            "total_count": total_count,
+            "truncated": truncated,
         }
         if hierarchy:
             output["hierarchy"] = build_hierarchy_tree(scan_root, block_list)
