@@ -24,6 +24,25 @@ Simulink Automation Suite is a Claude Code plugin for read-only Simulink automat
 
 ---
 
+## Prerequisites
+
+Before using session-bound actions (`list_opened`, `scan`, `inspect`, `highlight`):
+
+1. Install and activate MATLAB on your machine.
+2. Install MATLAB Engine for Python in the same Python interpreter that runs this plugin.
+3. In MATLAB Command Window, run:
+
+```matlab
+matlab.engine.shareEngine
+```
+
+Troubleshooting:
+
+- `engine_unavailable`: MATLAB Engine for Python is unavailable in the active Python environment. Fix interpreter/environment installation.
+- `no_session`: MATLAB Engine is available, but no shared MATLAB session is visible. Run `matlab.engine.shareEngine` in MATLAB, then retry.
+
+---
+
 ## Quick Start
 
 ### 1. Add the marketplace source

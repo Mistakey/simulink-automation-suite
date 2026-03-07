@@ -24,6 +24,7 @@ Common error codes:
 - `invalid_json`
 - `unknown_parameter`
 - `json_conflict`
+- `engine_unavailable`
 - `no_session`
 - `session_required`
 - `session_not_found`
@@ -97,6 +98,7 @@ Examples:
 
 | Error Code | Likely Cause | Next Command | Expected Success Signal |
 |---|---|---|---|
+| `engine_unavailable` | MATLAB Engine for Python is not available in active interpreter | install/configure MATLAB Engine for Python and rerun the same command | command runs without `engine_unavailable` |
 | `session_required` | Multiple MATLAB shared sessions and no explicit target | `python -m skills.simulink_scan session list` then retry with `--session` | action returns payload without `error` |
 | `session_not_found` | Session name is not an exact match | `python -m skills.simulink_scan session list` then copy exact name | action connects to requested session |
 | `model_required` | Multiple opened models and no explicit model | `python -m skills.simulink_scan list_opened` then retry with `--model` | scan/inspect returns selected model |
@@ -105,5 +107,6 @@ Examples:
 
 ## Troubleshooting
 
+- If MATLAB Engine for Python is unavailable, install/configure it in the active interpreter first.
 - If no shared MATLAB session is found, run `matlab.engine.shareEngine` in MATLAB.
 - If `matlab.engine` import fails, install/configure MATLAB Engine for Python in the active environment.

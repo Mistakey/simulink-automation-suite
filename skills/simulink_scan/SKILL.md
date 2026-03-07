@@ -10,6 +10,9 @@ This skill is one capability inside plugin `simulink-automation-suite`, which is
 
 ## Preflight
 
+0. Ensure runtime prerequisites:
+   - MATLAB Engine for Python is installed in the active Python environment.
+   - MATLAB shared session is started by running `matlab.engine.shareEngine` in MATLAB.
 1. Discover contract when the caller is uncertain about commands/fields:
    - `python -m skills.simulink_scan schema`
    - JSON: `python -m skills.simulink_scan --json "{\"action\":\"schema\"}"`
@@ -51,6 +54,7 @@ Error-driven next actions:
 
 - `session_required` -> run `session list`, then retry with explicit `--session`.
 - `session_not_found` -> rerun `session list`, copy exact name, retry.
+- `engine_unavailable` -> install/configure MATLAB Engine for Python for the active interpreter, then retry.
 - `no_session` -> run `matlab.engine.shareEngine` in MATLAB, retry.
 - `model_required` -> rerun `list_opened`, retry with explicit `--model`.
 - `model_not_found` -> rerun `list_opened`, choose existing model.

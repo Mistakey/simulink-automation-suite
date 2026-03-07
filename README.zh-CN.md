@@ -24,6 +24,25 @@ Simulink Automation Suite 是一个基于 MATLAB Engine for Python 的 Claude Co
 
 ---
 
+## 前置条件
+
+在使用依赖 MATLAB 会话的动作（`list_opened`、`scan`、`inspect`、`highlight`）前，请先确认：
+
+1. 本机已安装并可启动 MATLAB。
+2. 当前插件使用的 Python 解释器中已安装 MATLAB Engine for Python。
+3. 在 MATLAB 命令窗口执行：
+
+```matlab
+matlab.engine.shareEngine
+```
+
+排障指引：
+
+- `engine_unavailable`：当前 Python 环境不可用 MATLAB Engine for Python，请先修复解释器环境安装。
+- `no_session`：MATLAB Engine 可用，但没有共享会话，请在 MATLAB 中执行 `matlab.engine.shareEngine` 后重试。
+
+---
+
 ## 快速开始
 
 ### 1. 添加 Marketplace 源
