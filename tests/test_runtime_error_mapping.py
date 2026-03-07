@@ -5,7 +5,12 @@ from skills.simulink_scan.scripts.sl_core import map_runtime_error
 
 class RuntimeErrorMappingTests(unittest.TestCase):
     def test_known_session_error_codes_map_stably(self):
-        for code in ("session_required", "session_not_found", "no_session"):
+        for code in (
+            "session_required",
+            "session_not_found",
+            "no_session",
+            "engine_unavailable",
+        ):
             result = map_runtime_error(RuntimeError(code))
             self.assertEqual(result["error"], code)
             self.assertIn("message", result)

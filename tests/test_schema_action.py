@@ -24,6 +24,11 @@ class SchemaActionTests(unittest.TestCase):
         self.assertIn("session", result["actions"])
         self.assertIn("error_codes", result)
 
+    def test_schema_action_includes_engine_unavailable_error_code(self):
+        args = parse_request_args(self.parser, ["schema"])
+        result = run_action(args)
+        self.assertIn("engine_unavailable", result["error_codes"])
+
 
 if __name__ == "__main__":
     unittest.main()
