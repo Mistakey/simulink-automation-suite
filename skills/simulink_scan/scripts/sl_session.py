@@ -16,9 +16,7 @@ def _get_matlab_engine():
 
         return importlib.import_module("matlab.engine")
     except Exception as exc:
-        raise RuntimeError(
-            "MATLAB Engine for Python is not available. Install/configure matlab.engine in this Python environment."
-        ) from exc
+        raise RuntimeError("engine_unavailable") from exc
 
 
 def load_state():
@@ -85,6 +83,10 @@ def discover_sessions():
     try:
         engine = _get_matlab_engine()
         return as_list(engine.find_matlab())
+    except RuntimeError as exc:
+        if str(exc).strip() == "engine_unavailable":
+            raise
+        raise RuntimeError(f"Failed to discover MATLAB sessions: {exc}")
     except Exception as exc:
         raise RuntimeError(f"Failed to discover MATLAB sessions: {exc}")
 
