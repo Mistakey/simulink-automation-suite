@@ -4,57 +4,70 @@ description: Use when analyzing Simulink model topology, subsystem structure, or
 ---
 
 Use this skill only for Simulink read-only analysis.
-Reject write/edit requests (set_param, add/delete blocks/lines, save changes).
+Reject write/edit requests (`set_param`, add/delete blocks/lines, save changes).
 Canonical skill name is `simulink-scan` (module path `skills.simulink_scan` is internal only).
 
-Decision flow:
-1. Discover contract first when needed:
+## Preflight
+
+1. Discover contract when the caller is uncertain about commands/fields:
    - `python -m skills.simulink_scan.scripts.sl_core schema`
-   - JSON mode alternative:
-     - `python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"schema\"}"`
-2. Discover models first:
+   - JSON: `python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"schema\"}"`
+2. Discover opened models first:
    - `python -m skills.simulink_scan.scripts.sl_core list_opened`
-   - JSON mode alternative:
-     - `python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"list_opened\"}"`
 3. Resolve session strictly:
-   - Use exact session names only (no fuzzy matching).
-   - If multiple sessions exist for commands that connect to MATLAB, require explicit `--session`.
-   - If exact session does not exist, surface `session_not_found`.
-   - For malformed text inputs, surface `invalid_input`.
-4. Choose model:
-   - Use explicit `--model` when provided.
-   - If multiple models exist and none is specified, surface `model_required` and ask for explicit `--model`.
-5. Scan with token control:
-   - Default shallow:
-     - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>"`
-     - `python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"scan\",\"model\":\"<model>\",\"session\":\"<session>\"}"`
-   - Use `--max-blocks` and `--fields` to clip/project large outputs.
-   - Recursive only if user asks deep/internal/hierarchy or shallow is insufficient.
-6. Parameter safety:
-   - Prefer `--summary` for overview.
-   - Use `--active-only` for effective fields only.
-   - Use `--strict-active`/`--resolve-effective` for single-parameter correctness.
-   - Use `--max-params` and `--fields` to clip/project large inspect outputs.
+   - Exact session names only.
+   - If multiple sessions exist for MATLAB-bound actions, require explicit `--session`.
 
-Output rules:
-- Ground all claims in tool JSON outputs.
-- Keep output compact: selected model, scan_root, recursive flag, block count, key findings.
-- Do not dump full recursive lists unless explicitly requested.
+## Action Selection
 
-Recovery rules:
-- Missing session: return error and instruct `matlab.engine.shareEngine`.
-- Multiple sessions without explicit `--session`: return `session_required`.
-- Non-exact session name: return `session_not_found`.
-- Invalid text fields (`?`, `#`, `%`, control chars, trim mismatch, overlength): return `invalid_input`.
-- JSON and flags mixed in one call: return `json_conflict`.
-- Unknown JSON fields: return `unknown_parameter`.
-- Malformed JSON or wrong JSON value type: return `invalid_json`.
-- Invalid model: return `model_not_found`, then rerun list_opened and provide valid options.
-- Invalid subsystem path: return `subsystem_not_found` and suggest likely top-level alternatives.
-- Non-subsystem path passed as subsystem: return `invalid_subsystem_type`.
-- Invalid inspect target path: return `block_not_found`.
-- Ambiguous model selection: rerun with explicit `--model`.
-- Unknown/inactive param: switch to `--summary`, `--strict-active`, or `--resolve-effective`.
+1. Topology/hierarchy analysis -> `scan`
+2. Parameter/effective-value analysis -> `inspect`
+3. Session management -> `session`
+4. Capability discovery -> `schema`
 
-For full command matrix and troubleshooting details, read `reference.md`.
-For behavior validation and regression checks, read `test-scenarios.md`.
+Default to shallow scan first, then escalate to recursive/hierarchy only when required.
+
+## Execution Templates
+
+- Shallow scan:
+  - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>"`
+- Recursive scan:
+  - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>" --recursive`
+- Scan with output controls:
+  - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>" --max-blocks 200 --fields "name,type"`
+- Inspect all params with summary:
+  - `python -m skills.simulink_scan.scripts.sl_core inspect --model "<model>" --target "<block>" --param "All" --summary`
+- Inspect with output controls:
+  - `python -m skills.simulink_scan.scripts.sl_core inspect --model "<model>" --target "<block>" --param "All" --max-params 50 --fields "target,values"`
+- Resolve inactive parameter source:
+  - `python -m skills.simulink_scan.scripts.sl_core inspect --model "<model>" --target "<block>" --param "<name>" --resolve-effective`
+
+JSON mode is first-class and mutually exclusive with flag-mode action arguments.
+
+## Recovery Routing
+
+Error-driven next actions:
+
+- `session_required` -> run `session list`, then retry with explicit `--session`.
+- `session_not_found` -> rerun `session list`, copy exact name, retry.
+- `no_session` -> run `matlab.engine.shareEngine` in MATLAB, retry.
+- `model_required` -> rerun `list_opened`, retry with explicit `--model`.
+- `model_not_found` -> rerun `list_opened`, choose existing model.
+- `subsystem_not_found` -> run shallow root scan, select valid subsystem.
+- `invalid_subsystem_type` -> choose a real SubSystem path.
+- `block_not_found` -> run scan, select valid block path.
+- `invalid_json` / `json_conflict` / `unknown_parameter` / `invalid_input` -> correct request payload and retry.
+- `inactive_parameter` -> use `--resolve-effective` or `--strict-active` according to intent.
+
+For full matrix and examples, read `reference.md`.
+
+## Output Discipline
+
+- Ground claims in tool JSON.
+- Keep outputs compact: selected model, scan root, recursive flag, key findings.
+- Do not dump full recursive trees unless explicitly requested.
+
+## Related Docs
+
+- Deep reference: `reference.md`
+- Validation scenarios: `test-scenarios.md`

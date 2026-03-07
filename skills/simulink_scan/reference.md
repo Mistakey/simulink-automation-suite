@@ -92,6 +92,16 @@ Examples:
 - Output clipping:
   - `python -m skills.simulink_scan.scripts.sl_core inspect --model "<model>" --target "<block>" --param "All" --max-params 50 --fields "target,values"`
 
+## Recovery Matrix
+
+| Error Code | Likely Cause | Next Command | Expected Success Signal |
+|---|---|---|---|
+| `session_required` | Multiple MATLAB shared sessions and no explicit target | `python -m skills.simulink_scan.scripts.sl_core session list` then retry with `--session` | action returns payload without `error` |
+| `session_not_found` | Session name is not an exact match | `python -m skills.simulink_scan.scripts.sl_core session list` then copy exact name | action connects to requested session |
+| `model_required` | Multiple opened models and no explicit model | `python -m skills.simulink_scan.scripts.sl_core list_opened` then retry with `--model` | scan/inspect returns selected model |
+| `inactive_parameter` | Requested parameter is inactive under current mask config | retry with `--resolve-effective` or `--strict-active` | response includes effective mapping or explicit inactive failure |
+| `invalid_json` | Malformed JSON or wrong field type | validate payload using `schema`, then retry | request parses and executes |
+
 ## Troubleshooting
 
 - If no shared MATLAB session is found, run `matlab.engine.shareEngine` in MATLAB.
