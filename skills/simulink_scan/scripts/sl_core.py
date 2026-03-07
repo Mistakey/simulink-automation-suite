@@ -14,6 +14,52 @@ from .sl_session import (
 )
 
 
+def _invalid_input(field_name, message):
+    return {
+        "error": "invalid_input",
+        "message": f"Field '{field_name}' {message}.",
+    }
+
+
+def validate_text_field(field_name, value, max_len=256):
+    if value is None:
+        return None
+
+    text = str(value)
+    if not text:
+        return _invalid_input(field_name, "must not be empty")
+    if text != text.strip():
+        return _invalid_input(field_name, "has leading/trailing whitespace")
+    if len(text) > max_len:
+        return _invalid_input(field_name, f"exceeds max length {max_len}")
+    if any(ord(char) < 32 for char in text):
+        return _invalid_input(field_name, "contains control characters")
+    if any(char in text for char in ("?", "#", "%")):
+        return _invalid_input(field_name, "contains reserved characters")
+    return None
+
+
+def validate_args(args):
+    fields = []
+
+    if args.action == "scan":
+        fields = ["model", "subsystem", "session"]
+    elif args.action == "highlight":
+        fields = ["target", "session"]
+    elif args.action == "inspect":
+        fields = ["model", "target", "session", "param"]
+    elif args.action == "list_opened":
+        fields = ["session"]
+    elif args.action == "session" and getattr(args, "session_action", None) == "use":
+        fields = ["name"]
+
+    for field_name in fields:
+        result = validate_text_field(field_name, getattr(args, field_name, None))
+        if result:
+            return result
+    return None
+
+
 def build_parser():
     parser = JsonArgumentParser(description="Simulink AI Bridge Core")
     subparsers = parser.add_subparsers(dest="action", required=True)
@@ -149,6 +195,10 @@ if __name__ == "__main__":
     try:
         parser = build_parser()
         parsed = parser.parse_args()
+        validation_error = validate_args(parsed)
+        if validation_error:
+            emit_json(validation_error)
+            sys.exit(1)
         result = run_action(parsed)
         emit_json(result)
         if isinstance(result, dict) and "error" in result:
