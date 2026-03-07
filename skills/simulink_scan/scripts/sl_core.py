@@ -246,6 +246,11 @@ def parse_request_args(parser, argv=None):
 
 def build_parser():
     parser = JsonArgumentParser(description="Simulink AI Bridge Core")
+    parser.add_argument(
+        "--json",
+        dest="json_payload",
+        help="JSON request payload. Use as a standalone entrypoint and do not mix with flags.",
+    )
     subparsers = parser.add_subparsers(dest="action", required=True)
 
     scan_parser = subparsers.add_parser("scan", help="Read active model topology")

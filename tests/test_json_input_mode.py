@@ -7,6 +7,12 @@ class JsonInputModeTests(unittest.TestCase):
     def setUp(self):
         self.parser = build_parser()
 
+    def test_build_parser_exposes_json_flag(self):
+        option_strings = []
+        for action in self.parser._actions:
+            option_strings.extend(action.option_strings)
+        self.assertIn("--json", option_strings)
+
     def test_parse_request_args_accepts_json_scan_request(self):
         args = parse_request_args(
             self.parser,
