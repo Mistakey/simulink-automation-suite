@@ -9,12 +9,26 @@ This file is optional deep reference for the `simulink-scan` skill.
 
 ## Session Behavior
 
-- Session priority: explicit `--session` > saved active session > first discovered session.
+- Session matching is exact-only.
+- When multiple shared sessions exist, commands that connect to MATLAB require explicit `--session`.
+- Unknown exact session returns `session_not_found`.
 - Session management actions:
   - `python -m skills.simulink_scan.scripts.sl_core session list`
   - `python -m skills.simulink_scan.scripts.sl_core session current`
   - `python -m skills.simulink_scan.scripts.sl_core session use MATLAB_12345`
   - `python -m skills.simulink_scan.scripts.sl_core session clear`
+
+## JSON Input Mode
+
+- `--json` is a first-class entrypoint.
+- `--json` and flag-based action arguments are mutually exclusive.
+- JSON request must be an object with `action` and action-specific fields.
+- Unknown JSON fields return `unknown_parameter`.
+- Wrong JSON field types or malformed payload return `invalid_json`.
+
+Examples:
+- `python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"`
+- `python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"inspect\",\"model\":\"m\",\"target\":\"m/Gain\",\"param\":\"All\",\"summary\":true,\"session\":\"MATLAB_12345\"}"`
 
 ## Scan Actions
 

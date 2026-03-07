@@ -10,6 +10,8 @@ Canonical skill name is `simulink-scan` (module path `skills.simulink_scan` is i
 Decision flow:
 1. Discover models first:
    - `python -m skills.simulink_scan.scripts.sl_core list_opened`
+   - JSON mode alternative:
+     - `python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"list_opened\"}"`
 2. Resolve session strictly:
    - Use exact session names only (no fuzzy matching).
    - If multiple sessions exist for commands that connect to MATLAB, require explicit `--session`.
@@ -21,6 +23,7 @@ Decision flow:
 4. Scan with token control:
    - Default shallow:
      - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>"`
+     - `python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"scan\",\"model\":\"<model>\",\"session\":\"<session>\"}"`
    - Recursive only if user asks deep/internal/hierarchy or shallow is insufficient.
 5. Parameter safety:
    - Prefer `--summary` for overview.
@@ -37,6 +40,9 @@ Recovery rules:
 - Multiple sessions without explicit `--session`: return `session_required`.
 - Non-exact session name: return `session_not_found`.
 - Invalid text fields (`?`, `#`, `%`, control chars, trim mismatch, overlength): return `invalid_input`.
+- JSON and flags mixed in one call: return `json_conflict`.
+- Unknown JSON fields: return `unknown_parameter`.
+- Malformed JSON or wrong JSON value type: return `invalid_json`.
 - Invalid model: rerun list_opened and provide valid options.
 - Invalid subsystem: suggest likely top-level alternatives.
 - Ambiguous model selection: rerun with explicit `--model`.

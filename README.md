@@ -44,6 +44,7 @@ python -m skills.simulink_scan.scripts.sl_core scan --model "gmp_pmsm_sensored_s
   - `invalid_input`
   - `session_required`
   - `session_not_found`
+- `--json` is a first-class request entrypoint and is mutually exclusive with flag-based input.
 
 Examples:
 
@@ -51,6 +52,19 @@ Examples:
 python -m skills.simulink_scan.scripts.sl_core session list
 python -m skills.simulink_scan.scripts.sl_core scan --session "MATLAB_12345" --model "my_model"
 ```
+
+JSON request examples:
+
+```bash
+python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"
+python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"scan\",\"model\":\"my_model\",\"recursive\":true,\"session\":\"MATLAB_12345\"}"
+```
+
+JSON strictness:
+
+- Do not mix `--json` with other action flags.
+- Unknown JSON fields return `unknown_parameter`.
+- Malformed JSON or wrong field types return `invalid_json`.
 
 ## Verification
 
