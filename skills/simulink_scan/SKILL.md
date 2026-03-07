@@ -8,27 +8,33 @@ Reject write/edit requests (set_param, add/delete blocks/lines, save changes).
 Canonical skill name is `simulink-scan` (module path `skills.simulink_scan` is internal only).
 
 Decision flow:
-1. Discover models first:
+1. Discover contract first when needed:
+   - `python -m skills.simulink_scan.scripts.sl_core schema`
+   - JSON mode alternative:
+     - `python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"schema\"}"`
+2. Discover models first:
    - `python -m skills.simulink_scan.scripts.sl_core list_opened`
    - JSON mode alternative:
      - `python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"list_opened\"}"`
-2. Resolve session strictly:
+3. Resolve session strictly:
    - Use exact session names only (no fuzzy matching).
    - If multiple sessions exist for commands that connect to MATLAB, require explicit `--session`.
    - If exact session does not exist, surface `session_not_found`.
    - For malformed text inputs, surface `invalid_input`.
-3. Choose model:
+4. Choose model:
    - Use explicit `--model` when provided.
    - If multiple models exist and none is specified, surface `model_required` and ask for explicit `--model`.
-4. Scan with token control:
+5. Scan with token control:
    - Default shallow:
      - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>"`
      - `python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"scan\",\"model\":\"<model>\",\"session\":\"<session>\"}"`
+   - Use `--max-blocks` and `--fields` to clip/project large outputs.
    - Recursive only if user asks deep/internal/hierarchy or shallow is insufficient.
-5. Parameter safety:
+6. Parameter safety:
    - Prefer `--summary` for overview.
    - Use `--active-only` for effective fields only.
    - Use `--strict-active`/`--resolve-effective` for single-parameter correctness.
+   - Use `--max-params` and `--fields` to clip/project large inspect outputs.
 
 Output rules:
 - Ground all claims in tool JSON outputs.

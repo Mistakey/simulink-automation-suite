@@ -32,6 +32,7 @@ Invoke:
 ## Direct Python Entry (optional)
 
 ```bash
+python -m skills.simulink_scan.scripts.sl_core schema
 python -m skills.simulink_scan.scripts.sl_core list_opened
 python -m skills.simulink_scan.scripts.sl_core scan --model "gmp_pmsm_sensored_sil_mdl"
 ```
@@ -71,8 +72,16 @@ python -m skills.simulink_scan.scripts.sl_core scan --session "MATLAB_12345" --m
 JSON request examples:
 
 ```bash
+python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"schema\"}"
 python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"
 python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"scan\",\"model\":\"my_model\",\"recursive\":true,\"session\":\"MATLAB_12345\"}"
+```
+
+Output controls:
+
+```bash
+python -m skills.simulink_scan.scripts.sl_core scan --model "my_model" --max-blocks 200 --fields "name,type"
+python -m skills.simulink_scan.scripts.sl_core inspect --model "my_model" --target "my_model/Gain" --param "All" --max-params 50 --fields "target,values"
 ```
 
 JSON strictness:

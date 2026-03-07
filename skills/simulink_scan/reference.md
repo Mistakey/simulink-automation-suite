@@ -54,8 +54,14 @@ Common error codes:
 - Wrong JSON field types or malformed payload return `invalid_json`.
 
 Examples:
+- `python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"schema\"}"`
 - `python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"`
 - `python -m skills.simulink_scan.scripts.sl_core --json "{\"action\":\"inspect\",\"model\":\"m\",\"target\":\"m/Gain\",\"param\":\"All\",\"summary\":true,\"session\":\"MATLAB_12345\"}"`
+
+## Schema Action
+
+- `python -m skills.simulink_scan.scripts.sl_core schema`
+- Returns machine-readable action and error-code contracts for agents.
 
 ## Scan Actions
 
@@ -68,6 +74,8 @@ Examples:
   - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>" --subsystem "<subsystem>" --recursive`
 - Hierarchy output:
   - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>" --hierarchy`
+- Output clipping:
+  - `python -m skills.simulink_scan.scripts.sl_core scan --model "<model>" --max-blocks 200 --fields "name,type"`
 
 ## Inspect Actions
 
@@ -81,6 +89,8 @@ Examples:
   - `python -m skills.simulink_scan.scripts.sl_core inspect --model "<model>" --target "<block>" --param "<name>" --strict-active`
 - Resolve effective value:
   - `python -m skills.simulink_scan.scripts.sl_core inspect --model "<model>" --target "<block>" --param "<name>" --resolve-effective`
+- Output clipping:
+  - `python -m skills.simulink_scan.scripts.sl_core inspect --model "<model>" --target "<block>" --param "All" --max-params 50 --fields "target,values"`
 
 ## Troubleshooting
 
