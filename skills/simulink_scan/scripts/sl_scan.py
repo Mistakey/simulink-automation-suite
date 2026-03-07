@@ -3,7 +3,8 @@ from .sl_errors import make_error
 
 
 def get_opened_models(eng):
-    return [str(x) for x in as_list(eng.find_system("Type", "block_diagram"))]
+    models = [str(x) for x in as_list(eng.find_system("Type", "block_diagram"))]
+    return sorted(models)
 
 
 def resolve_scan_root_path(eng, model_name=None, subsystem_path=None):

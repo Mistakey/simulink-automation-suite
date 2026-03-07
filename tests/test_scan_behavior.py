@@ -1,6 +1,6 @@
 import unittest
 
-from skills.simulink_scan.scripts.sl_scan import get_model_structure
+from skills.simulink_scan.scripts.sl_scan import get_model_structure, list_opened_models
 
 
 class FakeScanEngine:
@@ -43,6 +43,17 @@ class FakeScanEngine:
 
 
 class ScanBehaviorTests(unittest.TestCase):
+    def test_list_opened_models_returns_sorted_names(self):
+        eng = FakeScanEngine(
+            models=["z_model", "a_model", "m_model"],
+            active_root="a_model",
+            shallow_blocks={},
+            recursive_blocks={},
+            block_types={},
+        )
+        result = list_opened_models(eng)
+        self.assertEqual(result["models"], ["a_model", "m_model", "z_model"])
+
     def test_multiple_models_without_model_returns_model_required(self):
         eng = FakeScanEngine(
             models=["m1", "m2"],
