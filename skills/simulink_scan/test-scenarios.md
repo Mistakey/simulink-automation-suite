@@ -2,58 +2,26 @@
 
 Use these scenarios to validate skill behavior with and without the skill loaded (RED/GREEN style).
 
-## Scenario 1: Multiple Models, No Explicit Target
+## Scenario 1: Model Disambiguation (`model_required`)
 
 - Prompt: "Scan my model deeply and tell me controller structure"
 - Setup: 2+ opened models
 - Expected:
   - Must run `list_opened` first
   - Must avoid scanning with ambiguous model context
-  - Must surface `model_required` and candidate model alternatives
+  - Must surface `model_required` with candidate model alternatives
   - Must rerun with explicit `--model`
 
-## Scenario 2: Inactive Parameter Misread Risk
-
-- Prompt: "Inspect PolePairs and confirm effective value"
-- Setup: masked block where PolePairs is inactive, Mechanical is active
-- Expected:
-  - Must avoid naive raw-value conclusion
-  - Must use `--strict-active` or `--resolve-effective`
-  - Must mention effective source when resolved
-
-## Scenario 3: Subsystem Path Invalid
-
-- Prompt: "Scan subsystem X recursively"
-- Setup: subsystem name is wrong
-- Expected:
-  - Must return tool error
-  - Must suggest likely alternatives from shallow top-level scan
-
-## Scenario 4: Session Missing
+## Scenario 2: Session Missing (`no_session`)
 
 - Prompt: "Scan model gmp_pmsm_sensored_sil_mdl"
 - Setup: no shared MATLAB session
 - Expected:
-  - Must surface JSON error
-  - Must provide action: run `matlab.engine.shareEngine`
+  - Must surface `no_session`
+  - Must provide recovery action: run `matlab.engine.shareEngine`
+  - Retry succeeds after sharing engine
 
-## Scenario 5: Write Request Rejection
-
-- Prompt: "Set Gain to 5 and add a block"
-- Expected:
-  - Must reject write/edit action under this skill
-  - Must offer read-only analysis alternative
-
-## Scenario 6: Token Discipline Under Large Model
-
-- Prompt: "Analyze entire model"
-- Setup: very large model
-- Expected:
-  - Must do shallow scan first
-  - Must summarize key results
-  - Must avoid full recursive dump unless explicitly requested
-
-## Scenario 7: Session Recovery Chain (`session_required`)
+## Scenario 3: Session Selection Required (`session_required`)
 
 - Prompt: "Scan model m1 now"
 - Setup: 2+ shared MATLAB sessions, no explicit `--session`
@@ -62,20 +30,48 @@ Use these scenarios to validate skill behavior with and without the skill loaded
   - Recovery step runs `session list`
   - Retry uses exact `--session` and succeeds
 
-## Scenario 8: Subsystem Recovery Chain (`subsystem_not_found`)
+## Scenario 4: Session Name Not Found (`session_not_found`)
+
+- Prompt: "Use session matlab and scan model m1"
+- Setup: available session is `MATLAB_12345` only
+- Expected:
+  - First response returns `session_not_found`
+  - Recovery step reruns `session list`
+  - Retry with exact name succeeds
+
+## Scenario 5: Subsystem Recovery (`subsystem_not_found` / `invalid_subsystem_type`)
 
 - Prompt: "Scan subsystem controller/internal recursively"
-- Setup: subsystem path is invalid
+- Setup:
+  - Case A: subsystem path is invalid
+  - Case B: path exists but points to non-SubSystem block
 - Expected:
-  - First response returns `subsystem_not_found`
-  - Recovery step runs shallow root scan
-  - Retry uses a valid subsystem path and succeeds
+  - Case A returns `subsystem_not_found`
+  - Case B returns `invalid_subsystem_type`
+  - Recovery runs shallow root scan and retries with valid subsystem path
 
-## Scenario 9: Inactive Parameter Recovery Chain (`inactive_parameter`)
+## Scenario 6: Inactive Parameter Recovery (`inactive_parameter`)
 
-- Prompt: "Give me the effective PolePairs value"
-- Setup: requested parameter is inactive in current mask config
+- Prompt: "Inspect PolePairs and confirm effective value"
+- Setup: masked block where PolePairs is inactive, Mechanical is active
 - Expected:
   - `--strict-active` returns `inactive_parameter`
   - Recovery step reruns with `--resolve-effective`
   - Output includes resolved effective source/value
+  - Must avoid naive raw-value conclusion
+
+## Scenario 7: Token Discipline Under Large Model
+
+- Prompt: "Analyze entire model"
+- Setup: very large model
+- Expected:
+  - Must do shallow scan first
+  - Must summarize key results
+  - Must avoid full recursive dump unless explicitly requested
+
+## Scenario 8: Write Request Rejection
+
+- Prompt: "Set Gain to 5 and add a block"
+- Expected:
+  - Must reject write/edit action under this skill
+  - Must offer read-only analysis alternative
