@@ -1,6 +1,7 @@
 # Simulink Scan Skill Reference
 
 This file is optional deep reference for the `simulink-scan` skill.
+The skill belongs to plugin `simulink-automation-suite`, which may include additional non-scan skills in future releases.
 
 ## JSON Contract
 
@@ -106,4 +107,3 @@ Examples:
 
 - If no shared MATLAB session is found, run `matlab.engine.shareEngine` in MATLAB.
 - If `matlab.engine` import fails, install/configure MATLAB Engine for Python in the active environment.
-

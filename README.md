@@ -1,15 +1,24 @@
 # Simulink Automation Suite
 
-This repository is a Claude Code plugin focused on read-only Simulink analysis via MATLAB Engine for Python.
-Canonical plugin/skill name: `simulink-scan`.
-Internal Python module path: `skills.simulink_scan` (underscore is module naming only).
+This repository is a Claude Code plugin for Simulink automation workflows via MATLAB Engine for Python.
+Canonical plugin name: `simulink-automation-suite`.
+Current shipped skill: `simulink-scan` (read-only analysis).
+Internal Python module path for the current skill runtime: `skills.simulink_scan` (underscore is module naming only).
 
 ## Plugin Root
 
 - Manifest: `.claude-plugin/plugin.json`
-- Skill entry: `skills/simulink_scan/SKILL.md`
-- Skill deep reference: `skills/simulink_scan/reference.md`
-- Runtime scripts: `skills/simulink_scan/scripts/`
+- Current skill entry: `skills/simulink_scan/SKILL.md`
+- Current skill deep reference: `skills/simulink_scan/reference.md`
+- Current runtime scripts: `skills/simulink_scan/scripts/`
+
+## Suite Positioning
+
+- Product boundary: this plugin is the Simulink automation suite.
+- Skill boundary: each capability can be implemented as an independent skill.
+- Current capability set: scan/inspect/session via `simulink-scan`.
+- Planned capability growth: future skills can add edit/build/repair workflows without renaming the plugin.
+- This release does not split shared Python core yet; runtime refactoring and MCP-core migration are future work.
 
 ## Install and Run
 
@@ -23,10 +32,16 @@ or
 claude plugin install . --scope project
 ```
 
+## GitHub Marketplace Publishing
+
+This repository now includes `.claude-plugin/marketplace.json` so it can be used as a GitHub-hosted Claude Code marketplace source.
+Marketplace name: `simulink-automation-marketplace`.
+Published plugin entry: `simulink-automation-suite` from repo root (`source: "./"`).
+
 Invoke:
 
 ```text
-/simulink-scan:simulink-scan Scan gmp_pmsm_sensored_sil_mdl recursively and focus on controller subsystems.
+/simulink-automation-suite:simulink-scan Scan gmp_pmsm_sensored_sil_mdl recursively and focus on controller subsystems.
 ```
 
 ## Direct Python Entry (optional)
@@ -102,4 +117,3 @@ claude plugin validate .
 - stdout is JSON; stderr is human guidance.
 - If no MATLAB shared session exists, run `matlab.engine.shareEngine` in MATLAB.
 - This project is in development-stage versioning.
-

@@ -6,6 +6,7 @@ description: Use when analyzing Simulink model topology, subsystem structure, or
 Use this skill only for Simulink read-only analysis.
 Reject write/edit requests (`set_param`, add/delete blocks/lines, save changes).
 Canonical skill name is `simulink-scan` (module path `skills.simulink_scan` is internal only).
+This skill is one capability inside plugin `simulink-automation-suite`, which is designed to host additional skills over time.
 
 ## Preflight
 
@@ -71,4 +72,3 @@ For full matrix and examples, read `reference.md`.
 
 - Deep reference: `reference.md`
 - Validation scenarios: `test-scenarios.md`
-

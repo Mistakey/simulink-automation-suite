@@ -1,0 +1,37 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "simulink-automation-marketplace",
+  "description": "Marketplace manifest for publishing the Simulink automation suite plugin from this repository.",
+  "owner": {
+    "name": "kelch"
+  },
+  "metadata": {
+    "description": "Simulink automation suite marketplace for Claude Code plugins."
+  },
+  "plugins": [
+    {
+      "name": "simulink-automation-suite",
+      "source": "./",
+      "description": "Simulink automation suite plugin for Claude Code with extensible multi-skill architecture.",
+      "version": "1.1.0",
+      "author": {
+        "name": "kelch"
+      },
+      "keywords": [
+        "simulink",
+        "matlab",
+        "automation",
+        "claude-code",
+        "agent-first",
+        "scan"
+      ],
+      "category": "workflow",
+      "tags": [
+        "simulink",
+        "matlab",
+        "automation",
+        "workflow"
+      ]
+    }
+  ]
+}
