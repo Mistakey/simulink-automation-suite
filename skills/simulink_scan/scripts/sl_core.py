@@ -47,7 +47,9 @@ def validate_args(args):
     elif args.action == "highlight":
         fields = ["target", "session"]
     elif args.action == "inspect":
-        fields = ["model", "target", "session", "param"]
+        # Parameter names are API-level identifiers and may contain symbols.
+        # Keep strict hardening on path/session-like fields only.
+        fields = ["model", "target", "session"]
     elif args.action == "list_opened":
         fields = ["session"]
     elif args.action == "session" and getattr(args, "session_action", None) == "use":
@@ -161,6 +163,10 @@ def build_parser():
 
 
 def run_action(args):
+    validation_error = validate_args(args)
+    if validation_error:
+        return validation_error
+
     if args.action == "session":
         if args.session_action == "list":
             return command_session_list()
@@ -207,10 +213,6 @@ if __name__ == "__main__":
     try:
         parser = build_parser()
         parsed = parser.parse_args()
-        validation_error = validate_args(parsed)
-        if validation_error:
-            emit_json(validation_error)
-            sys.exit(1)
         result = run_action(parsed)
         emit_json(result)
         if isinstance(result, dict) and "error" in result:

@@ -1,6 +1,11 @@
+import argparse
 import unittest
 
-from skills.simulink_scan.scripts.sl_core import validate_text_field
+from skills.simulink_scan.scripts.sl_core import (
+    run_action,
+    validate_args,
+    validate_text_field,
+)
 
 
 class InputValidationTests(unittest.TestCase):
@@ -23,6 +28,26 @@ class InputValidationTests(unittest.TestCase):
 
     def test_accepts_normal_text(self):
         result = validate_text_field("model", "my_model")
+        self.assertIsNone(result)
+
+    def test_run_action_applies_validation_for_library_callers(self):
+        args = argparse.Namespace(action="highlight", target="a?b", session=None)
+        result = run_action(args)
+        self.assertEqual(result["error"], "invalid_input")
+
+    def test_validate_args_does_not_overrestrict_inspect_param(self):
+        args = argparse.Namespace(
+            action="inspect",
+            model=None,
+            target="m/b",
+            param="Param%Name",
+            active_only=False,
+            strict_active=False,
+            resolve_effective=False,
+            summary=False,
+            session=None,
+        )
+        result = validate_args(args)
         self.assertIsNone(result)
 
 

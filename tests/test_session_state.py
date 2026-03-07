@@ -5,6 +5,18 @@ from skills.simulink_scan.scripts import sl_session
 
 
 class SessionStateTests(unittest.TestCase):
+    def test_session_current_does_not_activate_saved_when_multiple_sessions(self):
+        with mock.patch.object(
+            sl_session, "discover_sessions", return_value=["MATLAB_A", "MATLAB_B"]
+        ), mock.patch.object(
+            sl_session, "get_saved_session_name", return_value="MATLAB_A"
+        ):
+            result = sl_session.command_session_current()
+
+        self.assertIsNone(result["active_session"])
+        self.assertEqual(result["active_source"], "required")
+        self.assertEqual(result["configured_session"], "MATLAB_A")
+
     def test_resolve_target_session_requires_explicit_when_multiple_sessions(self):
         with mock.patch.object(
             sl_session, "discover_sessions", return_value=["MATLAB_A", "MATLAB_B"]

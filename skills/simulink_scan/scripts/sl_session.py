@@ -96,8 +96,6 @@ def resolve_session_alias(query, sessions):
 
 def get_effective_session(sessions):
     saved = get_saved_session_name()
-    if saved and saved in sessions:
-        return saved, "saved", saved
     if len(sessions) == 1:
         return sessions[0], "single", saved
     if sessions:
