@@ -60,6 +60,18 @@ def validate_args(args):
     return None
 
 
+def map_runtime_error(exc):
+    code = str(exc).strip()
+    messages = {
+        "session_required": "Multiple MATLAB sessions found. Pass --session with an exact session name.",
+        "session_not_found": "Session not found. Pass an exact session name from `session list` output.",
+        "no_session": "No shared MATLAB session found. Ask user to run matlab.engine.shareEngine in MATLAB.",
+    }
+    if code in messages:
+        return {"error": code, "message": messages[code]}
+    return {"error": "runtime_error", "message": str(exc)}
+
+
 def build_parser():
     parser = JsonArgumentParser(description="Simulink AI Bridge Core")
     subparsers = parser.add_subparsers(dest="action", required=True)
@@ -207,7 +219,7 @@ if __name__ == "__main__":
         emit_json({"error": str(exc)})
         sys.exit(1)
     except RuntimeError as exc:
-        emit_json({"error": str(exc)})
+        emit_json(map_runtime_error(exc))
         sys.exit(1)
     except Exception as exc:
         emit_json({"error": f"Unexpected error: {exc}"})

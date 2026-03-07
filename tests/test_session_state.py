@@ -21,6 +21,7 @@ class SessionStateTests(unittest.TestCase):
             result = sl_session.command_session_use("matlab")
 
         self.assertEqual(result["error"], "session_not_found")
+        self.assertIn("message", result)
         self.assertEqual(result["sessions"], ["MATLAB_12345"])
 
     def test_session_use_write_failure_returns_machine_error(self):
