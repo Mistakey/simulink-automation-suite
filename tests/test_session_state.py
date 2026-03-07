@@ -5,6 +5,22 @@ from skills.simulink_scan.scripts import sl_session
 
 
 class SessionStateTests(unittest.TestCase):
+    def test_get_matlab_engine_import_failure_returns_engine_unavailable(self):
+        with mock.patch("importlib.import_module", side_effect=ImportError("missing")):
+            with self.assertRaises(RuntimeError) as context:
+                sl_session._get_matlab_engine()
+
+        self.assertEqual(str(context.exception), "engine_unavailable")
+
+    def test_discover_sessions_propagates_engine_unavailable(self):
+        with mock.patch.object(
+            sl_session, "_get_matlab_engine", side_effect=RuntimeError("engine_unavailable")
+        ):
+            with self.assertRaises(RuntimeError) as context:
+                sl_session.discover_sessions()
+
+        self.assertEqual(str(context.exception), "engine_unavailable")
+
     def test_session_current_does_not_activate_saved_when_multiple_sessions(self):
         with mock.patch.object(
             sl_session, "discover_sessions", return_value=["MATLAB_A", "MATLAB_B"]
