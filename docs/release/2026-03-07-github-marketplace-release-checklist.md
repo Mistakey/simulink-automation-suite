@@ -1,7 +1,7 @@
 # GitHub Marketplace Release Checklist
 
 Scope: release `simulink-automation-suite` through GitHub-hosted Claude Code marketplace.
-Current manifest version in repo: `1.1.0`.
+Current manifest version in repo: `1.2.0`.
 
 ## 1. Version Sync
 

@@ -13,7 +13,7 @@
       "name": "simulink-automation-suite",
       "source": "./",
       "description": "Simulink automation suite plugin for Claude Code with extensible multi-skill architecture.",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "author": {
         "name": "kelch"
       },
