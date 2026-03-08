@@ -14,6 +14,33 @@ Simulink Automation Suite 是一个基于 MATLAB Engine for Python 的 Claude Co
 
 ---
 
+## 工具定位
+
+Simulink Automation Suite 的核心定位，是让 Simulink 分析能力在 Claude Code 中具备 Agent 原生可调用性：
+
+- 以确定性、机器可读的结果暴露模型上下文。
+- 让 AI 基于真实模型拓扑与参数进行分析，而不是仅凭截图理解。
+- 通过裁剪与字段投影控制输出体积，兼顾实时性与 token 成本。
+
+一句话：先让 AI 读懂模型，再让 AI 辅助开发分析。
+
+![工具定位图](docs/assets/readme/positioning-ai-plugin-simulink.png)
+
+---
+
+## 为什么需要这个插件
+
+常见的 AI+Simulink 使用方式通常是这两类：
+
+1. 截图问答：接入快，但理解深度受限，且依赖视觉能力。
+2. 导出后解析：信息更完整，但流程重、反馈慢、token 开销高。
+
+这个插件提供第三条路径：让 Agent 直接基于结构化、可运行时调用的模型能力完成分析。
+
+![能力总览图](docs/assets/readme/capability-overview.png)
+
+---
+
 ## 工作方式
 
 1. Claude Code 在 Simulink 分析场景下调用 `simulink-scan` 技能。
@@ -68,6 +95,14 @@ matlab.engine.shareEngine
 ```bash
 /plugin list simulink-automation-suite@simulink-automation-marketplace
 ```
+
+---
+
+## 使用示例（跳转）
+
+完整的 Claude Code Prompt 示例与截图已放在单独页面（中英合并，避免 README 过重）：
+
+- [docs/examples/claude-code-scenarios.md](docs/examples/claude-code-scenarios.md)
 
 ---
 
@@ -182,6 +217,8 @@ claude plugin validate .
 
 ## 路线图
 
-- 保持 `simulink-automation-suite` 作为稳定插件标识。
-- 保持 `simulink-scan` 聚焦只读分析。
-- 后续通过新增技能扩展到 edit/build/repair，且不改插件名。
+- **当前阶段（v1.2.x）：** 完成只读分析基础能力，包括 `schema`、`session`、`list_opened`、`scan`、`connections`、`inspect`、`highlight`，并强化面向 Agent 的严格契约。
+- **下一阶段：** 在保持可预测契约与恢复链路的前提下，增强 Agent 工作流编排与可靠性。
+- **后续阶段：** 通过新增技能扩展到 edit/build/repair 场景，且保持插件标识 `simulink-automation-suite` 不变。
+
+![路线图](docs/assets/readme/roadmap.png)

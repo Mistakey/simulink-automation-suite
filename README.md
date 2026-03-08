@@ -14,6 +14,33 @@ Simulink Automation Suite is a Claude Code plugin for read-only Simulink automat
 
 ---
 
+## Positioning
+
+Simulink Automation Suite is built to make Simulink analysis agent-native in Claude Code:
+
+- It exposes Simulink context as deterministic, machine-readable tool outputs.
+- It lets AI reason on real model topology/parameters instead of screenshots.
+- It keeps workflows real-time and token-efficient with clipping/projection controls.
+
+In short: the plugin helps AI *understand first, then assist*.
+
+![Positioning diagram](docs/assets/readme/positioning-ai-plugin-simulink.png)
+
+---
+
+## Why This Plugin Exists
+
+Common AI+Simulink workflows are often one of these:
+
+1. Screenshot-based discussion: fast but shallow, visual-only understanding.
+2. Export-and-parse flow: richer context but heavy, delayed, and token-expensive.
+
+This plugin provides a third path: direct, structured, runtime model analysis for agents.
+
+![Capability overview](docs/assets/readme/capability-overview.png)
+
+---
+
 ## How It Works
 
 1. Claude Code invokes the `simulink-scan` skill for Simulink analysis tasks.
@@ -68,6 +95,14 @@ Troubleshooting:
 ```bash
 /plugin list simulink-automation-suite@simulink-automation-marketplace
 ```
+
+---
+
+## Scenario Examples
+
+For end-to-end Claude Code prompts and screenshots (single bilingual page), see:
+
+- [docs/examples/claude-code-scenarios.md](docs/examples/claude-code-scenarios.md)
 
 ---
 
@@ -182,6 +217,8 @@ claude plugin validate .
 
 ## Roadmap
 
-- Keep `simulink-automation-suite` as the stable plugin identity.
-- Keep `simulink-scan` focused on read-only analysis.
-- Add future skills (edit/build/repair) without renaming the plugin.
+- **Current (v1.2.x):** solid read-only analysis foundation with `schema`, `session`, `list_opened`, `scan`, `connections`, `inspect`, `highlight`, plus strict agent-facing contracts.
+- **Next:** strengthen agent workflow orchestration and reliability while preserving deterministic contracts and recovery paths.
+- **Future:** add new skills for edit/build/repair scenarios without renaming the plugin (`simulink-automation-suite` remains the stable identity).
+
+![Roadmap](docs/assets/readme/roadmap.png)
