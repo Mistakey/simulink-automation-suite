@@ -84,3 +84,13 @@ Use these scenarios to validate skill behavior with and without the skill loaded
   - `highlight` returns `block_not_found`
   - Recovery step runs `scan` to locate valid block path
   - Retry highlight with valid `--target` succeeds
+
+## Scenario 10: connections-Based Upstream/Downstream Recovery
+
+- Prompt: "Locate and highlight angle compensation block, then list key upstream and downstream modules."
+- Setup: target block exists but exact path is unknown to the caller
+- Expected:
+  - First step uses `scan` to resolve candidate block paths
+  - Then runs `connections --target "<resolved_path>" --direction both --depth 1 --detail summary`
+  - Returns compact upstream/downstream module lists without custom MATLAB scripts
+  - Optional escalation to `--detail ports` or `--detail lines` when requested

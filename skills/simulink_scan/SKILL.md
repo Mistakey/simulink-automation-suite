@@ -27,9 +27,10 @@ This skill is one capability inside plugin `simulink-automation-suite`, which is
 
 1. Topology/hierarchy analysis -> `scan`
 2. Parameter/effective-value analysis -> `inspect`
-3. Visual location in Simulink -> `highlight`
-4. Session management -> `session`
-5. Capability discovery -> `schema`
+3. Upstream/downstream signal relationship analysis -> `connections`
+4. Visual location in Simulink -> `highlight`
+5. Session management -> `session`
+6. Capability discovery -> `schema`
 
 Default to shallow scan first, then escalate to recursive/hierarchy only when required.
 
@@ -47,6 +48,8 @@ Default to shallow scan first, then escalate to recursive/hierarchy only when re
   - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "All" --max-params 50 --fields "target,values"`
 - Resolve inactive parameter source:
   - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "<name>" --resolve-effective`
+- Analyze upstream/downstream key modules:
+  - `python -m skills.simulink_scan connections --target "<block>" --direction both --depth 1 --detail summary`
 - Highlight block in Simulink UI:
   - `python -m skills.simulink_scan highlight --target "<block>"`
 

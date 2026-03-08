@@ -61,6 +61,17 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("## Highlight Action", text)
         self.assertIn("skills.simulink_scan highlight", text)
 
+    def test_skill_and_reference_document_connections_action(self):
+        skill_text = SKILL_PATH.read_text(encoding="utf-8")
+        reference_text = REFERENCE_PATH.read_text(encoding="utf-8")
+        self.assertIn("connections", skill_text)
+        self.assertIn("## Connections Action", reference_text)
+        self.assertIn("skills.simulink_scan connections", reference_text)
+
+    def test_readme_mentions_connections_action(self):
+        text = README_PATH.read_text(encoding="utf-8")
+        self.assertIn("`connections`", text)
+
     def test_scenarios_include_recovery_chain_examples(self):
         text = SCENARIOS_PATH.read_text(encoding="utf-8")
         required_tokens = [
@@ -69,6 +80,7 @@ class DocsContractTests(unittest.TestCase):
             "subsystem_not_found",
             "inactive_parameter",
             "highlight",
+            "connections",
         ]
         for token in required_tokens:
             self.assertIn(token, text)

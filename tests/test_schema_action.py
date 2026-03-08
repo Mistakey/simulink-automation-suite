@@ -19,6 +19,7 @@ class SchemaActionTests(unittest.TestCase):
         args = parse_request_args(self.parser, ["schema"])
         result = run_action(args)
         self.assertIn("actions", result)
+        self.assertIn("connections", result["actions"])
         self.assertIn("scan", result["actions"])
         self.assertIn("inspect", result["actions"])
         self.assertIn("session", result["actions"])

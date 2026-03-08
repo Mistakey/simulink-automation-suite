@@ -18,7 +18,7 @@ Simulink Automation Suite is a Claude Code plugin for read-only Simulink automat
 
 1. Claude Code invokes the `simulink-scan` skill for Simulink analysis tasks.
 2. The skill resolves MATLAB session context (`session list/use/current/clear`) with exact-name matching.
-3. It executes one of the core actions: `schema`, `list_opened`, `scan`, `inspect`, or `highlight`.
+3. It executes one of the core actions: `schema`, `list_opened`, `scan`, `connections`, `inspect`, or `highlight`.
 4. Results are returned as machine-readable JSON on `stdout`.
 5. Failures use stable error codes for reliable agent recovery.
 
@@ -26,7 +26,7 @@ Simulink Automation Suite is a Claude Code plugin for read-only Simulink automat
 
 ## Prerequisites
 
-Before using session-bound actions (`list_opened`, `scan`, `inspect`, `highlight`):
+Before using session-bound actions (`list_opened`, `scan`, `connections`, `inspect`, `highlight`):
 
 1. Install and activate MATLAB on your machine.
 2. Install MATLAB Engine for Python in the same Python interpreter that runs this plugin.
@@ -78,6 +78,7 @@ Troubleshooting:
 | `schema` | Return machine-readable command contract | `python -m skills.simulink_scan schema` |
 | `list_opened` | List currently opened Simulink models | `python -m skills.simulink_scan list_opened` |
 | `scan` | Read model/subsystem topology | `python -m skills.simulink_scan scan --model "my_model" --recursive` |
+| `connections` | Read upstream/downstream key modules for a target block | `python -m skills.simulink_scan connections --target "my_model/Gain" --direction both --depth 1 --detail summary` |
 | `inspect` | Read block parameters/effective values | `python -m skills.simulink_scan inspect --model "my_model" --target "my_model/Gain" --param "All"` |
 | `highlight` | Highlight a block in Simulink (UI-only, no model mutation) | `python -m skills.simulink_scan highlight --target "my_model/Gain"` |
 | `session` | Manage active MATLAB shared session | `python -m skills.simulink_scan session list` |

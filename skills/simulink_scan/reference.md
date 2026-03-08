@@ -94,6 +94,20 @@ Examples:
 - Output clipping:
   - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "All" --max-params 50 --fields "target,values"`
 
+## Connections Action
+
+- Default concise neighborhood (both directions, one hop):
+  - `python -m skills.simulink_scan connections --target "<block>"`
+- Upstream-only with depth expansion:
+  - `python -m skills.simulink_scan connections --target "<block>" --direction upstream --depth 2 --detail summary`
+- Port-level details:
+  - `python -m skills.simulink_scan connections --target "<block>" --detail ports`
+- Line-level details with optional handles:
+  - `python -m skills.simulink_scan connections --target "<block>" --detail lines --include-handles`
+- JSON request:
+  - `python -m skills.simulink_scan --json "{\"action\":\"connections\",\"target\":\"<block>\",\"direction\":\"both\",\"depth\":1,\"detail\":\"summary\"}"`
+- Invalid target path returns `block_not_found`.
+
 ## Highlight Action
 
 - Highlight is supported as a read-only visual locator (implemented via `hilite_system`, no model mutation).

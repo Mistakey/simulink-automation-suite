@@ -22,6 +22,20 @@ class JsonInputModeTests(unittest.TestCase):
         self.assertEqual(args.model, "demo")
         self.assertTrue(args.recursive)
 
+    def test_parse_request_args_accepts_json_connections_request(self):
+        args = parse_request_args(
+            self.parser,
+            [
+                "--json",
+                '{"action":"connections","target":"m1/Gain","direction":"both","depth":1,"detail":"summary"}',
+            ],
+        )
+        self.assertEqual(args.action, "connections")
+        self.assertEqual(args.target, "m1/Gain")
+        self.assertEqual(args.direction, "both")
+        self.assertEqual(args.depth, 1)
+        self.assertEqual(args.detail, "summary")
+
     def test_parse_request_args_rejects_invalid_json_payload(self):
         with self.assertRaises(ValueError) as context:
             parse_request_args(self.parser, ["--json", "{invalid-json"])

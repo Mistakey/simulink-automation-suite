@@ -3,6 +3,7 @@ import json
 from .sl_common import JsonArgumentParser, emit_json
 from .sl_errors import make_error
 from .sl_scan import (
+    get_block_connections,
     get_model_structure,
     highlight_block,
     inspect_block,
@@ -26,6 +27,15 @@ _JSON_FIELD_TYPES = {
         "session": str,
         "max_blocks": int,
         "fields": list,
+    },
+    "connections": {
+        "model": str,
+        "target": str,
+        "direction": str,
+        "depth": int,
+        "detail": str,
+        "include_handles": bool,
+        "session": str,
     },
     "highlight": {"target": str, "session": str},
     "inspect": {
@@ -96,6 +106,8 @@ def validate_args(args):
 
     if args.action == "scan":
         fields = ["model", "subsystem", "session"]
+    elif args.action == "connections":
+        fields = ["model", "target", "session"]
     elif args.action == "highlight":
         fields = ["target", "session"]
     elif args.action == "inspect":
@@ -116,6 +128,18 @@ def validate_args(args):
         max_blocks = getattr(args, "max_blocks", None)
         if max_blocks is not None and max_blocks <= 0:
             return _invalid_input("max_blocks", "must be greater than zero")
+    if args.action == "connections":
+        depth = getattr(args, "depth", None)
+        if depth is not None and depth <= 0:
+            return _invalid_input("depth", "must be greater than zero")
+        direction = getattr(args, "direction", "both")
+        if direction not in {"upstream", "downstream", "both"}:
+            return _invalid_input(
+                "direction", "must be one of upstream,downstream,both"
+            )
+        detail = getattr(args, "detail", "summary")
+        if detail not in {"summary", "ports", "lines"}:
+            return _invalid_input("detail", "must be one of summary,ports,lines")
     if args.action == "inspect":
         max_params = getattr(args, "max_params", None)
         if max_params is not None and max_params <= 0:
@@ -316,6 +340,7 @@ def build_schema_payload():
         "actions": {
             "schema": {"fields": {}},
             "scan": {"fields": _JSON_FIELD_TYPES["scan"]},
+            "connections": {"fields": _JSON_FIELD_TYPES["connections"]},
             "highlight": {"fields": _JSON_FIELD_TYPES["highlight"]},
             "inspect": {"fields": _JSON_FIELD_TYPES["inspect"]},
             "list_opened": {"fields": _JSON_FIELD_TYPES["list_opened"]},
@@ -362,6 +387,40 @@ def build_parser():
     scan_parser.add_argument(
         "--fields",
         help="Comma-separated block fields to return (for example: name,type)",
+    )
+
+    connections_parser = subparsers.add_parser(
+        "connections", help="Read upstream/downstream block connections"
+    )
+    connections_parser.add_argument(
+        "--model", help="Optional specific model name from list_opened output"
+    )
+    connections_parser.add_argument(
+        "--target", required=True, help="Block path to analyze"
+    )
+    connections_parser.add_argument("--session", help="Session override for this command")
+    connections_parser.add_argument(
+        "--direction",
+        default="both",
+        choices=["upstream", "downstream", "both"],
+        help="Traversal direction from target block",
+    )
+    connections_parser.add_argument(
+        "--depth",
+        type=int,
+        default=1,
+        help="Traversal depth in hops (must be greater than zero)",
+    )
+    connections_parser.add_argument(
+        "--detail",
+        default="summary",
+        choices=["summary", "ports", "lines"],
+        help="Output detail level",
+    )
+    connections_parser.add_argument(
+        "--include-handles",
+        action="store_true",
+        help="Include line handles in lines detail output",
     )
 
     highlight_parser = subparsers.add_parser("highlight", help="Highlight a block")
@@ -475,6 +534,16 @@ def run_action(args):
             hierarchy=getattr(args, "hierarchy", False),
             max_blocks=getattr(args, "max_blocks", None),
             fields=parsed_fields,
+        )
+    if args.action == "connections":
+        return get_block_connections(
+            eng,
+            block_path=args.target,
+            model_name=getattr(args, "model", None),
+            direction=getattr(args, "direction", "both"),
+            depth=getattr(args, "depth", 1),
+            detail=getattr(args, "detail", "summary"),
+            include_handles=getattr(args, "include_handles", False),
         )
     if args.action == "highlight":
         return highlight_block(eng, args.target)

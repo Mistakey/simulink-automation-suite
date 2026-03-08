@@ -50,6 +50,34 @@ class InputValidationTests(unittest.TestCase):
         result = validate_args(args)
         self.assertIsNone(result)
 
+    def test_validate_args_rejects_invalid_connections_direction(self):
+        args = argparse.Namespace(
+            action="connections",
+            model=None,
+            target="m/b",
+            session=None,
+            direction="sideways",
+            depth=1,
+            detail="summary",
+            include_handles=False,
+        )
+        result = validate_args(args)
+        self.assertEqual(result["error"], "invalid_input")
+
+    def test_validate_args_rejects_non_positive_connections_depth(self):
+        args = argparse.Namespace(
+            action="connections",
+            model=None,
+            target="m/b",
+            session=None,
+            direction="both",
+            depth=0,
+            detail="summary",
+            include_handles=False,
+        )
+        result = validate_args(args)
+        self.assertEqual(result["error"], "invalid_input")
+
 
 if __name__ == "__main__":
     unittest.main()
