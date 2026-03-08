@@ -74,6 +74,24 @@ class InputValidationTests(unittest.TestCase):
             depth=0,
             detail="summary",
             include_handles=False,
+            max_edges=None,
+            fields=None,
+        )
+        result = validate_args(args)
+        self.assertEqual(result["error"], "invalid_input")
+
+    def test_validate_args_rejects_non_positive_connections_max_edges(self):
+        args = argparse.Namespace(
+            action="connections",
+            model=None,
+            target="m/b",
+            session=None,
+            direction="both",
+            depth=1,
+            detail="ports",
+            include_handles=False,
+            max_edges=0,
+            fields=None,
         )
         result = validate_args(args)
         self.assertEqual(result["error"], "invalid_input")

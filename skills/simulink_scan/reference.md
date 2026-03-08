@@ -104,8 +104,10 @@ Examples:
   - `python -m skills.simulink_scan connections --target "<block>" --detail ports`
 - Line-level details with optional handles:
   - `python -m skills.simulink_scan connections --target "<block>" --detail lines --include-handles`
+- Output clipping and projection:
+  - `python -m skills.simulink_scan connections --target "<block>" --detail ports --max-edges 50 --fields "target,edges,total_edges,truncated"`
 - JSON request:
-  - `python -m skills.simulink_scan --json "{\"action\":\"connections\",\"target\":\"<block>\",\"direction\":\"both\",\"depth\":1,\"detail\":\"summary\"}"`
+  - `python -m skills.simulink_scan --json "{\"action\":\"connections\",\"target\":\"<block>\",\"direction\":\"both\",\"depth\":1,\"detail\":\"summary\",\"max_edges\":50,\"fields\":[\"target\",\"upstream_blocks\",\"downstream_blocks\"]}"`
 - Invalid target path returns `block_not_found`.
 
 ## Highlight Action

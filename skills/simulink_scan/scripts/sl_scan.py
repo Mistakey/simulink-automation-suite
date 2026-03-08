@@ -333,6 +333,8 @@ def get_block_connections(
     depth=1,
     detail="summary",
     include_handles=False,
+    max_edges=None,
+    fields=None,
 ):
     resolved_target = resolve_inspect_target_path(eng, block_path, model_name)
     if "error" in resolved_target:
@@ -425,9 +427,21 @@ def get_block_connections(
             "downstream_blocks": sorted(downstream_blocks),
         }
         if detail in {"ports", "lines"}:
-            output["edges"] = _project_connection_edges(edges, detail, include_handles)
+            projected_edges = _project_connection_edges(edges, detail, include_handles)
+            total_edges = len(projected_edges)
+            truncated = False
+            if (
+                isinstance(max_edges, int)
+                and max_edges >= 0
+                and total_edges > max_edges
+            ):
+                projected_edges = projected_edges[:max_edges]
+                truncated = True
+            output["edges"] = projected_edges
+            output["total_edges"] = total_edges
+            output["truncated"] = truncated
 
-        return output
+        return _project_top_level_fields(output, fields)
     except Exception as exc:
         return make_error(
             "runtime_error",

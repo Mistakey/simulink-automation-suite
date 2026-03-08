@@ -27,7 +27,7 @@ class JsonInputModeTests(unittest.TestCase):
             self.parser,
             [
                 "--json",
-                '{"action":"connections","target":"m1/Gain","direction":"both","depth":1,"detail":"summary"}',
+                '{"action":"connections","target":"m1/Gain","direction":"both","depth":1,"detail":"summary","max_edges":20,"fields":["target","edges"]}',
             ],
         )
         self.assertEqual(args.action, "connections")
@@ -35,6 +35,19 @@ class JsonInputModeTests(unittest.TestCase):
         self.assertEqual(args.direction, "both")
         self.assertEqual(args.depth, 1)
         self.assertEqual(args.detail, "summary")
+        self.assertEqual(args.max_edges, 20)
+        self.assertEqual(args.fields, "target,edges")
+
+    def test_parse_request_args_rejects_wrong_connections_include_handles_type(self):
+        with self.assertRaises(ValueError) as context:
+            parse_request_args(
+                self.parser,
+                [
+                    "--json",
+                    '{"action":"connections","target":"m1/Gain","include_handles":"yes"}',
+                ],
+            )
+        self.assertIn("invalid_json", str(context.exception))
 
     def test_parse_request_args_rejects_invalid_json_payload(self):
         with self.assertRaises(ValueError) as context:

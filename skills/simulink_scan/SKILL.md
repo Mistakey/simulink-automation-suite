@@ -50,6 +50,8 @@ Default to shallow scan first, then escalate to recursive/hierarchy only when re
   - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "<name>" --resolve-effective`
 - Analyze upstream/downstream key modules:
   - `python -m skills.simulink_scan connections --target "<block>" --direction both --depth 1 --detail summary`
+- Analyze connections with clipping/projection:
+  - `python -m skills.simulink_scan connections --target "<block>" --detail ports --max-edges 50 --fields "target,edges,total_edges,truncated"`
 - Highlight block in Simulink UI:
   - `python -m skills.simulink_scan highlight --target "<block>"`
 

@@ -20,40 +20,221 @@ from .sl_session import (
 _JSON_FIELD_TYPES = {
     "schema": {},
     "scan": {
-        "model": str,
-        "subsystem": str,
-        "recursive": bool,
-        "hierarchy": bool,
-        "session": str,
-        "max_blocks": int,
-        "fields": list,
+        "model": {
+            "type": "string",
+            "required": False,
+            "default": None,
+            "description": "Optional specific model name from list_opened output.",
+        },
+        "subsystem": {
+            "type": "string",
+            "required": False,
+            "default": None,
+            "description": "Optional subsystem path under model.",
+        },
+        "recursive": {
+            "type": "boolean",
+            "required": False,
+            "default": False,
+            "description": "Recursively scan all nested blocks under scan root.",
+        },
+        "hierarchy": {
+            "type": "boolean",
+            "required": False,
+            "default": False,
+            "description": "Include hierarchy tree in output (implies recursive).",
+        },
+        "session": {
+            "type": "string",
+            "required": False,
+            "default": None,
+            "description": "Session override for this command.",
+        },
+        "max_blocks": {
+            "type": "integer",
+            "required": False,
+            "default": None,
+            "description": "Limit number of block entries returned.",
+        },
+        "fields": {
+            "type": "array",
+            "items": "string",
+            "required": False,
+            "default": None,
+            "description": "Projected block fields to include.",
+        },
     },
     "connections": {
-        "model": str,
-        "target": str,
-        "direction": str,
-        "depth": int,
-        "detail": str,
-        "include_handles": bool,
-        "session": str,
+        "model": {
+            "type": "string",
+            "required": False,
+            "default": None,
+            "description": "Optional specific model name from list_opened output.",
+        },
+        "target": {
+            "type": "string",
+            "required": True,
+            "default": None,
+            "description": "Block path to analyze.",
+        },
+        "direction": {
+            "type": "string",
+            "required": False,
+            "default": "both",
+            "enum": ["upstream", "downstream", "both"],
+            "description": "Traversal direction from target block.",
+        },
+        "depth": {
+            "type": "integer",
+            "required": False,
+            "default": 1,
+            "description": "Traversal depth in hops.",
+        },
+        "detail": {
+            "type": "string",
+            "required": False,
+            "default": "summary",
+            "enum": ["summary", "ports", "lines"],
+            "description": "Output detail level.",
+        },
+        "include_handles": {
+            "type": "boolean",
+            "required": False,
+            "default": False,
+            "description": "Include line handles in lines detail output.",
+        },
+        "max_edges": {
+            "type": "integer",
+            "required": False,
+            "default": None,
+            "description": "Limit number of connection edges returned.",
+        },
+        "fields": {
+            "type": "array",
+            "items": "string",
+            "required": False,
+            "default": None,
+            "description": "Projected top-level response fields to include.",
+        },
+        "session": {
+            "type": "string",
+            "required": False,
+            "default": None,
+            "description": "Session override for this command.",
+        },
     },
-    "highlight": {"target": str, "session": str},
+    "highlight": {
+        "target": {
+            "type": "string",
+            "required": True,
+            "default": None,
+            "description": "Block path to highlight.",
+        },
+        "session": {
+            "type": "string",
+            "required": False,
+            "default": None,
+            "description": "Session override for this command.",
+        },
+    },
     "inspect": {
-        "model": str,
-        "target": str,
-        "param": str,
-        "active_only": bool,
-        "strict_active": bool,
-        "resolve_effective": bool,
-        "summary": bool,
-        "session": str,
-        "max_params": int,
-        "fields": list,
+        "model": {
+            "type": "string",
+            "required": False,
+            "default": None,
+            "description": "Optional specific model name from list_opened output.",
+        },
+        "target": {
+            "type": "string",
+            "required": True,
+            "default": None,
+            "description": "Block path to inspect.",
+        },
+        "param": {
+            "type": "string",
+            "required": False,
+            "default": "All",
+            "description": "Parameter name to read, or All for dialog parameters.",
+        },
+        "active_only": {
+            "type": "boolean",
+            "required": False,
+            "default": False,
+            "description": "Return only active parameters when param=All.",
+        },
+        "strict_active": {
+            "type": "boolean",
+            "required": False,
+            "default": False,
+            "description": "Fail when requested parameter is inactive.",
+        },
+        "resolve_effective": {
+            "type": "boolean",
+            "required": False,
+            "default": False,
+            "description": "Resolve known effective value for inactive parameter.",
+        },
+        "summary": {
+            "type": "boolean",
+            "required": False,
+            "default": False,
+            "description": "Include compact summary lists when param=All.",
+        },
+        "session": {
+            "type": "string",
+            "required": False,
+            "default": None,
+            "description": "Session override for this command.",
+        },
+        "max_params": {
+            "type": "integer",
+            "required": False,
+            "default": None,
+            "description": "Limit number of parameters returned when param=All.",
+        },
+        "fields": {
+            "type": "array",
+            "items": "string",
+            "required": False,
+            "default": None,
+            "description": "Projected top-level response fields to include.",
+        },
     },
-    "list_opened": {"session": str},
+    "list_opened": {
+        "session": {
+            "type": "string",
+            "required": False,
+            "default": None,
+            "description": "Session override for this command.",
+        }
+    },
+    "session": {
+        "session_action": {
+            "type": "string",
+            "required": True,
+            "default": None,
+            "enum": ["list", "use", "current", "clear"],
+            "description": "Session management operation.",
+        },
+        "name": {
+            "type": "string",
+            "required": False,
+            "default": None,
+            "description": "Session name, required when session_action=use.",
+        },
+    },
 }
 
 _SESSION_ACTIONS = {"list", "use", "current", "clear"}
+_ACTION_DESCRIPTIONS = {
+    "schema": "Return machine-readable command contract and error-code catalog.",
+    "scan": "Read model or subsystem topology with optional hierarchy view.",
+    "connections": "Read upstream/downstream block relationships from a target block.",
+    "highlight": "Highlight a target block in Simulink UI.",
+    "inspect": "Read block parameters and effective values.",
+    "list_opened": "List currently opened Simulink models.",
+    "session": "Manage active MATLAB shared session selection.",
+}
 _ERROR_CODES = [
     "invalid_input",
     "invalid_json",
@@ -132,6 +313,9 @@ def validate_args(args):
         depth = getattr(args, "depth", None)
         if depth is not None and depth <= 0:
             return _invalid_input("depth", "must be greater than zero")
+        max_edges = getattr(args, "max_edges", None)
+        if max_edges is not None and max_edges <= 0:
+            return _invalid_input("max_edges", "must be greater than zero")
         direction = getattr(args, "direction", "both")
         if direction not in {"upstream", "downstream", "both"}:
             return _invalid_input(
@@ -201,27 +385,30 @@ def _parse_with_parser(parser, argv):
         raise ValueError(f"invalid_input: {message}") from exc
 
 
-def _validate_json_type(action, field_name, value, expected_type):
+def _validate_json_type(action, field_name, value, field_meta):
     if value is None:
         return
-    if expected_type is bool and not isinstance(value, bool):
+    field_type = field_meta.get("type")
+    if field_type == "boolean" and not isinstance(value, bool):
         raise ValueError(
             f"invalid_json: field '{field_name}' for action '{action}' must be boolean"
         )
-    if expected_type is str and not isinstance(value, str):
+    if field_type == "string" and not isinstance(value, str):
         raise ValueError(
             f"invalid_json: field '{field_name}' for action '{action}' must be string"
         )
-    if expected_type is int and not isinstance(value, int):
+    if field_type == "integer" and not isinstance(value, int):
         raise ValueError(
             f"invalid_json: field '{field_name}' for action '{action}' must be integer"
         )
-    if expected_type is list:
+    if field_type == "array":
         if not isinstance(value, list):
             raise ValueError(
                 f"invalid_json: field '{field_name}' for action '{action}' must be an array"
             )
-        if not all(isinstance(item, str) for item in value):
+        if field_meta.get("items") == "string" and not all(
+            isinstance(item, str) for item in value
+        ):
             raise ValueError(
                 f"invalid_json: field '{field_name}' for action '{action}' must be an array of strings"
             )
@@ -239,14 +426,11 @@ def _parse_json_request(raw_payload):
     action = request.get("action")
     if not isinstance(action, str) or not action.strip():
         raise ValueError("invalid_json: action is required")
-    if action not in _JSON_FIELD_TYPES and action != "session":
+    if action not in _JSON_FIELD_TYPES:
         raise ValueError(f"invalid_json: unsupported action '{action}'")
 
     allowed_fields = {"action"}
-    if action == "session":
-        allowed_fields.update({"session_action", "name"})
-    else:
-        allowed_fields.update(_JSON_FIELD_TYPES[action].keys())
+    allowed_fields.update(_JSON_FIELD_TYPES[action].keys())
 
     for key in request.keys():
         if key not in allowed_fields:
@@ -272,9 +456,9 @@ def _parse_json_request(raw_payload):
             )
         return request
 
-    for field_name, expected_type in _JSON_FIELD_TYPES[action].items():
+    for field_name, field_meta in _JSON_FIELD_TYPES[action].items():
         if field_name in request:
-            _validate_json_type(action, field_name, request[field_name], expected_type)
+            _validate_json_type(action, field_name, request[field_name], field_meta)
 
     return request
 
@@ -336,16 +520,15 @@ def parse_request_args(parser, argv=None):
 
 
 def build_schema_payload():
+    actions = {}
+    for action_name, field_defs in _JSON_FIELD_TYPES.items():
+        actions[action_name] = {
+            "description": _ACTION_DESCRIPTIONS.get(action_name, ""),
+            "fields": field_defs,
+        }
     return {
-        "actions": {
-            "schema": {"fields": {}},
-            "scan": {"fields": _JSON_FIELD_TYPES["scan"]},
-            "connections": {"fields": _JSON_FIELD_TYPES["connections"]},
-            "highlight": {"fields": _JSON_FIELD_TYPES["highlight"]},
-            "inspect": {"fields": _JSON_FIELD_TYPES["inspect"]},
-            "list_opened": {"fields": _JSON_FIELD_TYPES["list_opened"]},
-            "session": {"fields": {"session_action": str, "name": str}},
-        },
+        "version": "2.0",
+        "actions": actions,
         "error_codes": list(_ERROR_CODES),
     }
 
@@ -421,6 +604,15 @@ def build_parser():
         "--include-handles",
         action="store_true",
         help="Include line handles in lines detail output",
+    )
+    connections_parser.add_argument(
+        "--max-edges",
+        type=int,
+        help="Limit number of edge entries returned for connections action",
+    )
+    connections_parser.add_argument(
+        "--fields",
+        help="Comma-separated top-level response fields to return",
     )
 
     highlight_parser = subparsers.add_parser("highlight", help="Highlight a block")
@@ -536,6 +728,10 @@ def run_action(args):
             fields=parsed_fields,
         )
     if args.action == "connections":
+        fields = getattr(args, "fields", None)
+        parsed_fields = None
+        if fields:
+            parsed_fields = [item.strip() for item in str(fields).split(",") if item.strip()]
         return get_block_connections(
             eng,
             block_path=args.target,
@@ -544,6 +740,8 @@ def run_action(args):
             depth=getattr(args, "depth", 1),
             detail=getattr(args, "detail", "summary"),
             include_handles=getattr(args, "include_handles", False),
+            max_edges=getattr(args, "max_edges", None),
+            fields=parsed_fields,
         )
     if args.action == "highlight":
         return highlight_block(eng, args.target)

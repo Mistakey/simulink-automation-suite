@@ -39,6 +39,9 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("skills.simulink_scan schema", text)
         self.assertIn("--max-blocks", text)
         self.assertIn("--max-params", text)
+        self.assertIn("--max-edges", text)
+        self.assertIn('{"action":"connections"', text)
+        self.assertIn("structured metadata", text)
 
     def test_readme_documents_matlab_prerequisites(self):
         text = README_PATH.read_text(encoding="utf-8")
@@ -67,6 +70,8 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("connections", skill_text)
         self.assertIn("## Connections Action", reference_text)
         self.assertIn("skills.simulink_scan connections", reference_text)
+        self.assertIn("--max-edges", reference_text)
+        self.assertIn("--fields", reference_text)
 
     def test_readme_mentions_connections_action(self):
         text = README_PATH.read_text(encoding="utf-8")

@@ -92,6 +92,7 @@ Use output clipping/projected fields when you need compact payloads:
 ```bash
 python -m skills.simulink_scan scan --model "my_model" --max-blocks 200 --fields "name,type"
 python -m skills.simulink_scan inspect --model "my_model" --target "my_model/Gain" --param "All" --max-params 50 --fields "target,values"
+python -m skills.simulink_scan connections --target "my_model/Gain" --detail ports --max-edges 50 --fields "target,edges,total_edges,truncated"
 ```
 
 ---
@@ -99,11 +100,13 @@ python -m skills.simulink_scan inspect --model "my_model" --target "my_model/Gai
 ## JSON Request Mode
 
 `--json` is a first-class entrypoint and is mutually exclusive with flag-based action arguments.
+`schema` returns structured metadata for each action field (type, required/default/enum, description).
 
 ```bash
 python -m skills.simulink_scan --json "{\"action\":\"schema\"}"
 python -m skills.simulink_scan --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"
 python -m skills.simulink_scan --json "{\"action\":\"scan\",\"model\":\"my_model\",\"recursive\":true,\"session\":\"MATLAB_12345\"}"
+python -m skills.simulink_scan --json '{"action":"connections","target":"my_model/Gain","direction":"both","depth":1,"detail":"summary","max_edges":50,"fields":["target","upstream_blocks","downstream_blocks"]}'
 ```
 
 ---
