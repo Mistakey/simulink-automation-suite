@@ -161,6 +161,21 @@ Mandatory checks:
 Release steps and detailed checks are governed by:
 `docs/release/2026-03-07-github-marketplace-release-checklist.md`
 
+### 8.1 Commit-Time Release Discipline (New, Mandatory)
+
+To avoid "code merged but plugin not upgradable" failures, apply these rules for normal development commits (not only final tagging):
+
+1. If a commit changes any distributable plugin content, version bump is required in the same work cycle before completion.
+   - Distributable content includes: `skills/**`, `.claude-plugin/**`, `README*`, runtime/tests/docs contract files that affect shipped behavior.
+2. If the user asks to "commit/提交代码" and distributable content changed:
+   - Do not finish with code-only commit(s).
+   - Ensure `plugin.json.version` and `marketplace.json.plugins[0].version` are both bumped to a higher semver version first.
+3. Treat version bump as a delivery gate, not an optional release task.
+   - "Will bump later when releasing" is not allowed for shipped behavior changes.
+4. Minimum checks before concluding the commit step:
+   - `python -m unittest tests.test_plugin_manifest_contract tests.test_marketplace_manifest_contract -v`
+   - `claude plugin validate .`
+
 ## 9. Documentation Gate
 
 - Documentation is part of the contract; behavior changes without doc updates are incomplete.
