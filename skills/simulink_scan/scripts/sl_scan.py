@@ -180,6 +180,16 @@ def get_model_structure(
 
 def highlight_block(eng, block_path):
     try:
+        eng.get_param(block_path, "Handle")
+    except Exception as exc:
+        return make_error(
+            "block_not_found",
+            f"Block not found '{block_path}'.",
+            details={"target": block_path, "cause": str(exc)},
+            suggested_fix="Run scan to discover valid block paths, then retry with --target.",
+        )
+
+    try:
         eng.hilite_system(block_path, "find", nargout=0)
         return {"status": "success", "highlighted": block_path}
     except Exception as exc:

@@ -5,6 +5,7 @@ description: Use when analyzing Simulink model topology, subsystem structure, or
 
 Use this skill only for Simulink read-only analysis.
 Reject write/edit requests (`set_param`, add/delete blocks/lines, save changes).
+Visual-only block highlighting via `hilite_system` is allowed because it does not mutate model data.
 Canonical skill name is `simulink-scan` (module path `skills.simulink_scan` is internal only).
 This skill is one capability inside plugin `simulink-automation-suite`, which is designed to host additional skills over time.
 
@@ -26,8 +27,9 @@ This skill is one capability inside plugin `simulink-automation-suite`, which is
 
 1. Topology/hierarchy analysis -> `scan`
 2. Parameter/effective-value analysis -> `inspect`
-3. Session management -> `session`
-4. Capability discovery -> `schema`
+3. Visual location in Simulink -> `highlight`
+4. Session management -> `session`
+5. Capability discovery -> `schema`
 
 Default to shallow scan first, then escalate to recursive/hierarchy only when required.
 
@@ -45,6 +47,8 @@ Default to shallow scan first, then escalate to recursive/hierarchy only when re
   - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "All" --max-params 50 --fields "target,values"`
 - Resolve inactive parameter source:
   - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "<name>" --resolve-effective`
+- Highlight block in Simulink UI:
+  - `python -m skills.simulink_scan highlight --target "<block>"`
 
 JSON mode is first-class and mutually exclusive with flag-mode action arguments.
 

@@ -75,3 +75,12 @@ Use these scenarios to validate skill behavior with and without the skill loaded
 - Expected:
   - Must reject write/edit action under this skill
   - Must offer read-only analysis alternative
+
+## Scenario 9: highlight Path Recovery (`block_not_found`)
+
+- Prompt: "highlight block controller/GainX"
+- Setup: requested path does not exist in current model
+- Expected:
+  - `highlight` returns `block_not_found`
+  - Recovery step runs `scan` to locate valid block path
+  - Retry highlight with valid `--target` succeeds

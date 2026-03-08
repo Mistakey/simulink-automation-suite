@@ -79,7 +79,7 @@ matlab.engine.shareEngine
 | `list_opened` | 列出当前已打开的 Simulink 模型 | `python -m skills.simulink_scan list_opened` |
 | `scan` | 读取模型/子系统拓扑结构 | `python -m skills.simulink_scan scan --model "my_model" --recursive` |
 | `inspect` | 读取模块参数和有效值 | `python -m skills.simulink_scan inspect --model "my_model" --target "my_model/Gain" --param "All"` |
-| `highlight` | 在 Simulink 中高亮目标模块 | `python -m skills.simulink_scan highlight --target "my_model/Gain"` |
+| `highlight` | 在 Simulink 中高亮目标模块（仅 UI 定位，不修改模型） | `python -m skills.simulink_scan highlight --target "my_model/Gain"` |
 | `session` | 管理当前 MATLAB 共享会话 | `python -m skills.simulink_scan session list` |
 
 ---

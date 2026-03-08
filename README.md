@@ -79,7 +79,7 @@ Troubleshooting:
 | `list_opened` | List currently opened Simulink models | `python -m skills.simulink_scan list_opened` |
 | `scan` | Read model/subsystem topology | `python -m skills.simulink_scan scan --model "my_model" --recursive` |
 | `inspect` | Read block parameters/effective values | `python -m skills.simulink_scan inspect --model "my_model" --target "my_model/Gain" --param "All"` |
-| `highlight` | Highlight a block in Simulink | `python -m skills.simulink_scan highlight --target "my_model/Gain"` |
+| `highlight` | Highlight a block in Simulink (UI-only, no model mutation) | `python -m skills.simulink_scan highlight --target "my_model/Gain"` |
 | `session` | Manage active MATLAB shared session | `python -m skills.simulink_scan session list` |
 
 ---

@@ -1,6 +1,10 @@
 import unittest
 
-from skills.simulink_scan.scripts.sl_scan import get_model_structure, list_opened_models
+from skills.simulink_scan.scripts.sl_scan import (
+    get_model_structure,
+    highlight_block,
+    list_opened_models,
+)
 
 
 class FakeScanEngine:
@@ -12,6 +16,7 @@ class FakeScanEngine:
         recursive_blocks,
         block_types,
         valid_handles=None,
+        highlight_fail_targets=None,
     ):
         self.models = models
         self.active_root = active_root
@@ -19,6 +24,8 @@ class FakeScanEngine:
         self.recursive_blocks = recursive_blocks
         self.block_types = block_types
         self.valid_handles = set(valid_handles or [])
+        self.highlight_fail_targets = set(highlight_fail_targets or [])
+        self.highlight_calls = []
 
     def find_system(self, *args):
         if args == ("Type", "block_diagram"):
@@ -40,6 +47,12 @@ class FakeScanEngine:
                 raise RuntimeError("not found")
             return 1
         raise RuntimeError(f"unsupported param {param_name}")
+
+    def hilite_system(self, block_path, mode, nargout=0):
+        self.highlight_calls.append((block_path, mode, nargout))
+        if block_path in self.highlight_fail_targets:
+            raise RuntimeError("highlight failed")
+        return None
 
 
 class ScanBehaviorTests(unittest.TestCase):
@@ -118,6 +131,47 @@ class ScanBehaviorTests(unittest.TestCase):
         result = get_model_structure(eng, model_name="m1", subsystem_path="Gain")
         self.assertEqual(result["error"], "invalid_subsystem_type")
         self.assertEqual(result["details"]["path"], "m1/Gain")
+
+    def test_highlight_block_success_returns_highlighted_target(self):
+        eng = FakeScanEngine(
+            models=[],
+            active_root="",
+            shallow_blocks={},
+            recursive_blocks={},
+            block_types={},
+            valid_handles={"m1/Gain"},
+        )
+        result = highlight_block(eng, "m1/Gain")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["highlighted"], "m1/Gain")
+        self.assertEqual(eng.highlight_calls, [("m1/Gain", "find", 0)])
+
+    def test_highlight_block_missing_target_returns_block_not_found(self):
+        eng = FakeScanEngine(
+            models=[],
+            active_root="",
+            shallow_blocks={},
+            recursive_blocks={},
+            block_types={},
+            valid_handles={"m1/Other"},
+        )
+        result = highlight_block(eng, "m1/Gain")
+        self.assertEqual(result["error"], "block_not_found")
+        self.assertEqual(result["details"]["target"], "m1/Gain")
+
+    def test_highlight_block_runtime_failure_returns_runtime_error(self):
+        eng = FakeScanEngine(
+            models=[],
+            active_root="",
+            shallow_blocks={},
+            recursive_blocks={},
+            block_types={},
+            valid_handles={"m1/Gain"},
+            highlight_fail_targets={"m1/Gain"},
+        )
+        result = highlight_block(eng, "m1/Gain")
+        self.assertEqual(result["error"], "runtime_error")
+        self.assertEqual(result["details"]["target"], "m1/Gain")
 
 
 if __name__ == "__main__":

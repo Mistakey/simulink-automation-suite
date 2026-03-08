@@ -51,6 +51,16 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("engine_unavailable", skill_text)
         self.assertIn("engine_unavailable", reference_text)
 
+    def test_skill_documents_highlight_as_readonly_visual_action(self):
+        text = SKILL_PATH.read_text(encoding="utf-8")
+        self.assertIn("Visual location in Simulink -> `highlight`", text)
+        self.assertIn("`hilite_system`", text)
+
+    def test_reference_includes_highlight_action_examples(self):
+        text = REFERENCE_PATH.read_text(encoding="utf-8")
+        self.assertIn("## Highlight Action", text)
+        self.assertIn("skills.simulink_scan highlight", text)
+
     def test_scenarios_include_recovery_chain_examples(self):
         text = SCENARIOS_PATH.read_text(encoding="utf-8")
         required_tokens = [
@@ -58,6 +68,7 @@ class DocsContractTests(unittest.TestCase):
             "model_required",
             "subsystem_not_found",
             "inactive_parameter",
+            "highlight",
         ]
         for token in required_tokens:
             self.assertIn(token, text)

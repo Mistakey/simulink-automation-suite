@@ -94,6 +94,15 @@ Examples:
 - Output clipping:
   - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "All" --max-params 50 --fields "target,values"`
 
+## Highlight Action
+
+- Highlight is supported as a read-only visual locator (implemented via `hilite_system`, no model mutation).
+- Basic usage:
+  - `python -m skills.simulink_scan highlight --target "<block>"`
+- With explicit session:
+  - `python -m skills.simulink_scan highlight --target "<block>" --session "MATLAB_12345"`
+- If target path is invalid, command returns `block_not_found`.
+
 ## Recovery Matrix
 
 | Error Code | Likely Cause | Next Command | Expected Success Signal |
