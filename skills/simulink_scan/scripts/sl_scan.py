@@ -221,7 +221,8 @@ def _extract_handles(raw_value):
         except Exception:
             continue
         if numeric > 0:
-            handles.append(int(numeric))
+            # MATLAB get_param expects numeric handles as double values.
+            handles.append(float(numeric))
     return handles
 
 

@@ -36,14 +36,16 @@ class FakeConnectionsEngine:
             return 1
         if isinstance(target, str) and param_name == "PortHandles":
             return self.port_handles[target]
-        if isinstance(target, int) and param_name == "Line":
-            return self.port_line.get(target, -1)
-        if isinstance(target, int) and target in self.line_meta:
-            return self.line_meta[target][param_name]
-        if isinstance(target, int) and param_name == "Parent":
-            return self.port_parent[target]
-        if isinstance(target, int) and param_name == "PortNumber":
-            return self.port_number[target]
+        if isinstance(target, (int, float)):
+            key = int(target)
+            if param_name == "Line":
+                return self.port_line.get(key, -1)
+            if key in self.line_meta:
+                return self.line_meta[key][param_name]
+            if param_name == "Parent":
+                return self.port_parent[key]
+            if param_name == "PortNumber":
+                return self.port_number[key]
         raise RuntimeError(f"unsupported param: {param_name}")
 
 
