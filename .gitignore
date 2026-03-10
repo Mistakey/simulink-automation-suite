@@ -6,3 +6,6 @@ __pycache__/
 
 # Local Codex project config
 .codex/config.toml
+
+# Claude Code local state (not shipped)
+.claude/settings.local.json
