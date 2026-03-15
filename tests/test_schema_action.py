@@ -55,6 +55,19 @@ class SchemaActionTests(unittest.TestCase):
         result = run_action(args)
         self.assertIn("engine_unavailable", result["error_codes"])
 
+    def test_find_action_in_schema(self):
+        result = run_action(self.parser.parse_args(["schema"]))
+        self.assertIn("find", result["actions"])
+        find_action = result["actions"]["find"]
+        self.assertIn("description", find_action)
+        self.assertIn("fields", find_action)
+        self.assertIn("name", find_action["fields"])
+        self.assertIn("block_type", find_action["fields"])
+        self.assertIn("max_results", find_action["fields"])
+        name_meta = find_action["fields"]["name"]
+        self.assertEqual(name_meta["type"], "string")
+        self.assertFalse(name_meta["required"])
+
 
 if __name__ == "__main__":
     unittest.main()

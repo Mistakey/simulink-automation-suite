@@ -90,6 +90,20 @@ class DocsContractTests(unittest.TestCase):
         for token in required_tokens:
             self.assertIn(token, text)
 
+    def test_skill_and_reference_document_find_action(self):
+        skill_text = SKILL_PATH.read_text(encoding="utf-8")
+        reference_text = REFERENCE_PATH.read_text(encoding="utf-8")
+        self.assertIn("find", skill_text.lower())
+        self.assertIn("Find", reference_text)
+
+    def test_readme_mentions_find_action(self):
+        text = README_PATH.read_text(encoding="utf-8")
+        self.assertIn("`find`", text)
+
+    def test_scenarios_include_find_examples(self):
+        text = SCENARIOS_PATH.read_text(encoding="utf-8")
+        self.assertIn("find", text)
+
 
 if __name__ == "__main__":
     unittest.main()

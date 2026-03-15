@@ -86,6 +86,21 @@ class JsonInputModeTests(unittest.TestCase):
             parse_request_args(self.parser, ['--json', '{"action":"scan","model":123}'])
         self.assertIn("invalid_json", str(context.exception))
 
+    def test_parse_request_args_accepts_json_find_request(self):
+        args = parse_request_args(
+            self.parser,
+            [
+                "--json",
+                '{"action":"find","model":"my_model","name":"PID","block_type":"SubSystem","max_results":50,"fields":["path","type"]}',
+            ],
+        )
+        self.assertEqual(args.action, "find")
+        self.assertEqual(args.model, "my_model")
+        self.assertEqual(args.name, "PID")
+        self.assertEqual(args.block_type, "SubSystem")
+        self.assertEqual(args.max_results, 50)
+        self.assertEqual(args.fields, "path,type")
+
 
 if __name__ == "__main__":
     unittest.main()
