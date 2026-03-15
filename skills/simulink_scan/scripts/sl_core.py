@@ -10,6 +10,7 @@ from .sl_actions import (
     list_opened_models,
 )
 from .sl_connections import get_block_connections
+from .sl_find import find_blocks
 from skills._shared.session import (
     command_session_clear,
     command_session_current,
@@ -201,6 +202,51 @@ _JSON_FIELD_TYPES = {
             "description": "Projected top-level response fields to include.",
         },
     },
+    "find": {
+        "model": {
+            "type": "string",
+            "required": False,
+            "default": None,
+            "description": "Target model (same resolution as scan).",
+        },
+        "subsystem": {
+            "type": "string",
+            "required": False,
+            "default": None,
+            "description": "Narrow search scope to a subsystem.",
+        },
+        "name": {
+            "type": "string",
+            "required": False,
+            "default": None,
+            "description": "Name substring match (case-insensitive).",
+        },
+        "block_type": {
+            "type": "string",
+            "required": False,
+            "default": None,
+            "description": "BlockType exact match (e.g., SubSystem, Gain).",
+        },
+        "session": {
+            "type": "string",
+            "required": False,
+            "default": None,
+            "description": "Session override for this command.",
+        },
+        "max_results": {
+            "type": "integer",
+            "required": False,
+            "default": 200,
+            "description": "Limit number of results returned.",
+        },
+        "fields": {
+            "type": "array",
+            "items": "string",
+            "required": False,
+            "default": None,
+            "description": "Projected result fields to include.",
+        },
+    },
     "list_opened": {
         "session": {
             "type": "string",
@@ -233,6 +279,7 @@ _ACTION_DESCRIPTIONS = {
     "connections": "Read upstream/downstream block relationships from a target block.",
     "highlight": "Highlight a target block in Simulink UI.",
     "inspect": "Read block parameters and effective values.",
+    "find": "Search for blocks by name pattern and/or block type.",
     "list_opened": "List currently opened Simulink models.",
     "session": "Manage active MATLAB shared session selection.",
 }
@@ -270,6 +317,8 @@ def validate_args(args):
         # Parameter names are API-level identifiers and may contain symbols.
         # Keep strict hardening on path/session-like fields only.
         fields = ["model", "target", "session"]
+    elif args.action == "find":
+        fields = ["model", "subsystem", "name", "block_type", "session"]
     elif args.action == "list_opened":
         fields = ["session"]
     elif args.action == "session" and getattr(args, "session_action", None) == "use":
@@ -303,6 +352,14 @@ def validate_args(args):
         max_params = getattr(args, "max_params", None)
         if max_params is not None and max_params <= 0:
             return _invalid_input("max_params", "must be greater than zero")
+    if args.action == "find":
+        name = getattr(args, "name", None)
+        block_type = getattr(args, "block_type", None)
+        if not name and not block_type:
+            return _invalid_input("name/block_type", "at least one of name or block_type must be provided")
+        max_results = getattr(args, "max_results", None)
+        if max_results is not None and max_results <= 0:
+            return _invalid_input("max_results", "must be greater than zero")
     return None
 
 
@@ -608,6 +665,31 @@ def build_parser():
         help="Comma-separated top-level response fields to return",
     )
 
+    find_parser = subparsers.add_parser("find", help="Search blocks by name/type")
+    find_parser.add_argument(
+        "--model", help="Optional specific model name from list_opened output"
+    )
+    find_parser.add_argument(
+        "--subsystem", help="Optional subsystem path to narrow search scope"
+    )
+    find_parser.add_argument(
+        "--name", help="Name substring match (case-insensitive)"
+    )
+    find_parser.add_argument(
+        "--block-type", help="BlockType exact match (e.g., SubSystem, Gain)"
+    )
+    find_parser.add_argument("--session", help="Session override for this command")
+    find_parser.add_argument(
+        "--max-results",
+        type=int,
+        default=200,
+        help="Limit number of results returned",
+    )
+    find_parser.add_argument(
+        "--fields",
+        help="Comma-separated result fields to return (for example: path,type)",
+    )
+
     list_opened_parser = subparsers.add_parser("list_opened", help="List loaded models")
     list_opened_parser.add_argument(
         "--session", help="Session override for this command"
@@ -706,6 +788,20 @@ def run_action(args):
             resolve_effective=getattr(args, "resolve_effective", False),
             summary=getattr(args, "summary", False),
             max_params=getattr(args, "max_params", None),
+            fields=parsed_fields,
+        )
+    if args.action == "find":
+        fields = getattr(args, "fields", None)
+        parsed_fields = None
+        if fields:
+            parsed_fields = [item.strip() for item in str(fields).split(",") if item.strip()]
+        return find_blocks(
+            eng,
+            model_name=getattr(args, "model", None),
+            subsystem=getattr(args, "subsystem", None),
+            name=getattr(args, "name", None),
+            block_type=getattr(args, "block_type", None),
+            max_results=getattr(args, "max_results", 200),
             fields=parsed_fields,
         )
     if args.action == "list_opened":
