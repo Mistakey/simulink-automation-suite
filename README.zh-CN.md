@@ -6,11 +6,11 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![MATLAB](https://img.shields.io/badge/MATLAB-Engine-orange)
 
-Simulink Automation Suite 是一个基于 MATLAB Engine for Python 的 Claude Code 插件，用于 Simulink 只读自动化分析流程。
+Simulink Automation Suite 是一个基于 MATLAB Engine for Python 的 Claude Code 插件，用于 Simulink 自动化分析与参数修改流程。
 
 - 插件标准名称：`simulink-automation-suite`
-- 当前已发布技能：`simulink-scan`
-- 运行时 Python 模块路径：`skills.simulink_scan`（仅模块命名使用）
+- 已发布技能：`simulink-scan`（只读分析）、`simulink-edit`（参数修改）
+- 运行时 Python 模块路径：`skills.simulink_scan`、`skills.simulink_edit`（仅模块命名使用）
 
 ---
 
@@ -48,6 +48,8 @@ Simulink Automation Suite 的核心定位，是让 Simulink 分析能力在 Clau
 3. 然后执行核心动作之一：`schema`、`list_opened`、`scan`、`connections`、`inspect`、`find`、`highlight`。
 4. 结果通过 `stdout` 输出为机器可读 JSON。
 5. 异常通过稳定错误码返回，便于 Agent 做恢复重试。
+6. 对于参数修改场景，Claude Code 会调用 `simulink-edit` 技能。
+7. 编辑技能通过 `set_param` 提供预览模式（默认开启 dry-run）、回滚负载与写后读回验证。
 
 ---
 
@@ -117,6 +119,7 @@ matlab.engine.shareEngine
 | `inspect` | 读取模块参数和有效值 | `python -m skills.simulink_scan inspect --model "my_model" --target "my_model/Gain" --param "All"` |
 | `highlight` | 在 Simulink 中高亮目标模块（仅 UI 定位，不修改模型） | `python -m skills.simulink_scan highlight --target "my_model/Gain"` |
 | `find` | 按名称模式和/或模块类型搜索模块 | `python -m skills.simulink_scan find --model "my_model" --name "PID"` |
+| `set_param` | 设置模块参数（支持预览与回滚） | `python -m skills.simulink_edit set_param --target "my_model/Gain1" --param "Gain" --value "2.0"` |
 | `session` | 管理当前 MATLAB 共享会话 | `python -m skills.simulink_scan session list` |
 
 ---
@@ -145,7 +148,18 @@ python -m skills.simulink_scan --json "{\"action\":\"list_opened\",\"session\":\
 python -m skills.simulink_scan --json "{\"action\":\"scan\",\"model\":\"my_model\",\"recursive\":true,\"session\":\"MATLAB_12345\"}"
 python -m skills.simulink_scan --json '{"action":"connections","target":"my_model/Gain","direction":"both","depth":1,"detail":"summary","max_edges":50,"fields":["target","upstream_blocks","downstream_blocks"]}'
 python -m skills.simulink_scan --json '{"action":"find","model":"my_model","name":"PID","max_results":50,"fields":["path","type"]}'
+python -m skills.simulink_edit --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0"}'
+python -m skills.simulink_edit --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0","dry_run":false}'
 ```
+
+---
+
+## 安全模型（simulink-edit）
+
+- `dry_run` 默认为 `true` —— 先预览再写入
+- 每次响应都包含 `rollback` 负载，支持一条命令撤销
+- 执行模式会读回参数值以验证写入结果
+- 每次调用只修改一个参数（不支持批量操作）
 
 ---
 
@@ -181,6 +195,8 @@ python -m skills.simulink_scan --json '{"action":"find","model":"my_model","name
 - `subsystem_not_found`
 - `invalid_subsystem_type`
 - `block_not_found`
+- `param_not_found`
+- `set_param_failed`
 - `inactive_parameter`
 - `runtime_error`
 
@@ -196,7 +212,13 @@ simulink-automation-suite/
 |   |-- plugin.json
 |   |-- marketplace.json
 |-- skills/
+|   |-- _shared/
 |   |-- simulink_scan/
+|   |   |-- SKILL.md
+|   |   |-- reference.md
+|   |   |-- test-scenarios.md
+|   |   |-- scripts/
+|   |-- simulink_edit/
 |       |-- SKILL.md
 |       |-- reference.md
 |       |-- test-scenarios.md
@@ -220,8 +242,8 @@ claude plugin validate .
 
 ## 路线图
 
-- **当前阶段（v1.3.x）：** 完成只读分析基础能力，包括 `schema`、`session`、`list_opened`、`scan`、`connections`、`inspect`、`find`、`highlight`，并强化面向 Agent 的严格契约与共享基础设施（`skills/_shared/`）。
+- **当前阶段（v2.0.x）：** 在只读分析基础上新增参数修改能力（`set_param`，支持 dry-run 预览、回滚与写后验证），通过 `simulink-edit` 技能实现，与 `simulink-scan` 共享 `skills/_shared/` 基础设施。
 - **下一阶段：** 在保持可预测契约与恢复链路的前提下，增强 Agent 工作流编排与可靠性。
-- **后续阶段：** 通过新增技能扩展到 edit/build/repair 场景，且保持插件标识 `simulink-automation-suite` 不变。
+- **后续阶段：** 通过新增技能扩展到 build/repair 场景，且保持插件标识 `simulink-automation-suite` 不变。
 
 ![路线图](docs/assets/readme/roadmap.png)

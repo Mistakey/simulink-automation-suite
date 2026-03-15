@@ -6,11 +6,11 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![MATLAB](https://img.shields.io/badge/MATLAB-Engine-orange)
 
-Simulink Automation Suite is a Claude Code plugin for read-only Simulink automation workflows through MATLAB Engine for Python.
+Simulink Automation Suite is a Claude Code plugin for Simulink automation workflows (read-only analysis and parameter modification) through MATLAB Engine for Python.
 
 - Canonical plugin name: `simulink-automation-suite`
-- Current shipped skill: `simulink-scan`
-- Runtime Python module path: `skills.simulink_scan` (module naming only)
+- Shipped skills: `simulink-scan` (read-only analysis), `simulink-edit` (parameter modification)
+- Runtime Python module paths: `skills.simulink_scan`, `skills.simulink_edit` (module naming only)
 
 ---
 
@@ -48,6 +48,8 @@ This plugin provides a third path: direct, structured, runtime model analysis fo
 3. It executes one of the core actions: `schema`, `list_opened`, `scan`, `connections`, `inspect`, `find`, or `highlight`.
 4. Results are returned as machine-readable JSON on `stdout`.
 5. Failures use stable error codes for reliable agent recovery.
+6. For parameter modification, Claude Code invokes the `simulink-edit` skill.
+7. The edit skill uses `set_param` with dry-run preview (default), rollback payloads, and read-back verification.
 
 ---
 
@@ -117,6 +119,7 @@ For end-to-end Claude Code prompts and screenshots (single bilingual page), see:
 | `inspect` | Read block parameters/effective values | `python -m skills.simulink_scan inspect --model "my_model" --target "my_model/Gain" --param "All"` |
 | `highlight` | Highlight a block in Simulink (UI-only, no model mutation) | `python -m skills.simulink_scan highlight --target "my_model/Gain"` |
 | `find` | Search blocks by name pattern and/or block type | `python -m skills.simulink_scan find --model "my_model" --name "PID"` |
+| `set_param` | Set a block parameter with dry-run preview and rollback | `python -m skills.simulink_edit set_param --target "my_model/Gain1" --param "Gain" --value "2.0"` |
 | `session` | Manage active MATLAB shared session | `python -m skills.simulink_scan session list` |
 
 ---
@@ -145,7 +148,18 @@ python -m skills.simulink_scan --json "{\"action\":\"list_opened\",\"session\":\
 python -m skills.simulink_scan --json "{\"action\":\"scan\",\"model\":\"my_model\",\"recursive\":true,\"session\":\"MATLAB_12345\"}"
 python -m skills.simulink_scan --json '{"action":"connections","target":"my_model/Gain","direction":"both","depth":1,"detail":"summary","max_edges":50,"fields":["target","upstream_blocks","downstream_blocks"]}'
 python -m skills.simulink_scan --json '{"action":"find","model":"my_model","name":"PID","max_results":50,"fields":["path","type"]}'
+python -m skills.simulink_edit --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0"}'
+python -m skills.simulink_edit --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0","dry_run":false}'
 ```
+
+---
+
+## Safety Model (simulink-edit)
+
+- `dry_run` defaults to `true` — preview before writing
+- Every response includes a `rollback` payload for one-command undo
+- Execute mode reads back the value to verify the write
+- One parameter per invocation (no batch operations)
 
 ---
 
@@ -181,6 +195,8 @@ Common error codes:
 - `subsystem_not_found`
 - `invalid_subsystem_type`
 - `block_not_found`
+- `param_not_found`
+- `set_param_failed`
 - `inactive_parameter`
 - `runtime_error`
 
@@ -196,7 +212,13 @@ simulink-automation-suite/
 |   |-- plugin.json
 |   |-- marketplace.json
 |-- skills/
+|   |-- _shared/
 |   |-- simulink_scan/
+|   |   |-- SKILL.md
+|   |   |-- reference.md
+|   |   |-- test-scenarios.md
+|   |   |-- scripts/
+|   |-- simulink_edit/
 |       |-- SKILL.md
 |       |-- reference.md
 |       |-- test-scenarios.md
@@ -220,8 +242,8 @@ claude plugin validate .
 
 ## Roadmap
 
-- **Current (v1.3.x):** solid read-only analysis foundation with `schema`, `session`, `list_opened`, `scan`, `connections`, `inspect`, `find`, `highlight`, plus strict agent-facing contracts and shared infrastructure (`skills/_shared/`).
+- **Current (v2.0.x):** read-only analysis plus parameter modification (`set_param` with dry-run, rollback, verification) via `simulink-edit` skill, sharing `skills/_shared/` infrastructure with `simulink-scan`.
 - **Next:** strengthen agent workflow orchestration and reliability while preserving deterministic contracts and recovery paths.
-- **Future:** add new skills for edit/build/repair scenarios without renaming the plugin (`simulink-automation-suite` remains the stable identity).
+- **Future:** add new skills for build/repair scenarios without renaming the plugin (`simulink-automation-suite` remains the stable identity).
 
 ![Roadmap](docs/assets/readme/roadmap.png)
