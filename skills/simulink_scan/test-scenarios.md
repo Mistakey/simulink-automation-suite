@@ -94,3 +94,13 @@ Use these scenarios to validate skill behavior with and without the skill loaded
   - Then runs `connections --target "<resolved_path>" --direction both --depth 1 --detail summary`
   - Returns compact upstream/downstream module lists without custom MATLAB scripts
   - Optional escalation to `--detail ports` or `--detail lines` when requested
+
+## Find Scenarios
+
+- Find by name: `--json '{"action":"find","model":"m","name":"PID"}'` → results with matching blocks
+- Find by type: `--json '{"action":"find","model":"m","block_type":"Gain"}'` → results with Gain blocks
+- Find combined: `--json '{"action":"find","model":"m","name":"PID","block_type":"SubSystem"}'` → AND semantics
+- Find with scope: `--json '{"action":"find","model":"m","subsystem":"Controller","name":"PID"}'` → narrowed results
+- Find missing both: `--json '{"action":"find","model":"m"}'` → `invalid_input`
+- Find empty result: `--json '{"action":"find","model":"m","name":"nonexistent"}'` → empty results, no error
+- Find with clipping: `--json '{"action":"find","model":"m","name":"Block","max_results":2}'` → truncated

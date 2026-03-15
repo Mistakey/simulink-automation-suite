@@ -110,6 +110,23 @@ Examples:
   - `python -m skills.simulink_scan --json "{\"action\":\"connections\",\"target\":\"<block>\",\"direction\":\"both\",\"depth\":1,\"detail\":\"summary\",\"max_edges\":50,\"fields\":[\"target\",\"upstream_blocks\",\"downstream_blocks\"]}"`
 - Invalid target path returns `block_not_found`.
 
+## Find Action
+
+- Search blocks by name (case-insensitive substring match):
+  - `python -m skills.simulink_scan find --model "<model>" --name "PID"`
+- Search blocks by type:
+  - `python -m skills.simulink_scan find --model "<model>" --block-type "Gain"`
+- Combined search (AND semantics):
+  - `python -m skills.simulink_scan find --model "<model>" --name "Controller" --block-type "SubSystem"`
+- Narrow scope to subsystem:
+  - `python -m skills.simulink_scan find --model "<model>" --subsystem "Controller" --name "PID"`
+- Output clipping and projection:
+  - `python -m skills.simulink_scan find --model "<model>" --name "Gain" --max-results 50 --fields "path,type"`
+- JSON request:
+  - `python -m skills.simulink_scan --json '{"action":"find","model":"<model>","name":"PID","max_results":50,"fields":["path","type"]}'`
+- At least one of `--name` or `--block-type` is required; omitting both returns `invalid_input`.
+- Empty results (no matches) is not an error.
+
 ## Highlight Action
 
 - Highlight is supported as a read-only visual locator (implemented via `hilite_system`, no model mutation).
@@ -128,6 +145,7 @@ Examples:
 | `session_not_found` | Session name is not an exact match | `python -m skills.simulink_scan session list` then copy exact name | action connects to requested session |
 | `model_required` | Multiple opened models and no explicit model | `python -m skills.simulink_scan list_opened` then retry with `--model` | scan/inspect returns selected model |
 | `inactive_parameter` | Requested parameter is inactive under current mask config | retry with `--resolve-effective` or `--strict-active` | response includes effective mapping or explicit inactive failure |
+| `invalid_input` (find) | Neither name nor block_type provided | provide at least one of `--name` or `--block-type` | find returns results or empty array |
 | `invalid_json` | Malformed JSON or wrong field type | validate payload using `schema`, then retry | request parses and executes |
 
 ## Troubleshooting

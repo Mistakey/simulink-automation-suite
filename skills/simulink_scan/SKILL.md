@@ -29,8 +29,9 @@ This skill is one capability inside plugin `simulink-automation-suite`, which is
 2. Parameter/effective-value analysis -> `inspect`
 3. Upstream/downstream signal relationship analysis -> `connections`
 4. Visual location in Simulink -> `highlight`
-5. Session management -> `session`
-6. Capability discovery -> `schema`
+5. Block search by name/type -> `find`
+6. Session management -> `session`
+7. Capability discovery -> `schema`
 
 Default to shallow scan first, then escalate to recursive/hierarchy only when required.
 
@@ -54,6 +55,12 @@ Default to shallow scan first, then escalate to recursive/hierarchy only when re
   - `python -m skills.simulink_scan connections --target "<block>" --detail ports --max-edges 50 --fields "target,edges,total_edges,truncated"`
 - Highlight block in Simulink UI:
   - `python -m skills.simulink_scan highlight --target "<block>"`
+- Search blocks by name:
+  - `python -m skills.simulink_scan find --model "<model>" --name "PID"`
+- Search blocks by type:
+  - `python -m skills.simulink_scan find --model "<model>" --block-type "SubSystem"`
+- Search with output controls:
+  - `python -m skills.simulink_scan find --model "<model>" --name "Controller" --max-results 50 --fields "path,type"`
 
 JSON mode is first-class and mutually exclusive with flag-mode action arguments.
 
@@ -72,6 +79,7 @@ Error-driven next actions:
 - `block_not_found` -> run scan, select valid block path.
 - `invalid_json` / `json_conflict` / `unknown_parameter` / `invalid_input` -> correct request payload and retry.
 - `inactive_parameter` -> use `--resolve-effective` or `--strict-active` according to intent.
+- `find` returns empty results → broaden name pattern, try different block_type, or widen scope (remove subsystem constraint).
 
 For full matrix and examples, read `reference.md`.
 

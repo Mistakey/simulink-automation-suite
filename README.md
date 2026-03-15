@@ -45,7 +45,7 @@ This plugin provides a third path: direct, structured, runtime model analysis fo
 
 1. Claude Code invokes the `simulink-scan` skill for Simulink analysis tasks.
 2. The skill resolves MATLAB session context (`session list/use/current/clear`) with exact-name matching.
-3. It executes one of the core actions: `schema`, `list_opened`, `scan`, `connections`, `inspect`, or `highlight`.
+3. It executes one of the core actions: `schema`, `list_opened`, `scan`, `connections`, `inspect`, `find`, or `highlight`.
 4. Results are returned as machine-readable JSON on `stdout`.
 5. Failures use stable error codes for reliable agent recovery.
 
@@ -53,7 +53,7 @@ This plugin provides a third path: direct, structured, runtime model analysis fo
 
 ## Prerequisites
 
-Before using session-bound actions (`list_opened`, `scan`, `connections`, `inspect`, `highlight`):
+Before using session-bound actions (`list_opened`, `scan`, `connections`, `inspect`, `find`, `highlight`):
 
 1. Install and activate MATLAB on your machine.
 2. Install MATLAB Engine for Python in the same Python interpreter that runs this plugin.
@@ -116,6 +116,7 @@ For end-to-end Claude Code prompts and screenshots (single bilingual page), see:
 | `connections` | Read upstream/downstream key modules for a target block | `python -m skills.simulink_scan connections --target "my_model/Gain" --direction both --depth 1 --detail summary` |
 | `inspect` | Read block parameters/effective values | `python -m skills.simulink_scan inspect --model "my_model" --target "my_model/Gain" --param "All"` |
 | `highlight` | Highlight a block in Simulink (UI-only, no model mutation) | `python -m skills.simulink_scan highlight --target "my_model/Gain"` |
+| `find` | Search blocks by name pattern and/or block type | `python -m skills.simulink_scan find --model "my_model" --name "PID"` |
 | `session` | Manage active MATLAB shared session | `python -m skills.simulink_scan session list` |
 
 ---
@@ -128,6 +129,7 @@ Use output clipping/projected fields when you need compact payloads:
 python -m skills.simulink_scan scan --model "my_model" --max-blocks 200 --fields "name,type"
 python -m skills.simulink_scan inspect --model "my_model" --target "my_model/Gain" --param "All" --max-params 50 --fields "target,values"
 python -m skills.simulink_scan connections --target "my_model/Gain" --detail ports --max-edges 50 --fields "target,edges,total_edges,truncated"
+python -m skills.simulink_scan find --model "my_model" --name "PID" --max-results 50 --fields "path,type"
 ```
 
 ---
@@ -142,6 +144,7 @@ python -m skills.simulink_scan --json "{\"action\":\"schema\"}"
 python -m skills.simulink_scan --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"
 python -m skills.simulink_scan --json "{\"action\":\"scan\",\"model\":\"my_model\",\"recursive\":true,\"session\":\"MATLAB_12345\"}"
 python -m skills.simulink_scan --json '{"action":"connections","target":"my_model/Gain","direction":"both","depth":1,"detail":"summary","max_edges":50,"fields":["target","upstream_blocks","downstream_blocks"]}'
+python -m skills.simulink_scan --json '{"action":"find","model":"my_model","name":"PID","max_results":50,"fields":["path","type"]}'
 ```
 
 ---

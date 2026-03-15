@@ -45,7 +45,7 @@ Simulink Automation Suite 的核心定位，是让 Simulink 分析能力在 Clau
 
 1. Claude Code 在 Simulink 分析场景下调用 `simulink-scan` 技能。
 2. 技能先解析 MATLAB 会话上下文（`session list/use/current/clear`），并使用精确会话名匹配。
-3. 然后执行核心动作之一：`schema`、`list_opened`、`scan`、`connections`、`inspect`、`highlight`。
+3. 然后执行核心动作之一：`schema`、`list_opened`、`scan`、`connections`、`inspect`、`find`、`highlight`。
 4. 结果通过 `stdout` 输出为机器可读 JSON。
 5. 异常通过稳定错误码返回，便于 Agent 做恢复重试。
 
@@ -53,7 +53,7 @@ Simulink Automation Suite 的核心定位，是让 Simulink 分析能力在 Clau
 
 ## 前置条件
 
-在使用依赖 MATLAB 会话的动作（`list_opened`、`scan`、`connections`、`inspect`、`highlight`）前，请先确认：
+在使用依赖 MATLAB 会话的动作（`list_opened`、`scan`、`connections`、`inspect`、`find`、`highlight`）前，请先确认：
 
 1. 本机已安装并可启动 MATLAB。
 2. 当前插件使用的 Python 解释器中已安装 MATLAB Engine for Python。
@@ -116,6 +116,7 @@ matlab.engine.shareEngine
 | `connections` | 读取目标模块的上游/下游关键连接模块 | `python -m skills.simulink_scan connections --target "my_model/Gain" --direction both --depth 1 --detail summary` |
 | `inspect` | 读取模块参数和有效值 | `python -m skills.simulink_scan inspect --model "my_model" --target "my_model/Gain" --param "All"` |
 | `highlight` | 在 Simulink 中高亮目标模块（仅 UI 定位，不修改模型） | `python -m skills.simulink_scan highlight --target "my_model/Gain"` |
+| `find` | 按名称模式和/或模块类型搜索模块 | `python -m skills.simulink_scan find --model "my_model" --name "PID"` |
 | `session` | 管理当前 MATLAB 共享会话 | `python -m skills.simulink_scan session list` |
 
 ---
@@ -128,6 +129,7 @@ matlab.engine.shareEngine
 python -m skills.simulink_scan scan --model "my_model" --max-blocks 200 --fields "name,type"
 python -m skills.simulink_scan inspect --model "my_model" --target "my_model/Gain" --param "All" --max-params 50 --fields "target,values"
 python -m skills.simulink_scan connections --target "my_model/Gain" --detail ports --max-edges 50 --fields "target,edges,total_edges,truncated"
+python -m skills.simulink_scan find --model "my_model" --name "PID" --max-results 50 --fields "path,type"
 ```
 
 ---
@@ -142,6 +144,7 @@ python -m skills.simulink_scan --json "{\"action\":\"schema\"}"
 python -m skills.simulink_scan --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"
 python -m skills.simulink_scan --json "{\"action\":\"scan\",\"model\":\"my_model\",\"recursive\":true,\"session\":\"MATLAB_12345\"}"
 python -m skills.simulink_scan --json '{"action":"connections","target":"my_model/Gain","direction":"both","depth":1,"detail":"summary","max_edges":50,"fields":["target","upstream_blocks","downstream_blocks"]}'
+python -m skills.simulink_scan --json '{"action":"find","model":"my_model","name":"PID","max_results":50,"fields":["path","type"]}'
 ```
 
 ---
