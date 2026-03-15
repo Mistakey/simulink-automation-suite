@@ -1,0 +1,89 @@
+---
+name: simulink-edit
+description: Use when modifying Simulink block parameters via set_param with dry-run preview and rollback support in write workflows.
+---
+
+Use this skill for Simulink model parameter modification.
+Reject read-only analysis requests — redirect to `simulink-scan`.
+Canonical skill name is `simulink-edit` (module path `skills.simulink_edit` is internal only).
+This skill is one capability inside plugin `simulink-automation-suite`.
+
+## Safety Model
+
+- `dry_run` defaults to `true`. Always preview before applying.
+- Persist the `rollback` payload before executing — it enables one-command undo.
+- After each execute, verify the `verified` field confirms the write took effect.
+- One parameter per invocation. No batch operations.
+
+## Preflight
+
+0. Ensure runtime prerequisites:
+   - MATLAB Engine for Python is installed in the active Python environment.
+   - MATLAB shared session is started by running `matlab.engine.shareEngine` in MATLAB.
+1. Discover contract when uncertain about commands/fields:
+   - `python -m skills.simulink_edit schema`
+   - JSON: `python -m skills.simulink_edit --json "{\"action\":\"schema\"}"`
+2. Use `simulink-scan` to locate and inspect target blocks before editing:
+   - `python -m skills.simulink_scan find --name "PID"` → locate block
+   - `python -m skills.simulink_scan inspect --target "<block>" --param "All"` → read current values
+
+## Action Selection
+
+1. Parameter modification -> `set_param`
+2. Capability discovery -> `schema`
+
+## Execution Templates
+
+- Preview parameter change (dry-run):
+  - `python -m skills.simulink_edit set_param --target "<block>" --param "<name>" --value "<new_value>"`
+  - (dry_run defaults to true — shows diff without writing)
+- Execute parameter change:
+  - `python -m skills.simulink_edit set_param --target "<block>" --param "<name>" --value "<new_value>" --dry-run false`
+- JSON mode (preview):
+  - `python -m skills.simulink_edit --json '{"action":"set_param","target":"<block>","param":"<name>","value":"<new_value>"}'`
+- JSON mode (execute):
+  - `python -m skills.simulink_edit --json '{"action":"set_param","target":"<block>","param":"<name>","value":"<new_value>","dry_run":false}'`
+
+The `value` field is always a string. MATLAB `set_param` handles type conversion internally. Pass numeric values as `"2.0"`, not `2.0`.
+
+JSON mode is first-class and mutually exclusive with flag-mode action arguments.
+
+## Recovery Routing
+
+Error-driven next actions:
+
+- `session_required` -> run `session list` via simulink-scan, retry with explicit `--session`.
+- `session_not_found` -> rerun `session list`, copy exact name, retry.
+- `engine_unavailable` -> install/configure MATLAB Engine for Python, retry.
+- `no_session` -> run `matlab.engine.shareEngine` in MATLAB, retry.
+- `block_not_found` -> run `simulink-scan find` or `scan` to locate valid block path.
+- `param_not_found` -> run `simulink-scan inspect` on the target to list available parameters.
+- `set_param_failed` -> check value format/type, read parameter constraints from inspect, retry.
+- `invalid_json` / `json_conflict` / `unknown_parameter` / `invalid_input` -> correct request payload and retry.
+
+For full matrix and examples, read `reference.md`.
+
+## Cross-Skill Workflow
+
+Typical read-understand-preview-write-verify cycle:
+
+```
+simulink-scan  list_opened           → discover models
+simulink-scan  scan --recursive      → understand topology
+simulink-scan  find --name "PID"     → locate target block
+simulink-scan  inspect               → read current parameters
+simulink-edit  set_param (dry_run)   → preview proposed change
+simulink-edit  set_param (execute)   → apply change
+simulink-scan  inspect               → verify result
+```
+
+## Output Discipline
+
+- Ground claims in tool JSON output.
+- Always check `verified` field after execute.
+- Persist `rollback` payload before proceeding with further changes.
+
+## Related Docs
+
+- Deep reference: `reference.md`
+- Validation scenarios: `test-scenarios.md`
