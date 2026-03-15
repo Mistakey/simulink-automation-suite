@@ -21,7 +21,7 @@ python -m unittest tests.test_schema_action -v
 # Layered validation (recommended during development)
 python -m unittest tests.test_schema_action -v
 python -m unittest tests.test_json_input_mode tests.test_input_validation -v
-python -m unittest tests.test_scan_output_controls tests.test_inspect_output_controls tests.test_connections_output_controls -v
+python -m unittest tests.test_scan_output_controls tests.test_inspect_output_controls tests.test_connections_output_controls tests.test_find_output_controls -v
 python -m unittest tests.test_docs_contract -v
 
 # Manifest validation (when .claude-plugin/ or README* change)
@@ -35,15 +35,23 @@ python -m skills.simulink_scan --json '{"action":"schema"}'
 
 ## Architecture
 
+### Shared modules (`skills/_shared/`)
+
+| Module | Role |
+|---|---|
+| `errors.py` | `make_error()` — error envelope builder. |
+| `json_io.py` | `JsonArgumentParser`, `emit_json()`, `as_list()`, `project_top_level_fields()`. |
+| `validation.py` | `validate_text_field()`, `_invalid_input()`, `validate_json_type()` — input hardening. |
+| `session.py` | MATLAB session discovery/resolution (exact-name only), local state (`.sl_pilot_state.json`). |
+
 ### Source modules (`skills/simulink_scan/scripts/`)
 
 | Module | Role |
 |---|---|
-| `sl_core.py` | CLI parser, JSON request parsing, schema builder, action routing, input validation, error mapping. **Contract source of truth.** |
-| `sl_scan.py` | Read-only actions: `scan`, `connections`, `inspect`, `highlight`, `list_opened`. All MATLAB Engine calls. |
-| `sl_session.py` | MATLAB session discovery/resolution (exact-name only), local state (`.sl_pilot_state.json`). |
-| `sl_errors.py` | `make_error()` — error envelope builder. |
-| `sl_common.py` | `JsonArgumentParser`, `emit_json()`, `as_list()`. |
+| `sl_core.py` | CLI parser, JSON request parsing, schema builder, action routing. **Contract source of truth.** |
+| `sl_actions.py` | Read-only actions: `scan`, `inspect`, `highlight`, `list_opened`. |
+| `sl_connections.py` | `connections` action: port traversal, edge collection. |
+| `sl_find.py` | `find` action: block search by name/type via `find_system`. |
 
 ### Request flow
 
@@ -67,11 +75,11 @@ python -m skills.simulink_scan --json '{"action":"schema"}'
 
 ## Change Synchronization
 
-**CLI actions/arguments** → update `sl_core.py` + `sl_scan.py`/`sl_session.py` + tests + `README.md`, `README.zh-CN.md`, `SKILL.md`, `reference.md`, `test-scenarios.md`
+**CLI actions/arguments** → update `sl_core.py` + `sl_actions.py`/`sl_connections.py`/`sl_find.py` + tests + `README.md`, `README.zh-CN.md`, `SKILL.md`, `reference.md`, `test-scenarios.md`
 
 **Error codes** → reuse existing codes; update `sl_core.py` + docs + `test_error_contract`, `test_runtime_error_mapping`, `test_docs_contract`
 
-**Output budgets** → keep `scan`→`max_blocks,fields`, `inspect`→`max_params,fields`, `connections`→`max_edges,fields` semantics stable; update output-control tests
+**Output budgets** → keep `scan`→`max_blocks,fields`, `inspect`→`max_params,fields`, `connections`→`max_edges,fields`, `find`→`max_results,fields` semantics stable; update output-control tests
 
 ## Test Map
 
@@ -82,6 +90,9 @@ python -m skills.simulink_scan --json '{"action":"schema"}'
 | `test_scan_output_controls`, `test_inspect_output_controls`, `test_connections_output_controls` | Clipping + field projection |
 | `test_error_contract`, `test_runtime_error_mapping` | Error envelope + runtime error mapping |
 | `test_scan_behavior`, `test_connections_behavior`, `test_inspect_active` | Action behavior (mocked MATLAB) |
+| `test_find_behavior`, `test_find_output_controls` | find action behavior + clipping/projection |
+| `test_shared_validation` | Shared validation functions |
+| `test_shared_session` | Shared session module + PLUGIN_ROOT |
 | `test_session_state` | Session resolution + state file |
 | `test_docs_contract` | Required doc sections present |
 | `test_plugin_manifest_contract`, `test_marketplace_manifest_contract` | Manifest shape + version sync |
