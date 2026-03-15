@@ -1,6 +1,6 @@
 import unittest
 
-from skills.simulink_scan.scripts.sl_errors import make_error
+from skills._shared.errors import make_error
 
 
 class ErrorContractTests(unittest.TestCase):

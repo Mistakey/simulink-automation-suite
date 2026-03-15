@@ -1,7 +1,7 @@
 import unittest
 from unittest import mock
 
-from skills.simulink_scan.scripts import sl_session
+from skills._shared import session as sl_session
 
 
 class SessionStateTests(unittest.TestCase):

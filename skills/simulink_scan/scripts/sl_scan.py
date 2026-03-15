@@ -1,5 +1,5 @@
-from .sl_common import as_list
-from .sl_errors import make_error
+from skills._shared.json_io import as_list, project_top_level_fields
+from skills._shared.errors import make_error
 
 
 def get_opened_models(eng):
@@ -442,7 +442,7 @@ def get_block_connections(
             output["total_edges"] = total_edges
             output["truncated"] = truncated
 
-        return _project_top_level_fields(output, fields)
+        return project_top_level_fields(output, fields)
     except Exception as exc:
         return make_error(
             "runtime_error",
@@ -610,12 +610,6 @@ def _collect_dialog_values(eng, target_path, param_keys):
     return values
 
 
-def _project_top_level_fields(payload, fields):
-    if not isinstance(fields, list) or not fields:
-        return payload
-    return {key: value for key, value in payload.items() if key in fields}
-
-
 def inspect_block(
     eng,
     block_path,
@@ -733,7 +727,7 @@ def inspect_block(
             warnings = [item for item in warnings if item]
             if warnings:
                 output["warnings"] = warnings
-            return _project_top_level_fields(output, fields)
+            return project_top_level_fields(output, fields)
 
         if active_only:
             active_values = {}
@@ -765,7 +759,7 @@ def inspect_block(
             warnings = meta_warnings + conflict_warnings
             if warnings:
                 output["warnings"] = warnings
-            return _project_top_level_fields(output, fields)
+            return project_top_level_fields(output, fields)
 
         total_params = len(param_keys)
         truncated = False
@@ -814,7 +808,7 @@ def inspect_block(
         warnings = meta_warnings + conflict_warnings
         if warnings:
             output["warnings"] = warnings
-        return _project_top_level_fields(output, fields)
+        return project_top_level_fields(output, fields)
     except Exception as exc:
         return make_error(
             "runtime_error",

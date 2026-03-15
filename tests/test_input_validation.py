@@ -1,11 +1,8 @@
 import argparse
 import unittest
 
-from skills.simulink_scan.scripts.sl_core import (
-    run_action,
-    validate_args,
-    validate_text_field,
-)
+from skills._shared.validation import validate_text_field
+from skills.simulink_scan.scripts.sl_core import run_action, validate_args
 
 
 class InputValidationTests(unittest.TestCase):
