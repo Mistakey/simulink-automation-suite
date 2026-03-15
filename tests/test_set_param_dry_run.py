@@ -1,0 +1,94 @@
+import unittest
+
+from skills.simulink_edit.scripts.sl_set_param import set_param
+
+
+class FakeSetParamEngine:
+    def __init__(self, params=None, valid_handles=None):
+        self._params = params or {}
+        self._valid_handles = valid_handles or set()
+
+    def get_param(self, path, param):
+        if param == "Handle":
+            if path not in self._valid_handles:
+                raise RuntimeError(f"Invalid block path: {path}")
+            return 1.0
+        key = f"{path}::{param}"
+        if key not in self._params:
+            raise RuntimeError(f"Parameter '{param}' not found on '{path}'")
+        return self._params[key]
+
+    def set_param(self, path, param, value):
+        key = f"{path}::{param}"
+        self._params[key] = value
+
+
+class SetParamDryRunTests(unittest.TestCase):
+    def _make_engine(self):
+        return FakeSetParamEngine(
+            params={"my_model/PID/Kp::Kp": "1.5"},
+            valid_handles={"my_model/PID/Kp"},
+        )
+
+    def test_dry_run_does_not_write(self):
+        eng = self._make_engine()
+        set_param(
+            eng,
+            target="my_model/PID/Kp",
+            param="Kp",
+            value="3.0",
+            dry_run=True,
+        )
+        # Verify the original value is unchanged
+        self.assertEqual(eng.get_param("my_model/PID/Kp", "Kp"), "1.5")
+
+    def test_dry_run_rollback_payload(self):
+        eng = self._make_engine()
+        result = set_param(
+            eng,
+            target="my_model/PID/Kp",
+            param="Kp",
+            value="3.0",
+            dry_run=True,
+        )
+        rollback = result["rollback"]
+        self.assertEqual(rollback["action"], "set_param")
+        self.assertEqual(rollback["target"], "my_model/PID/Kp")
+        self.assertEqual(rollback["param"], "Kp")
+        self.assertEqual(rollback["value"], "1.5")
+        self.assertFalse(rollback["dry_run"])
+
+    def test_dry_run_output_shape(self):
+        eng = self._make_engine()
+        result = set_param(
+            eng,
+            target="my_model/PID/Kp",
+            param="Kp",
+            value="3.0",
+            dry_run=True,
+        )
+        required_keys = {"action", "dry_run", "target", "param", "current_value", "proposed_value", "rollback"}
+        self.assertTrue(required_keys.issubset(result.keys()))
+
+    def test_execute_output_shape(self):
+        eng = self._make_engine()
+        result = set_param(
+            eng,
+            target="my_model/PID/Kp",
+            param="Kp",
+            value="3.0",
+            dry_run=False,
+        )
+        required_keys = {"action", "dry_run", "target", "param", "previous_value", "new_value", "verified", "rollback"}
+        self.assertTrue(required_keys.issubset(result.keys()))
+
+    def test_dry_run_defaults_true_via_parser(self):
+        from skills.simulink_edit.scripts.sl_core import build_parser
+
+        parser = build_parser()
+        args = parser.parse_args(["set_param", "--target", "m/B", "--param", "P", "--value", "1"])
+        self.assertTrue(args.dry_run)
+
+
+if __name__ == "__main__":
+    unittest.main()
