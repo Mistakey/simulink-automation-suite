@@ -1,6 +1,6 @@
 import unittest
 
-from skills.simulink_scan.scripts.sl_scan import inspect_block
+from skills.simulink_scan.scripts.sl_actions import inspect_block
 
 
 class FakeEngine:

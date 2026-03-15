@@ -1,6 +1,6 @@
 import unittest
 
-from skills.simulink_scan.scripts.sl_scan import get_block_connections
+from skills.simulink_scan.scripts.sl_connections import get_block_connections
 
 
 class FakeConnectionsEngine:

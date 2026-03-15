@@ -3,13 +3,13 @@ import json
 from skills._shared.json_io import JsonArgumentParser, emit_json
 from skills._shared.errors import make_error
 from skills._shared.validation import validate_text_field, _invalid_input, validate_json_type
-from .sl_scan import (
-    get_block_connections,
+from .sl_actions import (
     get_model_structure,
     highlight_block,
     inspect_block,
     list_opened_models,
 )
+from .sl_connections import get_block_connections
 from skills._shared.session import (
     command_session_clear,
     command_session_current,

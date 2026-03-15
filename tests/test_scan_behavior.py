@@ -1,6 +1,6 @@
 import unittest
 
-from skills.simulink_scan.scripts.sl_scan import (
+from skills.simulink_scan.scripts.sl_actions import (
     get_model_structure,
     highlight_block,
     list_opened_models,

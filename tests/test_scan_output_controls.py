@@ -2,7 +2,7 @@ import argparse
 import unittest
 
 from skills.simulink_scan.scripts.sl_core import validate_args
-from skills.simulink_scan.scripts.sl_scan import get_model_structure
+from skills.simulink_scan.scripts.sl_actions import get_model_structure
 
 
 class FakeEngine:
