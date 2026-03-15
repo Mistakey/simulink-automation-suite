@@ -220,7 +220,7 @@ claude plugin validate .
 
 ## 路线图
 
-- **当前阶段（v1.2.x）：** 完成只读分析基础能力，包括 `schema`、`session`、`list_opened`、`scan`、`connections`、`inspect`、`highlight`，并强化面向 Agent 的严格契约。
+- **当前阶段（v1.3.x）：** 完成只读分析基础能力，包括 `schema`、`session`、`list_opened`、`scan`、`connections`、`inspect`、`find`、`highlight`，并强化面向 Agent 的严格契约与共享基础设施（`skills/_shared/`）。
 - **下一阶段：** 在保持可预测契约与恢复链路的前提下，增强 Agent 工作流编排与可靠性。
 - **后续阶段：** 通过新增技能扩展到 edit/build/repair 场景，且保持插件标识 `simulink-automation-suite` 不变。
 

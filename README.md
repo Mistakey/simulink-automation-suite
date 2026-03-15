@@ -220,7 +220,7 @@ claude plugin validate .
 
 ## Roadmap
 
-- **Current (v1.2.x):** solid read-only analysis foundation with `schema`, `session`, `list_opened`, `scan`, `connections`, `inspect`, `highlight`, plus strict agent-facing contracts.
+- **Current (v1.3.x):** solid read-only analysis foundation with `schema`, `session`, `list_opened`, `scan`, `connections`, `inspect`, `find`, `highlight`, plus strict agent-facing contracts and shared infrastructure (`skills/_shared/`).
 - **Next:** strengthen agent workflow orchestration and reliability while preserving deterministic contracts and recovery paths.
 - **Future:** add new skills for edit/build/repair scenarios without renaming the plugin (`simulink-automation-suite` remains the stable identity).
 
