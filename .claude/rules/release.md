@@ -31,6 +31,9 @@ claude plugin validate .
 - Update `.claude-plugin/plugin.json` → `version`
 - Update `.claude-plugin/marketplace.json` → `plugins[0].version`
 - Verify plugin names consistent across both manifests
+- Sync schema version string in **every** skill's `sl_core.py` → `build_schema_payload()` → `"version"` field
+  - Rule: schema `"version"` must match the plugin major.minor (e.g., plugin `2.1.0` → schema `"2.1"`)
+  - Check: `simulink_scan/scripts/sl_core.py` and `simulink_edit/scripts/sl_core.py` must agree
 
 ### 2. Validation
 ```bash
