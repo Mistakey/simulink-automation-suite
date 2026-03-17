@@ -241,7 +241,7 @@ Stay at `2.0.0`. This is a pre-publish development cycle — `2.0.0` has never b
 | Implementer (main session) | Claude Opus | Execute refactoring, write code, migrate tests |
 | Code-reviewer | Claude Agent (code-reviewer) | Code quality, logic correctness, contract consistency |
 | Code-simplifier | Claude Agent (code-simplifier) | Code conciseness, redundancy elimination, readability |
-| Codex | Bash → `codex` CLI (gpt-5.3-codex, xhigh) | Independent third-party review perspective |
+| Codex | Bash → `codex review` / `codex exec` (gpt-5.3-codex, xhigh via config.toml) | Independent third-party review perspective |
 | Contract-validator | Claude Agent (general-purpose) | Run manifest/schema/docs contract tests |
 
 ### Phase Gates
@@ -274,12 +274,16 @@ Implementation complete → Trigger Phase Gate
 
 ### Codex Invocation Template
 
+Model (`gpt-5.3-codex`) and reasoning effort (`xhigh`) are configured globally in `~/.codex/config.toml` — no need to pass per-invocation.
+
+**For reviewing uncommitted changes (after each phase):**
 ```bash
-codex -q \
-  --model gpt-5.3-codex \
-  --reasoning xhigh \
-  -f "<files relevant to gate>" \
-  "<gate-specific review prompt>"
+codex review --uncommitted "<gate-specific review prompt>"
+```
+
+**For read-only code analysis (specific review tasks):**
+```bash
+codex exec -s read-only "<gate-specific review prompt>"
 ```
 
 ### Consensus Rules
