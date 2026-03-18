@@ -1,6 +1,7 @@
 import unittest
+from unittest.mock import patch
 
-from skills.simulink_scan.scripts.sl_actions import inspect_block
+from simulink_cli.actions import inspect_block
 
 
 class FakeEngine:
@@ -45,10 +46,22 @@ class FakeEngine:
         return list(dialog_params.keys())
 
 
+def _inspect_args(target="m/b", model=None, param="All", active_only=False,
+                  strict_active=False, resolve_effective=False, summary=False,
+                  session=None, max_params=None, fields=None):
+    return {
+        "target": target, "model": model, "param": param,
+        "active_only": active_only, "strict_active": strict_active,
+        "resolve_effective": resolve_effective, "summary": summary,
+        "session": session, "max_params": max_params, "fields": fields,
+    }
+
+
 class InspectActiveTests(unittest.TestCase):
     def test_missing_block_returns_block_not_found(self):
         eng = FakeEngine(values={"Gain": "5"}, valid_paths={"m/other"})
-        result = inspect_block(eng, "m/b", "All")
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            result = inspect_block.execute(_inspect_args(target="m/b"))
         self.assertEqual(result["error"], "block_not_found")
         self.assertEqual(result["details"]["target"], "m/b")
 
@@ -60,13 +73,15 @@ class InspectActiveTests(unittest.TestCase):
             mask_enables=["on", "on"],
         )
 
-        full = inspect_block(eng, "m/b", "All")
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            full = inspect_block.execute(_inspect_args())
         self.assertIn("parameter_meta", full)
         self.assertTrue(full["parameter_meta"]["Mechanical"]["active"])
         self.assertFalse(full["parameter_meta"]["PolePairs"]["active"])
         self.assertIn("warnings", full)
 
-        active = inspect_block(eng, "m/b", "All", active_only=True)
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            active = inspect_block.execute(_inspect_args(active_only=True))
         self.assertTrue(active["active_only"])
         self.assertIn("Mechanical", active["values"])
         self.assertNotIn("PolePairs", active["values"])
@@ -79,7 +94,8 @@ class InspectActiveTests(unittest.TestCase):
             mask_visibilities=["on", "off"],
             mask_enables=["on", "on"],
         )
-        result = inspect_block(eng, "m/b", "PolePairs")
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            result = inspect_block.execute(_inspect_args(param="PolePairs"))
         self.assertEqual(result["param"], "PolePairs")
         self.assertFalse(result["meta"]["active"])
         self.assertEqual(result["effective_from"], "Mechanical[3]")
@@ -92,7 +108,8 @@ class InspectActiveTests(unittest.TestCase):
             mask_visibilities=["on", "off"],
             mask_enables=["on", "on"],
         )
-        result = inspect_block(eng, "m/b", "PolePairs", strict_active=True)
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            result = inspect_block.execute(_inspect_args(param="PolePairs", strict_active=True))
         self.assertEqual(result["error"], "inactive_parameter")
         self.assertEqual(result["param"], "PolePairs")
         self.assertEqual(result["effective_from"], "Mechanical[3]")
@@ -104,7 +121,8 @@ class InspectActiveTests(unittest.TestCase):
             mask_visibilities=["on", "off"],
             mask_enables=["on", "on"],
         )
-        result = inspect_block(eng, "m/b", "PolePairs", resolve_effective=True)
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            result = inspect_block.execute(_inspect_args(param="PolePairs", resolve_effective=True))
         self.assertEqual(result["requested_param"], "PolePairs")
         self.assertEqual(result["resolved_param"], "Mechanical")
         self.assertEqual(result["resolved_path"], "Mechanical[3]")
@@ -112,7 +130,8 @@ class InspectActiveTests(unittest.TestCase):
 
     def test_single_param_unknown_name_returns_stable_error(self):
         eng = FakeEngine(values={"Gain": "5", "SampleTime": "0.1"})
-        result = inspect_block(eng, "m/b", "NoSuchParam")
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            result = inspect_block.execute(_inspect_args(param="NoSuchParam"))
         self.assertEqual(result["error"], "unknown_parameter")
         self.assertEqual(result["param"], "NoSuchParam")
 
@@ -123,7 +142,8 @@ class InspectActiveTests(unittest.TestCase):
             mask_visibilities=["off"],
             mask_enables=["on"],
         )
-        result = inspect_block(eng, "m/b", "Alpha", resolve_effective=True)
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            result = inspect_block.execute(_inspect_args(param="Alpha", resolve_effective=True))
         self.assertFalse(result["meta"]["active"])
         self.assertIn("warnings", result)
 
@@ -134,7 +154,8 @@ class InspectActiveTests(unittest.TestCase):
             mask_visibilities=["on", "off", "on"],
             mask_enables=["on", "on", "on"],
         )
-        result = inspect_block(eng, "m/b", "All", summary=True)
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            result = inspect_block.execute(_inspect_args(summary=True))
         self.assertIn("active_params", result)
         self.assertIn("inactive_params", result)
         self.assertIn("effective_overrides", result)
@@ -143,24 +164,29 @@ class InspectActiveTests(unittest.TestCase):
 
     def test_available_params_are_sorted_for_stable_output(self):
         eng = FakeEngine(values={"B": "2", "A": "1"})
-        result = inspect_block(eng, "m/b", "All")
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            result = inspect_block.execute(_inspect_args())
         self.assertEqual(result["available_params"], ["A", "B"])
 
     def test_unmasked_block_graceful_behavior(self):
         eng = FakeEngine(values={"Gain": "5", "SampleTime": "0.1"})
-        full = inspect_block(eng, "m/b", "All")
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            full = inspect_block.execute(_inspect_args())
         self.assertIn("parameter_meta", full)
         self.assertTrue(full["parameter_meta"]["Gain"]["active"])
 
-        active = inspect_block(eng, "m/b", "All", active_only=True)
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            active = inspect_block.execute(_inspect_args(active_only=True))
         self.assertEqual(set(active["values"].keys()), {"Gain", "SampleTime"})
         self.assertEqual(active["dropped_inactive"], [])
 
-        strict = inspect_block(eng, "m/b", "Gain", strict_active=True)
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            strict = inspect_block.execute(_inspect_args(param="Gain", strict_active=True))
         self.assertEqual(strict["param"], "Gain")
         self.assertTrue(strict["meta"]["active"])
 
-        resolved = inspect_block(eng, "m/b", "Gain", resolve_effective=True)
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            resolved = inspect_block.execute(_inspect_args(param="Gain", resolve_effective=True))
         self.assertEqual(resolved["param"], "Gain")
 
     def test_all_params_active(self):
@@ -170,11 +196,13 @@ class InspectActiveTests(unittest.TestCase):
             mask_visibilities=["on", "on"],
             mask_enables=["on", "on"],
         )
-        full = inspect_block(eng, "m/b", "All")
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            full = inspect_block.execute(_inspect_args())
         self.assertTrue(full["parameter_meta"]["A"]["active"])
         self.assertTrue(full["parameter_meta"]["B"]["active"])
 
-        active = inspect_block(eng, "m/b", "All", active_only=True)
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            active = inspect_block.execute(_inspect_args(active_only=True))
         self.assertEqual(set(active["values"].keys()), {"A", "B"})
         self.assertEqual(active["dropped_inactive"], [])
 
@@ -185,7 +213,8 @@ class InspectActiveTests(unittest.TestCase):
             mask_visibilities=["off"],
             mask_enables=[],
         )
-        full = inspect_block(eng, "m/b", "All")
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            full = inspect_block.execute(_inspect_args())
         self.assertIn("warnings", full)
         self.assertFalse(full["parameter_meta"]["A"]["active"])
         self.assertTrue(full["parameter_meta"]["B"]["active"])

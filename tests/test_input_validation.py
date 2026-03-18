@@ -1,8 +1,8 @@
-import argparse
 import unittest
 
-from skills._shared.validation import validate_text_field
-from skills.simulink_scan.scripts.sl_core import run_action, validate_args
+from simulink_cli.validation import validate_text_field
+from simulink_cli.core import run_action
+from simulink_cli.actions import connections, inspect_block, scan, set_param
 
 
 class InputValidationTests(unittest.TestCase):
@@ -28,70 +28,104 @@ class InputValidationTests(unittest.TestCase):
         self.assertIsNone(result)
 
     def test_run_action_applies_validation_for_library_callers(self):
-        args = argparse.Namespace(action="highlight", target="a?b", session=None)
-        result = run_action(args)
+        result = run_action("highlight", {"target": "a?b", "session": None})
         self.assertEqual(result["error"], "invalid_input")
 
-    def test_validate_args_does_not_overrestrict_inspect_param(self):
-        args = argparse.Namespace(
-            action="inspect",
-            model=None,
-            target="m/b",
-            param="Param%Name",
-            active_only=False,
-            strict_active=False,
-            resolve_effective=False,
-            summary=False,
-            session=None,
-        )
-        result = validate_args(args)
+    def test_validate_does_not_overrestrict_inspect_param(self):
+        args = {
+            "action": "inspect",
+            "model": None,
+            "target": "m/b",
+            "param": "Param%Name",
+            "active_only": False,
+            "strict_active": False,
+            "resolve_effective": False,
+            "summary": False,
+            "session": None,
+        }
+        result = inspect_block.validate(args)
         self.assertIsNone(result)
 
-    def test_validate_args_rejects_invalid_connections_direction(self):
-        args = argparse.Namespace(
-            action="connections",
-            model=None,
-            target="m/b",
-            session=None,
-            direction="sideways",
-            depth=1,
-            detail="summary",
-            include_handles=False,
-        )
-        result = validate_args(args)
+    def test_validate_rejects_invalid_connections_direction(self):
+        args = {
+            "action": "connections",
+            "model": None,
+            "target": "m/b",
+            "session": None,
+            "direction": "sideways",
+            "depth": 1,
+            "detail": "summary",
+            "include_handles": False,
+        }
+        result = connections.validate(args)
         self.assertEqual(result["error"], "invalid_input")
 
-    def test_validate_args_rejects_non_positive_connections_depth(self):
-        args = argparse.Namespace(
-            action="connections",
-            model=None,
-            target="m/b",
-            session=None,
-            direction="both",
-            depth=0,
-            detail="summary",
-            include_handles=False,
-            max_edges=None,
-            fields=None,
-        )
-        result = validate_args(args)
+    def test_validate_rejects_non_positive_connections_depth(self):
+        args = {
+            "action": "connections",
+            "model": None,
+            "target": "m/b",
+            "session": None,
+            "direction": "both",
+            "depth": 0,
+            "detail": "summary",
+            "include_handles": False,
+            "max_edges": None,
+            "fields": None,
+        }
+        result = connections.validate(args)
         self.assertEqual(result["error"], "invalid_input")
 
-    def test_validate_args_rejects_non_positive_connections_max_edges(self):
-        args = argparse.Namespace(
-            action="connections",
-            model=None,
-            target="m/b",
-            session=None,
-            direction="both",
-            depth=1,
-            detail="ports",
-            include_handles=False,
-            max_edges=0,
-            fields=None,
-        )
-        result = validate_args(args)
+    def test_validate_rejects_non_positive_connections_max_edges(self):
+        args = {
+            "action": "connections",
+            "model": None,
+            "target": "m/b",
+            "session": None,
+            "direction": "both",
+            "depth": 1,
+            "detail": "ports",
+            "include_handles": False,
+            "max_edges": 0,
+            "fields": None,
+        }
+        result = connections.validate(args)
         self.assertEqual(result["error"], "invalid_input")
+
+    def test_set_param_missing_target_returns_error(self):
+        args = {"target": "", "param": "P", "value": "1", "dry_run": True, "model": None, "session": None}
+        result = set_param.validate(args)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
+    def test_set_param_missing_param_returns_error(self):
+        args = {"target": "m/B", "param": "", "value": "1", "dry_run": True, "model": None, "session": None}
+        result = set_param.validate(args)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
+    def test_set_param_control_characters_in_target_rejected(self):
+        args = {"target": "m/B\x01", "param": "P", "value": "1", "dry_run": True, "model": None, "session": None}
+        result = set_param.validate(args)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
+    def test_set_param_reserved_characters_in_param_rejected(self):
+        args = {"target": "m/B", "param": "P?", "value": "1", "dry_run": True, "model": None, "session": None}
+        result = set_param.validate(args)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
+    def test_set_param_valid_args_returns_none(self):
+        args = {"target": "m/B", "param": "Gain", "value": "2.0", "dry_run": True, "model": None, "session": None}
+        result = set_param.validate(args)
+        self.assertIsNone(result)
+
+    def test_schema_action_returns_none_for_validate(self):
+        # schema has no validate — run_action handles it directly
+        result = run_action("schema", {})
+        self.assertIn("version", result)
+        self.assertIn("actions", result)
 
 
 if __name__ == "__main__":

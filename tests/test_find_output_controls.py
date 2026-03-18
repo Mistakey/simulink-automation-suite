@@ -1,6 +1,7 @@
 import unittest
+from unittest import mock
 
-from skills.simulink_scan.scripts.sl_find import find_blocks
+from simulink_cli.actions import find
 
 
 class FakeFindEngine:
@@ -42,18 +43,31 @@ class FindOutputControlsTests(unittest.TestCase):
             valid_handles={"my_model"} | set(blocks),
         )
 
+    def _run_find(self, **kwargs):
+        args = {
+            "model": "my_model",
+            "subsystem": None,
+            "name": "Block",
+            "block_type": None,
+            "session": None,
+            "max_results": 200,
+            "fields": None,
+        }
+        args.update(kwargs)
+        with mock.patch(
+            "simulink_cli.actions.find.safe_connect_to_session",
+            return_value=(self._make_engine(), None),
+        ):
+            return find.execute(args)
+
     def test_max_results_clips_output(self):
-        eng = self._make_engine()
-        result = find_blocks(eng, model_name="my_model", name="Block", max_results=3)
+        result = self._run_find(max_results=3)
         self.assertEqual(result["total_results"], 5)
         self.assertTrue(result["truncated"])
         self.assertEqual(len(result["results"]), 3)
 
     def test_fields_projection(self):
-        eng = self._make_engine()
-        result = find_blocks(
-            eng, model_name="my_model", name="Block", fields=["path", "type"]
-        )
+        result = self._run_find(fields=["path", "type"])
         for item in result["results"]:
             self.assertIn("path", item)
             self.assertIn("type", item)
@@ -61,14 +75,7 @@ class FindOutputControlsTests(unittest.TestCase):
             self.assertNotIn("parent", item)
 
     def test_max_results_and_fields_combined(self):
-        eng = self._make_engine()
-        result = find_blocks(
-            eng,
-            model_name="my_model",
-            name="Block",
-            max_results=2,
-            fields=["path"],
-        )
+        result = self._run_find(max_results=2, fields=["path"])
         self.assertEqual(result["total_results"], 5)
         self.assertTrue(result["truncated"])
         self.assertEqual(len(result["results"]), 2)

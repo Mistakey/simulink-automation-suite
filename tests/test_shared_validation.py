@@ -1,6 +1,6 @@
 import unittest
 
-from skills._shared.validation import validate_text_field
+from simulink_cli.validation import validate_text_field
 
 
 class SharedValidationTests(unittest.TestCase):

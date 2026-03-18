@@ -1,6 +1,7 @@
 import unittest
+from unittest.mock import patch
 
-from skills.simulink_scan.scripts.sl_connections import get_block_connections
+from simulink_cli.actions import connections
 
 
 class FakeConnectionsEngine:
@@ -100,9 +101,20 @@ class FakeStrictMatlabHandleEngine:
         raise RuntimeError(f"unsupported param: {param_name}")
 
 
+def _conn_args(target, model=None, direction="both", depth=1, detail="summary",
+               include_handles=False, max_edges=None, fields=None, session=None):
+    return {
+        "target": target, "model": model, "direction": direction, "depth": depth,
+        "detail": detail, "include_handles": include_handles, "max_edges": max_edges,
+        "fields": fields, "session": session,
+    }
+
+
 class ConnectionsBehaviorTests(unittest.TestCase):
     def test_default_summary_returns_one_hop_neighbors(self):
-        result = get_block_connections(FakeConnectionsEngine(), block_path="m1/B")
+        eng = FakeConnectionsEngine()
+        with patch.object(connections, 'safe_connect_to_session', return_value=(eng, None)):
+            result = connections.execute(_conn_args(target="m1/B"))
         self.assertEqual(result["target"], "m1/B")
         self.assertEqual(result["direction"], "both")
         self.assertEqual(result["depth"], 1)
@@ -110,23 +122,23 @@ class ConnectionsBehaviorTests(unittest.TestCase):
         self.assertEqual(result["downstream_blocks"], ["m1/C"])
 
     def test_direction_upstream_only(self):
-        result = get_block_connections(
-            FakeConnectionsEngine(), block_path="m1/B", direction="upstream"
-        )
+        eng = FakeConnectionsEngine()
+        with patch.object(connections, 'safe_connect_to_session', return_value=(eng, None)):
+            result = connections.execute(_conn_args(target="m1/B", direction="upstream"))
         self.assertEqual(result["upstream_blocks"], ["m1/A"])
         self.assertEqual(result["downstream_blocks"], [])
 
     def test_direction_downstream_depth_two(self):
-        result = get_block_connections(
-            FakeConnectionsEngine(), block_path="m1/A", direction="downstream", depth=2
-        )
+        eng = FakeConnectionsEngine()
+        with patch.object(connections, 'safe_connect_to_session', return_value=(eng, None)):
+            result = connections.execute(_conn_args(target="m1/A", direction="downstream", depth=2))
         self.assertEqual(result["upstream_blocks"], [])
         self.assertEqual(result["downstream_blocks"], ["m1/B", "m1/C"])
 
     def test_detail_ports_includes_edge_endpoints(self):
-        result = get_block_connections(
-            FakeConnectionsEngine(), block_path="m1/B", detail="ports"
-        )
+        eng = FakeConnectionsEngine()
+        with patch.object(connections, 'safe_connect_to_session', return_value=(eng, None)):
+            result = connections.execute(_conn_args(target="m1/B", detail="ports"))
         self.assertTrue(result["edges"])
         first = result["edges"][0]
         self.assertIn("src_block", first)
@@ -136,25 +148,24 @@ class ConnectionsBehaviorTests(unittest.TestCase):
         self.assertNotIn("line_handle", first)
 
     def test_detail_lines_with_handles_includes_line_handle(self):
-        result = get_block_connections(
-            FakeConnectionsEngine(),
-            block_path="m1/B",
-            detail="lines",
-            include_handles=True,
-        )
+        eng = FakeConnectionsEngine()
+        with patch.object(connections, 'safe_connect_to_session', return_value=(eng, None)):
+            result = connections.execute(_conn_args(
+                target="m1/B", detail="lines", include_handles=True,
+            ))
         self.assertTrue(result["edges"])
         self.assertIn("line_handle", result["edges"][0])
 
     def test_invalid_target_returns_block_not_found(self):
-        result = get_block_connections(
-            FakeConnectionsEngine(), block_path="m1/UNKNOWN"
-        )
+        eng = FakeConnectionsEngine()
+        with patch.object(connections, 'safe_connect_to_session', return_value=(eng, None)):
+            result = connections.execute(_conn_args(target="m1/UNKNOWN"))
         self.assertEqual(result["error"], "block_not_found")
 
     def test_connections_supports_double_handles_without_int_cast_errors(self):
-        result = get_block_connections(
-            FakeStrictMatlabHandleEngine(), block_path="m1/B"
-        )
+        eng = FakeStrictMatlabHandleEngine()
+        with patch.object(connections, 'safe_connect_to_session', return_value=(eng, None)):
+            result = connections.execute(_conn_args(target="m1/B"))
         self.assertNotIn("error", result)
         self.assertEqual(result["upstream_blocks"], ["m1/A"])
         self.assertEqual(result["downstream_blocks"], ["m1/C"])

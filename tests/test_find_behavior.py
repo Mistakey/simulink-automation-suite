@@ -1,6 +1,7 @@
 import unittest
+from unittest.mock import patch
 
-from skills.simulink_scan.scripts.sl_find import find_blocks
+from simulink_cli.actions import find
 
 
 class FakeFindEngine:
@@ -33,6 +34,15 @@ class FakeFindEngine:
         return self.models[0] if self.models else ""
 
 
+def _find_args(model=None, subsystem=None, name=None, block_type=None,
+               session=None, max_results=200, fields=None):
+    return {
+        "model": model, "subsystem": subsystem, "name": name,
+        "block_type": block_type, "session": session,
+        "max_results": max_results, "fields": fields,
+    }
+
+
 class FindBehaviorTests(unittest.TestCase):
     def test_find_by_name_returns_matching_blocks(self):
         eng = FakeFindEngine(
@@ -45,7 +55,8 @@ class FindBehaviorTests(unittest.TestCase):
             },
             valid_handles={"my_model", "my_model/Controller/PID_speed", "my_model/Controller/PID_current"},
         )
-        result = find_blocks(eng, model_name="my_model", name="PID")
+        with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
+            result = find.execute(_find_args(model="my_model", name="PID"))
         self.assertNotIn("error", result)
         self.assertEqual(result["total_results"], 2)
         self.assertFalse(result["truncated"])
@@ -57,13 +68,14 @@ class FindBehaviorTests(unittest.TestCase):
             find_results={"my_model": ["my_model/Gain1", "my_model/Gain2"]},
             valid_handles={"my_model", "my_model/Gain1", "my_model/Gain2"},
         )
-        result = find_blocks(eng, model_name="my_model", block_type="Gain")
+        with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
+            result = find.execute(_find_args(model="my_model", block_type="Gain"))
         self.assertNotIn("error", result)
         self.assertEqual(result["total_results"], 2)
 
     def test_find_requires_name_or_block_type(self):
-        eng = FakeFindEngine(models=["my_model"], valid_handles={"my_model"})
-        result = find_blocks(eng, model_name="my_model")
+        result = find.validate(_find_args(model="my_model"))
+        self.assertIsNotNone(result)
         self.assertEqual(result["error"], "invalid_input")
 
     def test_find_empty_results_is_not_error(self):
@@ -72,7 +84,8 @@ class FindBehaviorTests(unittest.TestCase):
             find_results={"my_model": []},
             valid_handles={"my_model"},
         )
-        result = find_blocks(eng, model_name="my_model", name="nonexistent")
+        with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
+            result = find.execute(_find_args(model="my_model", name="nonexistent"))
         self.assertNotIn("error", result)
         self.assertEqual(result["total_results"], 0)
         self.assertEqual(result["results"], [])
@@ -83,7 +96,8 @@ class FindBehaviorTests(unittest.TestCase):
             find_results={"my_model": ["my_model/Gain1"]},
             valid_handles={"my_model", "my_model/Gain1"},
         )
-        result = find_blocks(eng, model_name="my_model", name="Gain")
+        with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
+            result = find.execute(_find_args(model="my_model", name="Gain"))
         self.assertEqual(result["model"], "my_model")
         self.assertEqual(result["scan_root"], "my_model")
 
@@ -93,9 +107,8 @@ class FindBehaviorTests(unittest.TestCase):
             find_results={"my_model/Controller": ["my_model/Controller/PID1"]},
             valid_handles={"my_model", "my_model/Controller", "my_model/Controller/PID1"},
         )
-        result = find_blocks(
-            eng, model_name="my_model", subsystem="Controller", name="PID"
-        )
+        with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
+            result = find.execute(_find_args(model="my_model", subsystem="Controller", name="PID"))
         self.assertNotIn("error", result)
         self.assertEqual(result["scan_root"], "my_model/Controller")
 
@@ -106,13 +119,15 @@ class FindBehaviorTests(unittest.TestCase):
             valid_handles={"my_model"},
         )
         # Name with regex metacharacters should not cause MATLAB error
-        result = find_blocks(eng, model_name="my_model", name="block[1].out")
+        with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
+            result = find.execute(_find_args(model="my_model", name="block[1].out"))
         self.assertNotIn("error", result)
         self.assertEqual(result["total_results"], 0)
 
     def test_find_model_not_found_error(self):
         eng = FakeFindEngine(models=["other_model"], valid_handles={"other_model"})
-        result = find_blocks(eng, model_name="missing_model", name="x")
+        with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
+            result = find.execute(_find_args(model="missing_model", name="x"))
         self.assertEqual(result["error"], "model_not_found")
 
 

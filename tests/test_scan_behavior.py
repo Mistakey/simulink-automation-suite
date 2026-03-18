@@ -1,10 +1,7 @@
 import unittest
+from unittest.mock import patch
 
-from skills.simulink_scan.scripts.sl_actions import (
-    get_model_structure,
-    highlight_block,
-    list_opened_models,
-)
+from simulink_cli.actions import scan, highlight, list_opened
 
 
 class FakeScanEngine:
@@ -55,6 +52,15 @@ class FakeScanEngine:
         return None
 
 
+def _scan_args(model=None, subsystem=None, recursive=False, hierarchy=False,
+               session=None, max_blocks=None, fields=None):
+    return {
+        "model": model, "subsystem": subsystem, "recursive": recursive,
+        "hierarchy": hierarchy, "session": session, "max_blocks": max_blocks,
+        "fields": fields,
+    }
+
+
 class ScanBehaviorTests(unittest.TestCase):
     def test_list_opened_models_returns_sorted_names(self):
         eng = FakeScanEngine(
@@ -64,7 +70,8 @@ class ScanBehaviorTests(unittest.TestCase):
             recursive_blocks={},
             block_types={},
         )
-        result = list_opened_models(eng)
+        with patch.object(list_opened, 'safe_connect_to_session', return_value=(eng, None)):
+            result = list_opened.execute({"session": None})
         self.assertEqual(result["models"], ["a_model", "m_model", "z_model"])
 
     def test_multiple_models_without_model_returns_model_required(self):
@@ -75,9 +82,10 @@ class ScanBehaviorTests(unittest.TestCase):
             recursive_blocks={},
             block_types={},
         )
-        result = get_model_structure(eng)
+        with patch.object(scan, 'safe_connect_to_session', return_value=(eng, None)):
+            result = scan.execute(_scan_args())
         self.assertEqual(result["error"], "model_required")
-        self.assertEqual(result["models"], ["m1", "m2"])
+        self.assertEqual(result["details"]["models"], ["m1", "m2"])
 
     def test_single_model_defaults_to_only_open_model(self):
         eng = FakeScanEngine(
@@ -87,7 +95,8 @@ class ScanBehaviorTests(unittest.TestCase):
             recursive_blocks={"m1": ["m1", "m1/Gain"]},
             block_types={"m1/Gain": "Gain"},
         )
-        result = get_model_structure(eng)
+        with patch.object(scan, 'safe_connect_to_session', return_value=(eng, None)):
+            result = scan.execute(_scan_args())
         self.assertEqual(result["model"], "m1")
         self.assertEqual(result["scan_root"], "m1")
         self.assertFalse(result["recursive"])
@@ -102,7 +111,8 @@ class ScanBehaviorTests(unittest.TestCase):
             recursive_blocks={},
             block_types={},
         )
-        result = get_model_structure(eng, model_name="m2")
+        with patch.object(scan, 'safe_connect_to_session', return_value=(eng, None)):
+            result = scan.execute(_scan_args(model="m2"))
         self.assertEqual(result["error"], "model_not_found")
         self.assertEqual(result["details"]["models"], ["m1"])
 
@@ -115,7 +125,8 @@ class ScanBehaviorTests(unittest.TestCase):
             block_types={},
             valid_handles={"m1"},
         )
-        result = get_model_structure(eng, model_name="m1", subsystem_path="bad/sub")
+        with patch.object(scan, 'safe_connect_to_session', return_value=(eng, None)):
+            result = scan.execute(_scan_args(model="m1", subsystem="bad/sub"))
         self.assertEqual(result["error"], "subsystem_not_found")
         self.assertEqual(result["details"]["model"], "m1")
 
@@ -128,7 +139,8 @@ class ScanBehaviorTests(unittest.TestCase):
             block_types={"m1/Gain": "Gain"},
             valid_handles={"m1", "m1/Gain"},
         )
-        result = get_model_structure(eng, model_name="m1", subsystem_path="Gain")
+        with patch.object(scan, 'safe_connect_to_session', return_value=(eng, None)):
+            result = scan.execute(_scan_args(model="m1", subsystem="Gain"))
         self.assertEqual(result["error"], "invalid_subsystem_type")
         self.assertEqual(result["details"]["path"], "m1/Gain")
 
@@ -141,7 +153,8 @@ class ScanBehaviorTests(unittest.TestCase):
             block_types={},
             valid_handles={"m1/Gain"},
         )
-        result = highlight_block(eng, "m1/Gain")
+        with patch.object(highlight, 'safe_connect_to_session', return_value=(eng, None)):
+            result = highlight.execute({"target": "m1/Gain", "session": None})
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["highlighted"], "m1/Gain")
         self.assertEqual(eng.highlight_calls, [("m1/Gain", "find", 0)])
@@ -155,7 +168,8 @@ class ScanBehaviorTests(unittest.TestCase):
             block_types={},
             valid_handles={"m1/Other"},
         )
-        result = highlight_block(eng, "m1/Gain")
+        with patch.object(highlight, 'safe_connect_to_session', return_value=(eng, None)):
+            result = highlight.execute({"target": "m1/Gain", "session": None})
         self.assertEqual(result["error"], "block_not_found")
         self.assertEqual(result["details"]["target"], "m1/Gain")
 
@@ -169,7 +183,8 @@ class ScanBehaviorTests(unittest.TestCase):
             valid_handles={"m1/Gain"},
             highlight_fail_targets={"m1/Gain"},
         )
-        result = highlight_block(eng, "m1/Gain")
+        with patch.object(highlight, 'safe_connect_to_session', return_value=(eng, None)):
+            result = highlight.execute({"target": "m1/Gain", "session": None})
         self.assertEqual(result["error"], "runtime_error")
         self.assertEqual(result["details"]["target"], "m1/Gain")
 

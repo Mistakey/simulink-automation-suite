@@ -1,6 +1,7 @@
 import unittest
+from unittest.mock import patch
 
-from skills.simulink_edit.scripts.sl_set_param import set_param
+from simulink_cli.actions import set_param
 
 
 class FakeCrossSkillEngine:
@@ -28,23 +29,32 @@ class FakeCrossSkillEngine:
         self._params[key] = value
 
 
+def _set_param_args(target, param, value, dry_run=True, model=None, session=None):
+    return {
+        "target": target, "param": param, "value": value,
+        "dry_run": dry_run, "model": model, "session": session,
+    }
+
+
 class CrossSkillWorkflowTests(unittest.TestCase):
     def test_preview_then_execute_then_rollback(self):
         eng = FakeCrossSkillEngine()
 
         # Step 1: Preview (dry-run)
-        preview = set_param(
-            eng, target="my_model/Gain1", param="Gain", value="3.0", dry_run=True
-        )
+        with patch.object(set_param, 'safe_connect_to_session', return_value=(eng, None)):
+            preview = set_param.execute(_set_param_args(
+                target="my_model/Gain1", param="Gain", value="3.0", dry_run=True
+            ))
         self.assertNotIn("error", preview)
         self.assertTrue(preview["dry_run"])
         self.assertEqual(preview["current_value"], "1.5")
         self.assertEqual(preview["proposed_value"], "3.0")
 
         # Step 2: Execute
-        execute = set_param(
-            eng, target="my_model/Gain1", param="Gain", value="3.0", dry_run=False
-        )
+        with patch.object(set_param, 'safe_connect_to_session', return_value=(eng, None)):
+            execute = set_param.execute(_set_param_args(
+                target="my_model/Gain1", param="Gain", value="3.0", dry_run=False
+            ))
         self.assertNotIn("error", execute)
         self.assertFalse(execute["dry_run"])
         self.assertEqual(execute["new_value"], "3.0")
@@ -55,13 +65,13 @@ class CrossSkillWorkflowTests(unittest.TestCase):
 
         # Step 4: Rollback using the rollback payload from execute response
         rollback_payload = execute["rollback"]
-        rollback_result = set_param(
-            eng,
-            target=rollback_payload["target"],
-            param=rollback_payload["param"],
-            value=rollback_payload["value"],
-            dry_run=rollback_payload["dry_run"],
-        )
+        with patch.object(set_param, 'safe_connect_to_session', return_value=(eng, None)):
+            rollback_result = set_param.execute(_set_param_args(
+                target=rollback_payload["target"],
+                param=rollback_payload["param"],
+                value=rollback_payload["value"],
+                dry_run=rollback_payload["dry_run"],
+            ))
         self.assertNotIn("error", rollback_result)
         self.assertEqual(rollback_result["new_value"], "1.5")
 
@@ -70,9 +80,10 @@ class CrossSkillWorkflowTests(unittest.TestCase):
 
     def test_rollback_payload_is_self_consistent(self):
         eng = FakeCrossSkillEngine()
-        result = set_param(
-            eng, target="my_model/Gain1", param="Gain", value="5.0", dry_run=True
-        )
+        with patch.object(set_param, 'safe_connect_to_session', return_value=(eng, None)):
+            result = set_param.execute(_set_param_args(
+                target="my_model/Gain1", param="Gain", value="5.0", dry_run=True
+            ))
         rollback = result["rollback"]
         # Rollback should restore the original value, not the proposed one
         self.assertEqual(rollback["value"], "1.5")
