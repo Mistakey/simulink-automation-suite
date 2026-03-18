@@ -132,6 +132,48 @@ def connect_to_session(target_name=None):
         raise RuntimeError(f"Failed to connect to MATLAB session '{target}': {exc}")
 
 
+def safe_connect_to_session(session_name=None):
+    """Connect to session, returning (engine, None) or (None, error_dict)."""
+    try:
+        eng = connect_to_session(session_name)
+        return eng, None
+    except RuntimeError as exc:
+        code = str(exc).strip()
+        if code == "engine_unavailable":
+            return None, make_error(
+                "engine_unavailable",
+                "MATLAB Engine for Python is not available.",
+                details={"cause": code},
+                suggested_fix="Install MATLAB Engine for Python, then retry.",
+            )
+        if code == "no_session":
+            return None, make_error(
+                "no_session",
+                "No shared MATLAB session found.",
+                details={"cause": code},
+                suggested_fix="Run matlab.engine.shareEngine in MATLAB, then retry.",
+            )
+        if code == "session_not_found":
+            return None, make_error(
+                "session_not_found",
+                f"Session '{session_name}' not found.",
+                details={"session": session_name, "cause": code},
+                suggested_fix="Run `session list` and pass an exact session name.",
+            )
+        if code == "session_required":
+            return None, make_error(
+                "session_required",
+                "Multiple MATLAB sessions found. Pass --session to disambiguate.",
+                details={"cause": code},
+                suggested_fix="Run `session list` and pass an exact session name via --session.",
+            )
+        return None, make_error(
+            "runtime_error",
+            f"Failed to connect to MATLAB session: {exc}",
+            details={"cause": str(exc)},
+        )
+
+
 def command_session_list():
     sessions = discover_sessions()
     effective, source, saved = get_effective_session(sessions)

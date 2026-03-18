@@ -6,7 +6,7 @@ from simulink_cli.errors import make_error
 from simulink_cli.json_io import as_list
 from simulink_cli.validation import validate_text_field
 from simulink_cli.model_helpers import resolve_scan_root_path
-from simulink_cli.session import connect_to_session
+from simulink_cli.session import safe_connect_to_session
 
 DESCRIPTION = "Search for blocks by name pattern and/or block type."
 
@@ -57,6 +57,10 @@ FIELDS = {
 }
 
 ERRORS = [
+    "engine_unavailable",
+    "no_session",
+    "session_not_found",
+    "session_required",
     "model_required",
     "model_not_found",
     "subsystem_not_found",
@@ -97,38 +101,9 @@ def validate(args):
 
 def execute(args):
     """Execute find action against a live MATLAB session."""
-    session = args.get("session")
-
-    try:
-        eng = connect_to_session(session)
-    except RuntimeError as exc:
-        error_code = str(exc).strip()
-        if error_code == "no_session":
-            return make_error(
-                "no_session",
-                "No shared MATLAB session found.",
-                details={},
-                suggested_fix="Run matlab.engine.shareEngine in MATLAB, then retry.",
-            )
-        if error_code == "session_not_found":
-            return make_error(
-                "session_not_found",
-                f"Session '{session}' not found.",
-                details={"session": session},
-                suggested_fix="Run `session list` and pass an exact session name.",
-            )
-        if error_code == "session_required":
-            return make_error(
-                "session_required",
-                "Multiple MATLAB sessions found. Pass --session to disambiguate.",
-                details={},
-                suggested_fix="Run `session list` and pass an exact session name via --session.",
-            )
-        return make_error(
-            "runtime_error",
-            "Failed to connect to MATLAB session.",
-            details={"cause": str(exc)},
-        )
+    eng, err = safe_connect_to_session(args.get("session"))
+    if err is not None:
+        return err
 
     model_name = args.get("model")
     subsystem = args.get("subsystem")

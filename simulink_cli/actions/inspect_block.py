@@ -2,7 +2,7 @@ from simulink_cli.errors import make_error
 from simulink_cli.json_io import as_list, project_top_level_fields
 from simulink_cli.validation import validate_text_field
 from simulink_cli.model_helpers import resolve_inspect_target_path
-from simulink_cli.session import connect_to_session
+from simulink_cli.session import safe_connect_to_session
 
 
 DESCRIPTION = "Read block parameters and effective values."
@@ -72,6 +72,10 @@ FIELDS = {
 }
 
 ERRORS = [
+    "engine_unavailable",
+    "no_session",
+    "session_not_found",
+    "session_required",
     "model_not_found",
     "block_not_found",
     "unknown_parameter",
@@ -466,7 +470,9 @@ def validate(args):
 
 
 def execute(args):
-    eng = connect_to_session(args.get("session"))
+    eng, err = safe_connect_to_session(args.get("session"))
+    if err is not None:
+        return err
     return _inspect_block(
         eng,
         block_path=args.get("target"),

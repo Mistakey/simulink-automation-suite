@@ -1,7 +1,6 @@
-from simulink_cli.errors import make_error
 from simulink_cli.json_io import as_list
 from simulink_cli.validation import validate_text_field
-from simulink_cli.session import connect_to_session
+from simulink_cli.session import safe_connect_to_session
 
 FIELDS = {
     "session": {
@@ -12,7 +11,13 @@ FIELDS = {
     },
 }
 
-ERRORS = ["runtime_error"]
+ERRORS = [
+    "engine_unavailable",
+    "no_session",
+    "session_not_found",
+    "session_required",
+    "runtime_error",
+]
 
 DESCRIPTION = "List currently opened Simulink models."
 
@@ -29,16 +34,9 @@ def validate(args):
 
 
 def execute(args):
-    session = args.get("session")
-
-    try:
-        eng = connect_to_session(session)
-    except RuntimeError as exc:
-        return make_error(
-            "runtime_error",
-            f"Failed to connect to MATLAB session: {exc}",
-            details={"cause": str(exc)},
-        )
+    eng, err = safe_connect_to_session(args.get("session"))
+    if err is not None:
+        return err
 
     try:
         models = _get_opened_models(eng)

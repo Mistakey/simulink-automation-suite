@@ -2,7 +2,7 @@
 
 from simulink_cli.errors import make_error
 from simulink_cli.validation import validate_text_field
-from simulink_cli.session import connect_to_session
+from simulink_cli.session import safe_connect_to_session
 
 DESCRIPTION = "Set a block parameter with dry-run preview and rollback support."
 
@@ -11,41 +11,45 @@ FIELDS = {
         "type": "string",
         "required": True,
         "default": None,
-        "description": "Block path to modify.",
+        "description": "Full block path to modify.",
     },
     "param": {
         "type": "string",
         "required": True,
         "default": None,
-        "description": "Parameter name to set.",
+        "description": "Parameter name.",
     },
     "value": {
         "type": "string",
         "required": True,
         "default": None,
-        "description": "New value for the parameter.",
+        "description": "New parameter value (always string — MATLAB handles conversion).",
     },
     "dry_run": {
         "type": "boolean",
         "required": False,
         "default": True,
-        "description": "Preview change without writing (default: true).",
+        "description": "Preview mode — show diff without writing. Defaults to true.",
     },
     "model": {
         "type": "string",
         "required": False,
         "default": None,
-        "description": "Optional model name for path resolution.",
+        "description": "Model disambiguation.",
     },
     "session": {
         "type": "string",
         "required": False,
         "default": None,
-        "description": "Session override for this command.",
+        "description": "MATLAB session name override.",
     },
 }
 
 ERRORS = [
+    "engine_unavailable",
+    "no_session",
+    "session_not_found",
+    "session_required",
     "block_not_found",
     "param_not_found",
     "set_param_failed",
@@ -75,38 +79,9 @@ def validate(args):
 
 def execute(args):
     """Execute set_param action against a live MATLAB session."""
-    session = args.get("session")
-
-    try:
-        eng = connect_to_session(session)
-    except RuntimeError as exc:
-        error_code = str(exc).strip()
-        if error_code == "no_session":
-            return make_error(
-                "no_session",
-                "No shared MATLAB session found.",
-                details={},
-                suggested_fix="Run matlab.engine.shareEngine in MATLAB, then retry.",
-            )
-        if error_code == "session_not_found":
-            return make_error(
-                "session_not_found",
-                f"Session '{session}' not found.",
-                details={"session": session},
-                suggested_fix="Run `session list` and pass an exact session name.",
-            )
-        if error_code == "session_required":
-            return make_error(
-                "session_required",
-                "Multiple MATLAB sessions found. Pass --session to disambiguate.",
-                details={},
-                suggested_fix="Run `session list` and pass an exact session name via --session.",
-            )
-        return make_error(
-            "runtime_error",
-            "Failed to connect to MATLAB session.",
-            details={"cause": str(exc)},
-        )
+    eng, err = safe_connect_to_session(args.get("session"))
+    if err is not None:
+        return err
 
     target = args["target"]
     param = args["param"]

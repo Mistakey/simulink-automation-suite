@@ -1,6 +1,6 @@
 from simulink_cli.errors import make_error
 from simulink_cli.validation import validate_text_field
-from simulink_cli.session import connect_to_session
+from simulink_cli.session import safe_connect_to_session
 
 FIELDS = {
     "target": {
@@ -17,7 +17,14 @@ FIELDS = {
     },
 }
 
-ERRORS = ["block_not_found", "runtime_error"]
+ERRORS = [
+    "engine_unavailable",
+    "no_session",
+    "session_not_found",
+    "session_required",
+    "block_not_found",
+    "runtime_error",
+]
 
 DESCRIPTION = "Highlight a target block in Simulink UI."
 
@@ -43,14 +50,9 @@ def execute(args):
     target = args["target"]
     session = args.get("session")
 
-    try:
-        eng = connect_to_session(session)
-    except RuntimeError as exc:
-        return make_error(
-            "runtime_error",
-            f"Failed to connect to MATLAB session: {exc}",
-            details={"cause": str(exc)},
-        )
+    eng, err = safe_connect_to_session(session)
+    if err is not None:
+        return err
 
     try:
         eng.get_param(target, "Handle")
