@@ -40,7 +40,7 @@ def validate_json_type(action, field_name, value, field_meta):
         raise ValueError(
             f"invalid_json: field '{field_name}' for action '{action}' must be string"
         )
-    if field_type == "integer" and not isinstance(value, int):
+    if field_type == "integer" and (isinstance(value, bool) or not isinstance(value, int)):
         raise ValueError(
             f"invalid_json: field '{field_name}' for action '{action}' must be integer"
         )

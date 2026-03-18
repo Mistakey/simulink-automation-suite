@@ -21,11 +21,12 @@ def resolve_scan_root_path(eng, model_name=None, subsystem_path=None):
             )
     else:
         if len(opened_models) > 1:
-            return {
-                "error": "model_required",
-                "message": "Multiple opened models found. Pass --model to disambiguate.",
-                "models": opened_models,
-            }
+            return make_error(
+                "model_required",
+                "Multiple opened models found. Pass --model to disambiguate.",
+                details={"models": opened_models},
+                suggested_fix="Pass --model with one of the listed model names.",
+            )
         if len(opened_models) == 1:
             target_model = opened_models[0]
         else:

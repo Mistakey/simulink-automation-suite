@@ -126,13 +126,6 @@ def run_action(action_name, args):
 
 
 # -- Error mapping (unified) --------------------------------------------------
-def _all_error_codes():
-    codes = set()
-    for mod in _ACTIONS.values():
-        codes.update(mod.ERRORS)
-    return codes
-
-
 def map_value_error(exc):
     text = str(exc).strip()
     if ":" in text:
