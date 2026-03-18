@@ -2,26 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from simulink_cli.actions import set_param
-
-
-class FakeSetParamEngine:
-    def __init__(self, params=None, valid_handles=None):
-        self._params = params or {}
-        self._valid_handles = valid_handles or set()
-
-    def get_param(self, path, param):
-        if param == "Handle":
-            if path not in self._valid_handles:
-                raise RuntimeError(f"Invalid block path: {path}")
-            return 1.0
-        key = f"{path}::{param}"
-        if key not in self._params:
-            raise RuntimeError(f"Parameter '{param}' not found on '{path}'")
-        return self._params[key]
-
-    def set_param(self, path, param, value):
-        key = f"{path}::{param}"
-        self._params[key] = value
+from tests.fakes import FakeSetParamEngine
 
 
 def _set_param_args(target="my_model/PID/Kp", param="Kp", value="3.0",

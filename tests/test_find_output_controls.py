@@ -1,37 +1,8 @@
 import unittest
-from unittest import mock
+from unittest.mock import patch
 
 from simulink_cli.actions import find
-
-
-class FakeFindEngine:
-    def __init__(self, models, find_results=None, valid_handles=None):
-        self.models = models
-        self.find_results = find_results or {}
-        self.valid_handles = valid_handles or set()
-
-    def find_system(self, *args, **kwargs):
-        # Handle get_opened_models() call: find_system("Type", "block_diagram")
-        if args == ("Type", "block_diagram"):
-            return list(self.models)
-        scope = args[0] if args else ""
-        return self.find_results.get(scope, [])
-
-    def get_param(self, path, param):
-        if param == "Handle":
-            if path not in self.valid_handles:
-                raise RuntimeError(f"not found: {path}")
-            return 1.0
-        if param == "BlockType":
-            if "SubSystem" in path or "Controller" in path:
-                return "SubSystem"
-            return "Gain"
-        if param == "Type":
-            return "block_diagram"
-        raise RuntimeError(f"unknown param: {param}")
-
-    def bdroot(self):
-        return self.models[0] if self.models else ""
+from tests.fakes import FakeFindEngine
 
 
 class FindOutputControlsTests(unittest.TestCase):
@@ -54,10 +25,8 @@ class FindOutputControlsTests(unittest.TestCase):
             "fields": None,
         }
         args.update(kwargs)
-        with mock.patch(
-            "simulink_cli.actions.find.safe_connect_to_session",
-            return_value=(self._make_engine(), None),
-        ):
+        with patch.object(find, 'safe_connect_to_session',
+                          return_value=(self._make_engine(), None)):
             return find.execute(args)
 
     def test_max_results_clips_output(self):

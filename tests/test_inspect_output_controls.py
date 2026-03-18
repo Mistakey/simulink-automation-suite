@@ -1,27 +1,8 @@
 import unittest
-from unittest import mock
+from unittest.mock import patch
 
 from simulink_cli.actions import inspect_block
-
-
-class FakeEngine:
-    def get_param(self, block_path, param_name):
-        if param_name == "Handle":
-            return 1
-        if param_name == "DialogParameters":
-            return {"B": {}, "A": {}}
-        if param_name == "MaskNames":
-            raise RuntimeError("not masked")
-        if param_name == "MaskVisibilities":
-            raise RuntimeError("not masked")
-        if param_name == "MaskEnables":
-            raise RuntimeError("not masked")
-        if param_name in {"A", "B"}:
-            return f"value_{param_name}"
-        raise RuntimeError("unknown")
-
-    def fieldnames(self, dialog_params):
-        return list(dialog_params.keys())
+from tests.fakes import FakeInspectOutputEngine
 
 
 class InspectOutputControlsTests(unittest.TestCase):
@@ -39,10 +20,8 @@ class InspectOutputControlsTests(unittest.TestCase):
             "fields": None,
         }
         args.update(kwargs)
-        with mock.patch(
-            "simulink_cli.actions.inspect_block.safe_connect_to_session",
-            return_value=(FakeEngine(), None),
-        ):
+        with patch.object(inspect_block, 'safe_connect_to_session',
+                          return_value=(FakeInspectOutputEngine(), None)):
             return inspect_block.execute(args)
 
     def test_inspect_max_params_truncates_and_reports_metadata(self):

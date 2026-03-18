@@ -3,6 +3,7 @@ import sys
 
 from simulink_cli.errors import make_error
 from simulink_cli.json_io import JsonArgumentParser, emit_json
+from simulink_cli.session import SESSION_ERROR_MAP
 from simulink_cli.validation import validate_json_type
 from simulink_cli.actions import (
     connections,
@@ -163,26 +164,8 @@ def map_value_error(exc):
 
 def map_runtime_error(exc):
     code = str(exc).strip()
-    messages = {
-        "engine_unavailable": (
-            "MATLAB Engine for Python is not available.",
-            "Install MATLAB Engine for Python, then retry.",
-        ),
-        "no_session": (
-            "No shared MATLAB session found.",
-            "Run matlab.engine.shareEngine in MATLAB, then retry.",
-        ),
-        "session_required": (
-            "Multiple MATLAB sessions found. Specify which session to use.",
-            "Run schema or session list to discover sessions, then pass --session.",
-        ),
-        "session_not_found": (
-            "Specified session not found.",
-            "Check session name with session list, then retry.",
-        ),
-    }
-    if code in messages:
-        msg, fix = messages[code]
+    if code in SESSION_ERROR_MAP:
+        msg, fix = SESSION_ERROR_MAP[code]
         return make_error(code, msg, details={"cause": code}, suggested_fix=fix)
     return make_error(
         "runtime_error", str(exc), details={"cause": str(exc)}

@@ -2,54 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from simulink_cli.actions import scan, highlight, list_opened
-
-
-class FakeScanEngine:
-    def __init__(
-        self,
-        models,
-        active_root,
-        shallow_blocks,
-        recursive_blocks,
-        block_types,
-        valid_handles=None,
-        highlight_fail_targets=None,
-    ):
-        self.models = models
-        self.active_root = active_root
-        self.shallow_blocks = shallow_blocks
-        self.recursive_blocks = recursive_blocks
-        self.block_types = block_types
-        self.valid_handles = set(valid_handles or [])
-        self.highlight_fail_targets = set(highlight_fail_targets or [])
-        self.highlight_calls = []
-
-    def find_system(self, *args):
-        if args == ("Type", "block_diagram"):
-            return self.models
-
-        scan_root = args[0]
-        if "SearchDepth" in args:
-            return self.shallow_blocks.get(scan_root, [scan_root])
-        return self.recursive_blocks.get(scan_root, [scan_root])
-
-    def bdroot(self):
-        return self.active_root
-
-    def get_param(self, block_path, param_name):
-        if param_name == "BlockType":
-            return self.block_types.get(block_path, "SubSystem")
-        if param_name == "Handle":
-            if self.valid_handles and block_path not in self.valid_handles:
-                raise RuntimeError("not found")
-            return 1
-        raise RuntimeError(f"unsupported param {param_name}")
-
-    def hilite_system(self, block_path, mode, nargout=0):
-        self.highlight_calls.append((block_path, mode, nargout))
-        if block_path in self.highlight_fail_targets:
-            raise RuntimeError("highlight failed")
-        return None
+from tests.fakes import FakeScanEngine
 
 
 def _scan_args(model=None, subsystem=None, recursive=False, hierarchy=False,

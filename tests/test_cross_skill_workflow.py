@@ -2,31 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from simulink_cli.actions import set_param
-
-
-class FakeCrossSkillEngine:
-    """Simulates a MATLAB engine with get_param and set_param."""
-
-    def __init__(self):
-        self._params = {
-            "my_model/Gain1::Gain": "1.5",
-            "my_model/Gain1::Handle": 1.0,
-        }
-        self._valid_handles = {"my_model/Gain1"}
-
-    def get_param(self, path, param):
-        if param == "Handle":
-            if path not in self._valid_handles:
-                raise RuntimeError(f"Invalid block path: {path}")
-            return 1.0
-        key = f"{path}::{param}"
-        if key not in self._params:
-            raise RuntimeError(f"Parameter '{param}' not found on '{path}'")
-        return self._params[key]
-
-    def set_param(self, path, param, value):
-        key = f"{path}::{param}"
-        self._params[key] = value
+from tests.fakes import FakeCrossSkillEngine
 
 
 def _set_param_args(target, param, value, dry_run=True, model=None, session=None):

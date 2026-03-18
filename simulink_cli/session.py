@@ -9,6 +9,27 @@ from simulink_cli.errors import make_error
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 STATE_FILE = PLUGIN_ROOT / ".sl_pilot_state.json"
 
+# Canonical session error map: code -> (message, suggested_fix)
+# Used by both safe_connect_to_session() and core.map_runtime_error().
+SESSION_ERROR_MAP = {
+    "engine_unavailable": (
+        "MATLAB Engine for Python is not available.",
+        "Install MATLAB Engine for Python, then retry.",
+    ),
+    "no_session": (
+        "No shared MATLAB session found.",
+        "Run matlab.engine.shareEngine in MATLAB, then retry.",
+    ),
+    "session_required": (
+        "Multiple MATLAB sessions found. Specify which session to use.",
+        "Run `session list` and pass an exact session name via --session.",
+    ),
+    "session_not_found": (
+        "Specified session not found.",
+        "Run `session list` and pass an exact session name.",
+    ),
+}
+
 
 def _get_matlab_engine():
     try:
@@ -139,34 +160,12 @@ def safe_connect_to_session(session_name=None):
         return eng, None
     except RuntimeError as exc:
         code = str(exc).strip()
-        if code == "engine_unavailable":
-            return None, make_error(
-                "engine_unavailable",
-                "MATLAB Engine for Python is not available.",
-                details={"cause": code},
-                suggested_fix="Install MATLAB Engine for Python, then retry.",
-            )
-        if code == "no_session":
-            return None, make_error(
-                "no_session",
-                "No shared MATLAB session found.",
-                details={"cause": code},
-                suggested_fix="Run matlab.engine.shareEngine in MATLAB, then retry.",
-            )
-        if code == "session_not_found":
-            return None, make_error(
-                "session_not_found",
-                f"Session '{session_name}' not found.",
-                details={"session": session_name, "cause": code},
-                suggested_fix="Run `session list` and pass an exact session name.",
-            )
-        if code == "session_required":
-            return None, make_error(
-                "session_required",
-                "Multiple MATLAB sessions found. Pass --session to disambiguate.",
-                details={"cause": code},
-                suggested_fix="Run `session list` and pass an exact session name via --session.",
-            )
+        if code in SESSION_ERROR_MAP:
+            msg, fix = SESSION_ERROR_MAP[code]
+            details = {"cause": code}
+            if code == "session_not_found" and session_name is not None:
+                details["session"] = session_name
+            return None, make_error(code, msg, details=details, suggested_fix=fix)
         return None, make_error(
             "runtime_error",
             f"Failed to connect to MATLAB session: {exc}",
