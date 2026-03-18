@@ -1,3 +1,4 @@
+import argparse
 import json
 import sys
 
@@ -92,13 +93,21 @@ def parse_json_request(raw_payload):
 
 # -- Argparse auto-generation (flag mode) ------------------------------------
 def _add_argument_from_field(parser, name, meta):
+    field_type = meta.get("type", "string")
+
+    # Positional arguments (e.g., session_action for `session list`)
+    if meta.get("positional"):
+        kwargs = {"help": meta.get("description", "")}
+        if "enum" in meta:
+            kwargs["choices"] = meta["enum"]
+        parser.add_argument(name, **kwargs)
+        return
+
     flag = f"--{name.replace('_', '-')}"
     kwargs = {"help": meta.get("description", ""), "dest": name}
-    field_type = meta.get("type", "string")
     if field_type == "boolean":
-        kwargs["action"] = "store_true"
+        kwargs["action"] = argparse.BooleanOptionalAction
         kwargs["default"] = meta.get("default", False)
-        kwargs.pop("dest")
         parser.add_argument(flag, **kwargs)
         return
     if field_type == "integer":

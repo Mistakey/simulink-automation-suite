@@ -207,26 +207,33 @@ If no MATLAB shared session exists, run `matlab.engine.shareEngine` in MATLAB an
 ## What's Inside
 
 ```text
-simulink-automation-suite/
-|-- .claude-plugin/
-|   |-- plugin.json
-|   |-- marketplace.json
-|-- skills/
-|   |-- _shared/
-|   |-- simulink_scan/
-|   |   |-- SKILL.md
-|   |   |-- reference.md
-|   |   |-- test-scenarios.md
-|   |   |-- scripts/
-|   |-- simulink_edit/
-|       |-- SKILL.md
-|       |-- reference.md
-|       |-- test-scenarios.md
-|       |-- scripts/
-|-- tests/
-|-- docs/
-|-- README.md
-|-- README.zh-CN.md
+simulink_cli/           # Unified CLI package (single entrypoint)
+├── __main__.py         # python -m simulink_cli
+├── core.py             # Action registry, JSON/flag parsing, schema, routing
+├── errors.py           # Error envelope builder
+├── json_io.py          # JSON I/O utilities
+├── validation.py       # Input hardening
+├── session.py          # MATLAB session management
+├── model_helpers.py    # Path resolution helpers
+└── actions/            # One module per action
+    ├── scan.py
+    ├── inspect_block.py
+    ├── connections.py
+    ├── find.py
+    ├── highlight.py
+    ├── list_opened.py
+    ├── set_param.py
+    └── session_cmd.py
+skills/                 # Plugin skill definitions (docs only, no Python code)
+├── simulink_scan/      # Read-only analysis skill
+│   ├── SKILL.md
+│   ├── reference.md
+│   └── test-scenarios.md
+└── simulink_edit/      # Parameter modification skill
+    ├── SKILL.md
+    ├── reference.md
+    └── test-scenarios.md
+tests/                  # Test suite
 ```
 
 ---

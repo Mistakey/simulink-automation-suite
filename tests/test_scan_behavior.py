@@ -142,5 +142,43 @@ class ScanBehaviorTests(unittest.TestCase):
         self.assertEqual(result["details"]["target"], "m1/Gain")
 
 
+    def test_hierarchy_with_fields_does_not_crash(self):
+        eng = FakeScanEngine(
+            models=["m1"],
+            active_root="m1",
+            shallow_blocks={"m1": ["m1/A", "m1/B"]},
+            recursive_blocks={"m1": ["m1/A", "m1/B"]},
+            block_types={"m1/A": "Gain", "m1/B": "SubSystem"},
+            valid_handles=set(),
+        )
+        with patch.object(scan, 'safe_connect_to_session', return_value=(eng, None)):
+            result = scan.execute(_scan_args(
+                model="m1", recursive=True, hierarchy=True, fields=["name"],
+            ))
+        self.assertNotIn("error", result)
+        self.assertIn("hierarchy", result)
+        # Field projection applies to blocks but hierarchy uses full data
+        for blk in result["blocks"]:
+            self.assertNotIn("type", blk)
+            self.assertIn("name", blk)
+
+
+class SessionFlagModeTests(unittest.TestCase):
+    def test_session_list_positional(self):
+        from simulink_cli.core import build_parser
+
+        parser = build_parser()
+        args = parser.parse_args(["session", "list"])
+        self.assertEqual(args.session_action, "list")
+
+    def test_session_use_positional_with_name(self):
+        from simulink_cli.core import build_parser
+
+        parser = build_parser()
+        args = parser.parse_args(["session", "use", "--name", "MATLAB_123"])
+        self.assertEqual(args.session_action, "use")
+        self.assertEqual(args.name, "MATLAB_123")
+
+
 if __name__ == "__main__":
     unittest.main()

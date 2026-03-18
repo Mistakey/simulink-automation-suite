@@ -20,6 +20,7 @@ FIELDS = {
         "default": None,
         "enum": ["list", "use", "current", "clear"],
         "description": "Session management operation.",
+        "positional": True,
     },
     "name": {
         "type": "string",

@@ -57,6 +57,8 @@ skills/                      ← Entrypoint wrappers + documentation (plugin dis
 │   ├── SKILL.md
 │   ├── reference.md
 │   └── test-scenarios.md
+
+> [UPDATE 2026-03-18] Backward-compat wrappers (`skills/*/__main__.py`) were later removed per user request. The `skills/` directories now contain only documentation files (SKILL.md, reference.md, test-scenarios.md), with no Python code.
 ```
 
 ### Key Decisions
@@ -69,6 +71,8 @@ skills/                      ← Entrypoint wrappers + documentation (plugin dis
 | session command file name | `session_cmd.py` | Avoids confusion with `session.py` (infrastructure) |
 | scan + highlight + list_opened | Separate files | Maintains 1-action-1-module protocol; shared helpers via model_helpers.py |
 | Backward compatibility | Thin wrappers in old `__main__.py` | `python -m skills.simulink_scan` still works, redirects to simulink_cli |
+
+> [UPDATE 2026-03-18] Backward-compat wrappers were later removed per user request. `python -m simulink_cli` is now the sole entrypoint.
 | Safety boundary | SKILL.md layer, not CLI enforcement | Unified CLI exposes all actions; each SKILL.md documents only its own actions. `set_param` has `dry_run=true` default. This matches `agent-first-cli.md` §7: "Write capabilities are separate skills" — at the instruction layer, not the binary layer. |
 
 ## Action Module Protocol
@@ -220,6 +224,8 @@ raise SystemExit(main())
 ```
 
 Note: The unified `main()` exposes all actions regardless of entry point. Safety boundary is at the SKILL.md instruction layer — simulink-scan's SKILL.md documents only read actions, simulink-edit's SKILL.md documents only write actions. This is intentional: the CLI is permissive, the skill instructions are restrictive.
+
+> [UPDATE 2026-03-18] Backward-compat wrappers (`skills/*/__main__.py`) were later removed per user request. The `skills/` directories now contain only documentation files. `python -m simulink_cli` is the sole entrypoint.
 
 ### Deletion Plan
 

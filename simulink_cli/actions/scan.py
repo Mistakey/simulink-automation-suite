@@ -166,12 +166,6 @@ def execute(args):
         )
         total_count = len(block_list)
 
-        if isinstance(fields, list) and fields:
-            block_list = [
-                {key: value for key, value in item.items() if key in fields}
-                for item in block_list
-            ]
-
         truncated = False
         if (
             isinstance(max_blocks, int)
@@ -185,12 +179,20 @@ def execute(args):
             "model": target_model,
             "scan_root": scan_root,
             "recursive": use_recursive,
-            "blocks": block_list,
             "total_count": total_count,
             "truncated": truncated,
         }
         if hierarchy:
             output["hierarchy"] = _build_hierarchy_tree(scan_root, block_list)
+
+        # Field projection AFTER hierarchy tree (which needs "type")
+        if isinstance(fields, list) and fields:
+            block_list = [
+                {key: value for key, value in item.items() if key in fields}
+                for item in block_list
+            ]
+
+        output["blocks"] = block_list
 
         return output
     except Exception as exc:

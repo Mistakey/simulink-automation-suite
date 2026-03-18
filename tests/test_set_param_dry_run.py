@@ -6,10 +6,10 @@ from tests.fakes import FakeSetParamEngine
 
 
 def _set_param_args(target="my_model/PID/Kp", param="Kp", value="3.0",
-                    dry_run=True, model=None, session=None):
+                    dry_run=True, session=None):
     return {
         "target": target, "param": param, "value": value,
-        "dry_run": dry_run, "model": model, "session": session,
+        "dry_run": dry_run, "session": session,
     }
 
 
@@ -58,6 +58,13 @@ class SetParamDryRunTests(unittest.TestCase):
         parser = build_parser()
         args = parser.parse_args(["set_param", "--target", "m/B", "--param", "P", "--value", "1"])
         self.assertTrue(args.dry_run)
+
+    def test_no_dry_run_flag_disables_dry_run(self):
+        from simulink_cli.core import build_parser
+
+        parser = build_parser()
+        args = parser.parse_args(["set_param", "--target", "m/B", "--param", "P", "--value", "1", "--no-dry-run"])
+        self.assertFalse(args.dry_run)
 
 
 if __name__ == "__main__":

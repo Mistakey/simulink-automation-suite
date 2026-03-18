@@ -34,7 +34,7 @@ Output:
 ### Execute
 
 ```bash
-python -m simulink_cli set_param --target "my_model/Gain1" --param "Gain" --value "2.0" --dry-run false
+python -m simulink_cli set_param --target "my_model/Gain1" --param "Gain" --value "2.0" --no-dry-run
 ```
 
 ```bash

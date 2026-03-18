@@ -1311,6 +1311,8 @@ With: "Check: `simulink_cli/core.py` `build_schema_payload()` version string"
 
 ### Task 19: Backward compat wrappers + delete old code
 
+> [UPDATE 2026-03-18] Backward-compat wrappers were later removed per user request. The `skills/` directories now contain only documentation files, with no Python code. `python -m simulink_cli` is the sole entrypoint.
+
 **Files:**
 - Modify: `skills/simulink_scan/__main__.py`
 - Modify: `skills/simulink_edit/__main__.py`

@@ -31,12 +31,6 @@ FIELDS = {
         "default": True,
         "description": "Preview mode — show diff without writing. Defaults to true.",
     },
-    "model": {
-        "type": "string",
-        "required": False,
-        "default": None,
-        "description": "Model disambiguation.",
-    },
     "session": {
         "type": "string",
         "required": False,
@@ -53,14 +47,13 @@ ERRORS = [
     "block_not_found",
     "param_not_found",
     "set_param_failed",
-    "model_not_found",
     "runtime_error",
 ]
 
 
 def validate(args):
     """Validate set_param arguments. Returns error dict or None."""
-    for field_name in ("target", "param", "value", "model", "session"):
+    for field_name in ("target", "param", "value", "session"):
         err = validate_text_field(field_name, args.get(field_name))
         if err is not None:
             return err

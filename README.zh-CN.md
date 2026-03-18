@@ -207,26 +207,33 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 ## 仓库内容
 
 ```text
-simulink-automation-suite/
-|-- .claude-plugin/
-|   |-- plugin.json
-|   |-- marketplace.json
-|-- skills/
-|   |-- _shared/
-|   |-- simulink_scan/
-|   |   |-- SKILL.md
-|   |   |-- reference.md
-|   |   |-- test-scenarios.md
-|   |   |-- scripts/
-|   |-- simulink_edit/
-|       |-- SKILL.md
-|       |-- reference.md
-|       |-- test-scenarios.md
-|       |-- scripts/
-|-- tests/
-|-- docs/
-|-- README.md
-|-- README.zh-CN.md
+simulink_cli/           # 统一 CLI 包（单一入口）
+├── __main__.py         # python -m simulink_cli
+├── core.py             # Action 注册、JSON/flag 解析、schema、路由
+├── errors.py           # 错误信封构建器
+├── json_io.py          # JSON I/O 工具
+├── validation.py       # 输入校验
+├── session.py          # MATLAB 会话管理
+├── model_helpers.py    # 路径解析辅助
+└── actions/            # 每个 action 一个模块
+    ├── scan.py
+    ├── inspect_block.py
+    ├── connections.py
+    ├── find.py
+    ├── highlight.py
+    ├── list_opened.py
+    ├── set_param.py
+    └── session_cmd.py
+skills/                 # 插件技能定义（仅文档，无 Python 代码）
+├── simulink_scan/      # 只读分析技能
+│   ├── SKILL.md
+│   ├── reference.md
+│   └── test-scenarios.md
+└── simulink_edit/      # 参数修改技能
+    ├── SKILL.md
+    ├── reference.md
+    └── test-scenarios.md
+tests/                  # 测试套件
 ```
 
 ---

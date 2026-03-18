@@ -38,7 +38,7 @@ This skill is one capability inside plugin `simulink-automation-suite`.
   - `python -m simulink_cli set_param --target "<block>" --param "<name>" --value "<new_value>"`
   - (dry_run defaults to true — shows diff without writing)
 - Execute parameter change:
-  - `python -m simulink_cli set_param --target "<block>" --param "<name>" --value "<new_value>" --dry-run false`
+  - `python -m simulink_cli set_param --target "<block>" --param "<name>" --value "<new_value>" --no-dry-run`
 - JSON mode (preview):
   - `python -m simulink_cli --json '{"action":"set_param","target":"<block>","param":"<name>","value":"<new_value>"}'`
 - JSON mode (execute):
