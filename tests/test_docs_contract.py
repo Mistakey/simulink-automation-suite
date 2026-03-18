@@ -36,7 +36,7 @@ class DocsContractTests(unittest.TestCase):
 
     def test_readme_mentions_schema_and_output_controls(self):
         text = README_PATH.read_text(encoding="utf-8")
-        self.assertIn("skills.simulink_scan schema", text)
+        self.assertIn("simulink_cli schema", text)
         self.assertIn("--max-blocks", text)
         self.assertIn("--max-params", text)
         self.assertIn("--max-edges", text)
@@ -62,14 +62,14 @@ class DocsContractTests(unittest.TestCase):
     def test_reference_includes_highlight_action_examples(self):
         text = REFERENCE_PATH.read_text(encoding="utf-8")
         self.assertIn("## Highlight Action", text)
-        self.assertIn("skills.simulink_scan highlight", text)
+        self.assertIn("simulink_cli highlight", text)
 
     def test_skill_and_reference_document_connections_action(self):
         skill_text = SKILL_PATH.read_text(encoding="utf-8")
         reference_text = REFERENCE_PATH.read_text(encoding="utf-8")
         self.assertIn("connections", skill_text)
         self.assertIn("## Connections Action", reference_text)
-        self.assertIn("skills.simulink_scan connections", reference_text)
+        self.assertIn("simulink_cli connections", reference_text)
         self.assertIn("--max-edges", reference_text)
         self.assertIn("--fields", reference_text)
 

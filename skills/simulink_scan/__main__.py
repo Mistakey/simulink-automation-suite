@@ -1,4 +1,4 @@
-from .scripts.sl_core import main
+from simulink_cli.core import main
 
 
 if __name__ == "__main__":

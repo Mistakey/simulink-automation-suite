@@ -5,7 +5,7 @@ description: Use when modifying Simulink block parameters via set_param with dry
 
 Use this skill for Simulink model parameter modification.
 Reject read-only analysis requests — redirect to `simulink-scan`.
-Canonical skill name is `simulink-edit` (module path `skills.simulink_edit` is internal only).
+Canonical skill name is `simulink-edit` (module path `simulink_cli` is internal only).
 This skill is one capability inside plugin `simulink-automation-suite`.
 
 ## Safety Model
@@ -21,11 +21,11 @@ This skill is one capability inside plugin `simulink-automation-suite`.
    - MATLAB Engine for Python is installed in the active Python environment.
    - MATLAB shared session is started by running `matlab.engine.shareEngine` in MATLAB.
 1. Discover contract when uncertain about commands/fields:
-   - `python -m skills.simulink_edit schema`
-   - JSON: `python -m skills.simulink_edit --json "{\"action\":\"schema\"}"`
+   - `python -m simulink_cli schema`
+   - JSON: `python -m simulink_cli --json "{\"action\":\"schema\"}"`
 2. Use `simulink-scan` to locate and inspect target blocks before editing:
-   - `python -m skills.simulink_scan find --name "PID"` → locate block
-   - `python -m skills.simulink_scan inspect --target "<block>" --param "All"` → read current values
+   - `python -m simulink_cli find --name "PID"` → locate block
+   - `python -m simulink_cli inspect --target "<block>" --param "All"` → read current values
 
 ## Action Selection
 
@@ -35,14 +35,14 @@ This skill is one capability inside plugin `simulink-automation-suite`.
 ## Execution Templates
 
 - Preview parameter change (dry-run):
-  - `python -m skills.simulink_edit set_param --target "<block>" --param "<name>" --value "<new_value>"`
+  - `python -m simulink_cli set_param --target "<block>" --param "<name>" --value "<new_value>"`
   - (dry_run defaults to true — shows diff without writing)
 - Execute parameter change:
-  - `python -m skills.simulink_edit set_param --target "<block>" --param "<name>" --value "<new_value>" --dry-run false`
+  - `python -m simulink_cli set_param --target "<block>" --param "<name>" --value "<new_value>" --dry-run false`
 - JSON mode (preview):
-  - `python -m skills.simulink_edit --json '{"action":"set_param","target":"<block>","param":"<name>","value":"<new_value>"}'`
+  - `python -m simulink_cli --json '{"action":"set_param","target":"<block>","param":"<name>","value":"<new_value>"}'`
 - JSON mode (execute):
-  - `python -m skills.simulink_edit --json '{"action":"set_param","target":"<block>","param":"<name>","value":"<new_value>","dry_run":false}'`
+  - `python -m simulink_cli --json '{"action":"set_param","target":"<block>","param":"<name>","value":"<new_value>","dry_run":false}'`
 
 The `value` field is always a string. MATLAB `set_param` handles type conversion internally. Pass numeric values as `"2.0"`, not `2.0`.
 

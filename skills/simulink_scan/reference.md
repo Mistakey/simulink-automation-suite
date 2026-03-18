@@ -42,10 +42,10 @@ Common error codes:
 - When multiple shared sessions exist, commands that connect to MATLAB require explicit `--session`.
 - Unknown exact session returns `session_not_found`.
 - Session management actions:
-  - `python -m skills.simulink_scan session list`
-  - `python -m skills.simulink_scan session current`
-  - `python -m skills.simulink_scan session use MATLAB_12345`
-  - `python -m skills.simulink_scan session clear`
+  - `python -m simulink_cli session list`
+  - `python -m simulink_cli session current`
+  - `python -m simulink_cli session use MATLAB_12345`
+  - `python -m simulink_cli session clear`
 
 ## JSON Input Mode
 
@@ -56,74 +56,74 @@ Common error codes:
 - Wrong JSON field types or malformed payload return `invalid_json`.
 
 Examples:
-- `python -m skills.simulink_scan --json "{\"action\":\"schema\"}"`
-- `python -m skills.simulink_scan --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"`
-- `python -m skills.simulink_scan --json "{\"action\":\"inspect\",\"model\":\"m\",\"target\":\"m/Gain\",\"param\":\"All\",\"summary\":true,\"session\":\"MATLAB_12345\"}"`
+- `python -m simulink_cli --json "{\"action\":\"schema\"}"`
+- `python -m simulink_cli --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"`
+- `python -m simulink_cli --json "{\"action\":\"inspect\",\"model\":\"m\",\"target\":\"m/Gain\",\"param\":\"All\",\"summary\":true,\"session\":\"MATLAB_12345\"}"`
 
 ## Schema Action
 
-- `python -m skills.simulink_scan schema`
+- `python -m simulink_cli schema`
 - Returns machine-readable action and error-code contracts for agents.
 
 ## Scan Actions
 
 - If multiple models are opened and `--model` is omitted, the tool returns `model_required` with candidate models.
 - Shallow scan:
-  - `python -m skills.simulink_scan scan --model "<model>"`
+  - `python -m simulink_cli scan --model "<model>"`
 - Recursive scan:
-  - `python -m skills.simulink_scan scan --model "<model>" --recursive`
+  - `python -m simulink_cli scan --model "<model>" --recursive`
 - Subsystem scan:
-  - `python -m skills.simulink_scan scan --model "<model>" --subsystem "<subsystem>" --recursive`
+  - `python -m simulink_cli scan --model "<model>" --subsystem "<subsystem>" --recursive`
 - Hierarchy output:
-  - `python -m skills.simulink_scan scan --model "<model>" --hierarchy`
+  - `python -m simulink_cli scan --model "<model>" --hierarchy`
 - Output clipping:
-  - `python -m skills.simulink_scan scan --model "<model>" --max-blocks 200 --fields "name,type"`
+  - `python -m simulink_cli scan --model "<model>" --max-blocks 200 --fields "name,type"`
 
 ## Inspect Actions
 
 - Full parameter view:
-  - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "All"`
+  - `python -m simulink_cli inspect --model "<model>" --target "<block>" --param "All"`
 - Active-only parameters:
-  - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "All" --active-only`
+  - `python -m simulink_cli inspect --model "<model>" --target "<block>" --param "All" --active-only`
 - Summary mode:
-  - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "All" --summary`
+  - `python -m simulink_cli inspect --model "<model>" --target "<block>" --param "All" --summary`
 - Strict active check:
-  - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "<name>" --strict-active`
+  - `python -m simulink_cli inspect --model "<model>" --target "<block>" --param "<name>" --strict-active`
 - Resolve effective value:
-  - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "<name>" --resolve-effective`
+  - `python -m simulink_cli inspect --model "<model>" --target "<block>" --param "<name>" --resolve-effective`
 - Output clipping:
-  - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "All" --max-params 50 --fields "target,values"`
+  - `python -m simulink_cli inspect --model "<model>" --target "<block>" --param "All" --max-params 50 --fields "target,values"`
 
 ## Connections Action
 
 - Default concise neighborhood (both directions, one hop):
-  - `python -m skills.simulink_scan connections --target "<block>"`
+  - `python -m simulink_cli connections --target "<block>"`
 - Upstream-only with depth expansion:
-  - `python -m skills.simulink_scan connections --target "<block>" --direction upstream --depth 2 --detail summary`
+  - `python -m simulink_cli connections --target "<block>" --direction upstream --depth 2 --detail summary`
 - Port-level details:
-  - `python -m skills.simulink_scan connections --target "<block>" --detail ports`
+  - `python -m simulink_cli connections --target "<block>" --detail ports`
 - Line-level details with optional handles:
-  - `python -m skills.simulink_scan connections --target "<block>" --detail lines --include-handles`
+  - `python -m simulink_cli connections --target "<block>" --detail lines --include-handles`
 - Output clipping and projection:
-  - `python -m skills.simulink_scan connections --target "<block>" --detail ports --max-edges 50 --fields "target,edges,total_edges,truncated"`
+  - `python -m simulink_cli connections --target "<block>" --detail ports --max-edges 50 --fields "target,edges,total_edges,truncated"`
 - JSON request:
-  - `python -m skills.simulink_scan --json "{\"action\":\"connections\",\"target\":\"<block>\",\"direction\":\"both\",\"depth\":1,\"detail\":\"summary\",\"max_edges\":50,\"fields\":[\"target\",\"upstream_blocks\",\"downstream_blocks\"]}"`
+  - `python -m simulink_cli --json "{\"action\":\"connections\",\"target\":\"<block>\",\"direction\":\"both\",\"depth\":1,\"detail\":\"summary\",\"max_edges\":50,\"fields\":[\"target\",\"upstream_blocks\",\"downstream_blocks\"]}"`
 - Invalid target path returns `block_not_found`.
 
 ## Find Action
 
 - Search blocks by name (case-insensitive substring match):
-  - `python -m skills.simulink_scan find --model "<model>" --name "PID"`
+  - `python -m simulink_cli find --model "<model>" --name "PID"`
 - Search blocks by type:
-  - `python -m skills.simulink_scan find --model "<model>" --block-type "Gain"`
+  - `python -m simulink_cli find --model "<model>" --block-type "Gain"`
 - Combined search (AND semantics):
-  - `python -m skills.simulink_scan find --model "<model>" --name "Controller" --block-type "SubSystem"`
+  - `python -m simulink_cli find --model "<model>" --name "Controller" --block-type "SubSystem"`
 - Narrow scope to subsystem:
-  - `python -m skills.simulink_scan find --model "<model>" --subsystem "Controller" --name "PID"`
+  - `python -m simulink_cli find --model "<model>" --subsystem "Controller" --name "PID"`
 - Output clipping and projection:
-  - `python -m skills.simulink_scan find --model "<model>" --name "Gain" --max-results 50 --fields "path,type"`
+  - `python -m simulink_cli find --model "<model>" --name "Gain" --max-results 50 --fields "path,type"`
 - JSON request:
-  - `python -m skills.simulink_scan --json '{"action":"find","model":"<model>","name":"PID","max_results":50,"fields":["path","type"]}'`
+  - `python -m simulink_cli --json '{"action":"find","model":"<model>","name":"PID","max_results":50,"fields":["path","type"]}'`
 - At least one of `--name` or `--block-type` is required; omitting both returns `invalid_input`.
 - Empty results (no matches) is not an error.
 
@@ -131,9 +131,9 @@ Examples:
 
 - Highlight is supported as a read-only visual locator (implemented via `hilite_system`, no model mutation).
 - Basic usage:
-  - `python -m skills.simulink_scan highlight --target "<block>"`
+  - `python -m simulink_cli highlight --target "<block>"`
 - With explicit session:
-  - `python -m skills.simulink_scan highlight --target "<block>" --session "MATLAB_12345"`
+  - `python -m simulink_cli highlight --target "<block>" --session "MATLAB_12345"`
 - If target path is invalid, command returns `block_not_found`.
 
 ## Recovery Matrix
@@ -141,9 +141,9 @@ Examples:
 | Error Code | Likely Cause | Next Command | Expected Success Signal |
 |---|---|---|---|
 | `engine_unavailable` | MATLAB Engine for Python is not available in active interpreter | install/configure MATLAB Engine for Python and rerun the same command | command runs without `engine_unavailable` |
-| `session_required` | Multiple MATLAB shared sessions and no explicit target | `python -m skills.simulink_scan session list` then retry with `--session` | action returns payload without `error` |
-| `session_not_found` | Session name is not an exact match | `python -m skills.simulink_scan session list` then copy exact name | action connects to requested session |
-| `model_required` | Multiple opened models and no explicit model | `python -m skills.simulink_scan list_opened` then retry with `--model` | scan/inspect returns selected model |
+| `session_required` | Multiple MATLAB shared sessions and no explicit target | `python -m simulink_cli session list` then retry with `--session` | action returns payload without `error` |
+| `session_not_found` | Session name is not an exact match | `python -m simulink_cli session list` then copy exact name | action connects to requested session |
+| `model_required` | Multiple opened models and no explicit model | `python -m simulink_cli list_opened` then retry with `--model` | scan/inspect returns selected model |
 | `inactive_parameter` | Requested parameter is inactive under current mask config | retry with `--resolve-effective` or `--strict-active` | response includes effective mapping or explicit inactive failure |
 | `invalid_input` (find) | Neither name nor block_type provided | provide at least one of `--name` or `--block-type` | find returns results or empty array |
 | `invalid_json` | Malformed JSON or wrong field type | validate payload using `schema`, then retry | request parses and executes |

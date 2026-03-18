@@ -5,11 +5,11 @@
 ### Dry-Run (Preview)
 
 ```bash
-python -m skills.simulink_edit set_param --target "my_model/Gain1" --param "Gain" --value "2.0"
+python -m simulink_cli set_param --target "my_model/Gain1" --param "Gain" --value "2.0"
 ```
 
 ```bash
-python -m skills.simulink_edit --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0"}'
+python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0"}'
 ```
 
 Output:
@@ -34,11 +34,11 @@ Output:
 ### Execute
 
 ```bash
-python -m skills.simulink_edit set_param --target "my_model/Gain1" --param "Gain" --value "2.0" --dry-run false
+python -m simulink_cli set_param --target "my_model/Gain1" --param "Gain" --value "2.0" --dry-run false
 ```
 
 ```bash
-python -m skills.simulink_edit --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0","dry_run":false}'
+python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0","dry_run":false}'
 ```
 
 Output:
@@ -66,7 +66,7 @@ Output:
 Use the `rollback` payload from any response to undo the change:
 
 ```bash
-python -m skills.simulink_edit --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"1.5","dry_run":false}'
+python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"1.5","dry_run":false}'
 ```
 
 ## Recovery Matrix

@@ -10,7 +10,7 @@ Simulink Automation Suite 是一个基于 MATLAB Engine for Python 的 Claude Co
 
 - 插件标准名称：`simulink-automation-suite`
 - 已发布技能：`simulink-scan`（只读分析）、`simulink-edit`（参数修改）
-- 运行时 Python 模块路径：`skills.simulink_scan`、`skills.simulink_edit`（仅模块命名使用）
+- 运行时 Python 模块路径：`simulink_cli`（统一 CLI 入口）
 
 ---
 
@@ -112,15 +112,15 @@ matlab.engine.shareEngine
 
 | 动作 | 用途 | 示例 |
 |---|---|---|
-| `schema` | 返回机器可读的命令契约 | `python -m skills.simulink_scan schema` |
-| `list_opened` | 列出当前已打开的 Simulink 模型 | `python -m skills.simulink_scan list_opened` |
-| `scan` | 读取模型/子系统拓扑结构 | `python -m skills.simulink_scan scan --model "my_model" --recursive` |
-| `connections` | 读取目标模块的上游/下游关键连接模块 | `python -m skills.simulink_scan connections --target "my_model/Gain" --direction both --depth 1 --detail summary` |
-| `inspect` | 读取模块参数和有效值 | `python -m skills.simulink_scan inspect --model "my_model" --target "my_model/Gain" --param "All"` |
-| `highlight` | 在 Simulink 中高亮目标模块（仅 UI 定位，不修改模型） | `python -m skills.simulink_scan highlight --target "my_model/Gain"` |
-| `find` | 按名称模式和/或模块类型搜索模块 | `python -m skills.simulink_scan find --model "my_model" --name "PID"` |
-| `set_param` | 设置模块参数（支持预览与回滚） | `python -m skills.simulink_edit set_param --target "my_model/Gain1" --param "Gain" --value "2.0"` |
-| `session` | 管理当前 MATLAB 共享会话 | `python -m skills.simulink_scan session list` |
+| `schema` | 返回机器可读的命令契约 | `python -m simulink_cli schema` |
+| `list_opened` | 列出当前已打开的 Simulink 模型 | `python -m simulink_cli list_opened` |
+| `scan` | 读取模型/子系统拓扑结构 | `python -m simulink_cli scan --model "my_model" --recursive` |
+| `connections` | 读取目标模块的上游/下游关键连接模块 | `python -m simulink_cli connections --target "my_model/Gain" --direction both --depth 1 --detail summary` |
+| `inspect` | 读取模块参数和有效值 | `python -m simulink_cli inspect --model "my_model" --target "my_model/Gain" --param "All"` |
+| `highlight` | 在 Simulink 中高亮目标模块（仅 UI 定位，不修改模型） | `python -m simulink_cli highlight --target "my_model/Gain"` |
+| `find` | 按名称模式和/或模块类型搜索模块 | `python -m simulink_cli find --model "my_model" --name "PID"` |
+| `set_param` | 设置模块参数（支持预览与回滚） | `python -m simulink_cli set_param --target "my_model/Gain1" --param "Gain" --value "2.0"` |
+| `session` | 管理当前 MATLAB 共享会话 | `python -m simulink_cli session list` |
 
 ---
 
@@ -129,10 +129,10 @@ matlab.engine.shareEngine
 当需要更紧凑的返回结果时，可使用截断与字段投影参数：
 
 ```bash
-python -m skills.simulink_scan scan --model "my_model" --max-blocks 200 --fields "name,type"
-python -m skills.simulink_scan inspect --model "my_model" --target "my_model/Gain" --param "All" --max-params 50 --fields "target,values"
-python -m skills.simulink_scan connections --target "my_model/Gain" --detail ports --max-edges 50 --fields "target,edges,total_edges,truncated"
-python -m skills.simulink_scan find --model "my_model" --name "PID" --max-results 50 --fields "path,type"
+python -m simulink_cli scan --model "my_model" --max-blocks 200 --fields "name,type"
+python -m simulink_cli inspect --model "my_model" --target "my_model/Gain" --param "All" --max-params 50 --fields "target,values"
+python -m simulink_cli connections --target "my_model/Gain" --detail ports --max-edges 50 --fields "target,edges,total_edges,truncated"
+python -m simulink_cli find --model "my_model" --name "PID" --max-results 50 --fields "path,type"
 ```
 
 ---
@@ -143,13 +143,13 @@ python -m skills.simulink_scan find --model "my_model" --name "PID" --max-result
 `schema` 返回结构化字段元数据（类型、必填/默认值/枚举、字段说明）。
 
 ```bash
-python -m skills.simulink_scan --json "{\"action\":\"schema\"}"
-python -m skills.simulink_scan --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"
-python -m skills.simulink_scan --json "{\"action\":\"scan\",\"model\":\"my_model\",\"recursive\":true,\"session\":\"MATLAB_12345\"}"
-python -m skills.simulink_scan --json '{"action":"connections","target":"my_model/Gain","direction":"both","depth":1,"detail":"summary","max_edges":50,"fields":["target","upstream_blocks","downstream_blocks"]}'
-python -m skills.simulink_scan --json '{"action":"find","model":"my_model","name":"PID","max_results":50,"fields":["path","type"]}'
-python -m skills.simulink_edit --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0"}'
-python -m skills.simulink_edit --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0","dry_run":false}'
+python -m simulink_cli --json "{\"action\":\"schema\"}"
+python -m simulink_cli --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"
+python -m simulink_cli --json "{\"action\":\"scan\",\"model\":\"my_model\",\"recursive\":true,\"session\":\"MATLAB_12345\"}"
+python -m simulink_cli --json '{"action":"connections","target":"my_model/Gain","direction":"both","depth":1,"detail":"summary","max_edges":50,"fields":["target","upstream_blocks","downstream_blocks"]}'
+python -m simulink_cli --json '{"action":"find","model":"my_model","name":"PID","max_results":50,"fields":["path","type"]}'
+python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0"}'
+python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0","dry_run":false}'
 ```
 
 ---

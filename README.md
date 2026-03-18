@@ -10,7 +10,7 @@ Simulink Automation Suite is a Claude Code plugin for Simulink automation workfl
 
 - Canonical plugin name: `simulink-automation-suite`
 - Shipped skills: `simulink-scan` (read-only analysis), `simulink-edit` (parameter modification)
-- Runtime Python module paths: `skills.simulink_scan`, `skills.simulink_edit` (module naming only)
+- Runtime Python module path: `simulink_cli` (unified CLI entrypoint)
 
 ---
 
@@ -112,15 +112,15 @@ For end-to-end Claude Code prompts and screenshots (single bilingual page), see:
 
 | Action | Purpose | Example |
 |---|---|---|
-| `schema` | Return machine-readable command contract | `python -m skills.simulink_scan schema` |
-| `list_opened` | List currently opened Simulink models | `python -m skills.simulink_scan list_opened` |
-| `scan` | Read model/subsystem topology | `python -m skills.simulink_scan scan --model "my_model" --recursive` |
-| `connections` | Read upstream/downstream key modules for a target block | `python -m skills.simulink_scan connections --target "my_model/Gain" --direction both --depth 1 --detail summary` |
-| `inspect` | Read block parameters/effective values | `python -m skills.simulink_scan inspect --model "my_model" --target "my_model/Gain" --param "All"` |
-| `highlight` | Highlight a block in Simulink (UI-only, no model mutation) | `python -m skills.simulink_scan highlight --target "my_model/Gain"` |
-| `find` | Search blocks by name pattern and/or block type | `python -m skills.simulink_scan find --model "my_model" --name "PID"` |
-| `set_param` | Set a block parameter with dry-run preview and rollback | `python -m skills.simulink_edit set_param --target "my_model/Gain1" --param "Gain" --value "2.0"` |
-| `session` | Manage active MATLAB shared session | `python -m skills.simulink_scan session list` |
+| `schema` | Return machine-readable command contract | `python -m simulink_cli schema` |
+| `list_opened` | List currently opened Simulink models | `python -m simulink_cli list_opened` |
+| `scan` | Read model/subsystem topology | `python -m simulink_cli scan --model "my_model" --recursive` |
+| `connections` | Read upstream/downstream key modules for a target block | `python -m simulink_cli connections --target "my_model/Gain" --direction both --depth 1 --detail summary` |
+| `inspect` | Read block parameters/effective values | `python -m simulink_cli inspect --model "my_model" --target "my_model/Gain" --param "All"` |
+| `highlight` | Highlight a block in Simulink (UI-only, no model mutation) | `python -m simulink_cli highlight --target "my_model/Gain"` |
+| `find` | Search blocks by name pattern and/or block type | `python -m simulink_cli find --model "my_model" --name "PID"` |
+| `set_param` | Set a block parameter with dry-run preview and rollback | `python -m simulink_cli set_param --target "my_model/Gain1" --param "Gain" --value "2.0"` |
+| `session` | Manage active MATLAB shared session | `python -m simulink_cli session list` |
 
 ---
 
@@ -129,10 +129,10 @@ For end-to-end Claude Code prompts and screenshots (single bilingual page), see:
 Use output clipping/projected fields when you need compact payloads:
 
 ```bash
-python -m skills.simulink_scan scan --model "my_model" --max-blocks 200 --fields "name,type"
-python -m skills.simulink_scan inspect --model "my_model" --target "my_model/Gain" --param "All" --max-params 50 --fields "target,values"
-python -m skills.simulink_scan connections --target "my_model/Gain" --detail ports --max-edges 50 --fields "target,edges,total_edges,truncated"
-python -m skills.simulink_scan find --model "my_model" --name "PID" --max-results 50 --fields "path,type"
+python -m simulink_cli scan --model "my_model" --max-blocks 200 --fields "name,type"
+python -m simulink_cli inspect --model "my_model" --target "my_model/Gain" --param "All" --max-params 50 --fields "target,values"
+python -m simulink_cli connections --target "my_model/Gain" --detail ports --max-edges 50 --fields "target,edges,total_edges,truncated"
+python -m simulink_cli find --model "my_model" --name "PID" --max-results 50 --fields "path,type"
 ```
 
 ---
@@ -143,13 +143,13 @@ python -m skills.simulink_scan find --model "my_model" --name "PID" --max-result
 `schema` returns structured metadata for each action field (type, required/default/enum, description).
 
 ```bash
-python -m skills.simulink_scan --json "{\"action\":\"schema\"}"
-python -m skills.simulink_scan --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"
-python -m skills.simulink_scan --json "{\"action\":\"scan\",\"model\":\"my_model\",\"recursive\":true,\"session\":\"MATLAB_12345\"}"
-python -m skills.simulink_scan --json '{"action":"connections","target":"my_model/Gain","direction":"both","depth":1,"detail":"summary","max_edges":50,"fields":["target","upstream_blocks","downstream_blocks"]}'
-python -m skills.simulink_scan --json '{"action":"find","model":"my_model","name":"PID","max_results":50,"fields":["path","type"]}'
-python -m skills.simulink_edit --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0"}'
-python -m skills.simulink_edit --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0","dry_run":false}'
+python -m simulink_cli --json "{\"action\":\"schema\"}"
+python -m simulink_cli --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"
+python -m simulink_cli --json "{\"action\":\"scan\",\"model\":\"my_model\",\"recursive\":true,\"session\":\"MATLAB_12345\"}"
+python -m simulink_cli --json '{"action":"connections","target":"my_model/Gain","direction":"both","depth":1,"detail":"summary","max_edges":50,"fields":["target","upstream_blocks","downstream_blocks"]}'
+python -m simulink_cli --json '{"action":"find","model":"my_model","name":"PID","max_results":50,"fields":["path","type"]}'
+python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0"}'
+python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0","dry_run":false}'
 ```
 
 ---

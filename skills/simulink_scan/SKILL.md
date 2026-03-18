@@ -6,7 +6,7 @@ description: Use when analyzing Simulink model topology, subsystem structure, or
 Use this skill only for Simulink read-only analysis.
 Reject write/edit requests (`set_param`, add/delete blocks/lines, save changes).
 Visual-only block highlighting via `hilite_system` is allowed because it does not mutate model data.
-Canonical skill name is `simulink-scan` (module path `skills.simulink_scan` is internal only).
+Canonical skill name is `simulink-scan` (module path `simulink_cli` is internal only).
 This skill is one capability inside plugin `simulink-automation-suite`, which is designed to host additional skills over time.
 
 ## Preflight
@@ -15,10 +15,10 @@ This skill is one capability inside plugin `simulink-automation-suite`, which is
    - MATLAB Engine for Python is installed in the active Python environment.
    - MATLAB shared session is started by running `matlab.engine.shareEngine` in MATLAB.
 1. Discover contract when the caller is uncertain about commands/fields:
-   - `python -m skills.simulink_scan schema`
-   - JSON: `python -m skills.simulink_scan --json "{\"action\":\"schema\"}"`
+   - `python -m simulink_cli schema`
+   - JSON: `python -m simulink_cli --json "{\"action\":\"schema\"}"`
 2. Discover opened models first:
-   - `python -m skills.simulink_scan list_opened`
+   - `python -m simulink_cli list_opened`
 3. Resolve session strictly:
    - Exact session names only.
    - If multiple sessions exist for MATLAB-bound actions, require explicit `--session`.
@@ -38,29 +38,29 @@ Default to shallow scan first, then escalate to recursive/hierarchy only when re
 ## Execution Templates
 
 - Shallow scan:
-  - `python -m skills.simulink_scan scan --model "<model>"`
+  - `python -m simulink_cli scan --model "<model>"`
 - Recursive scan:
-  - `python -m skills.simulink_scan scan --model "<model>" --recursive`
+  - `python -m simulink_cli scan --model "<model>" --recursive`
 - Scan with output controls:
-  - `python -m skills.simulink_scan scan --model "<model>" --max-blocks 200 --fields "name,type"`
+  - `python -m simulink_cli scan --model "<model>" --max-blocks 200 --fields "name,type"`
 - Inspect all params with summary:
-  - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "All" --summary`
+  - `python -m simulink_cli inspect --model "<model>" --target "<block>" --param "All" --summary`
 - Inspect with output controls:
-  - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "All" --max-params 50 --fields "target,values"`
+  - `python -m simulink_cli inspect --model "<model>" --target "<block>" --param "All" --max-params 50 --fields "target,values"`
 - Resolve inactive parameter source:
-  - `python -m skills.simulink_scan inspect --model "<model>" --target "<block>" --param "<name>" --resolve-effective`
+  - `python -m simulink_cli inspect --model "<model>" --target "<block>" --param "<name>" --resolve-effective`
 - Analyze upstream/downstream key modules:
-  - `python -m skills.simulink_scan connections --target "<block>" --direction both --depth 1 --detail summary`
+  - `python -m simulink_cli connections --target "<block>" --direction both --depth 1 --detail summary`
 - Analyze connections with clipping/projection:
-  - `python -m skills.simulink_scan connections --target "<block>" --detail ports --max-edges 50 --fields "target,edges,total_edges,truncated"`
+  - `python -m simulink_cli connections --target "<block>" --detail ports --max-edges 50 --fields "target,edges,total_edges,truncated"`
 - Highlight block in Simulink UI:
-  - `python -m skills.simulink_scan highlight --target "<block>"`
+  - `python -m simulink_cli highlight --target "<block>"`
 - Search blocks by name:
-  - `python -m skills.simulink_scan find --model "<model>" --name "PID"`
+  - `python -m simulink_cli find --model "<model>" --name "PID"`
 - Search blocks by type:
-  - `python -m skills.simulink_scan find --model "<model>" --block-type "SubSystem"`
+  - `python -m simulink_cli find --model "<model>" --block-type "SubSystem"`
 - Search with output controls:
-  - `python -m skills.simulink_scan find --model "<model>" --name "Controller" --max-results 50 --fields "path,type"`
+  - `python -m simulink_cli find --model "<model>" --name "Controller" --max-results 50 --fields "path,type"`
 
 JSON mode is first-class and mutually exclusive with flag-mode action arguments.
 

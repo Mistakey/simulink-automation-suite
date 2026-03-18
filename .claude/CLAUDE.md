@@ -7,8 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Plugin: `simulink-automation-suite` (fixed name, never rename)
 - Current skill: `simulink-scan` (read-only Simulink analysis via MATLAB Engine for Python)
 - Second skill: `simulink-edit` (Simulink parameter modification via MATLAB Engine for Python)
-- Entrypoint: `python -m skills.simulink_scan`
-- Edit entrypoint: `python -m skills.simulink_edit`
+- Entrypoint: `python -m simulink_cli`
 - Version: synced in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`
 
 ## Commands
@@ -31,44 +30,39 @@ python -m unittest tests.test_plugin_manifest_contract tests.test_marketplace_ma
 claude plugin validate .
 
 # Local invocation
-python -m skills.simulink_scan schema
-python -m skills.simulink_scan --json '{"action":"schema"}'
-
-# simulink-edit local invocation
-python -m skills.simulink_edit schema
-python -m skills.simulink_edit --json '{"action":"schema"}'
+python -m simulink_cli schema
+python -m simulink_cli --json '{"action":"schema"}'
 ```
 
 ## Architecture
 
-### Shared modules (`skills/_shared/`)
+### Unified CLI package (`simulink_cli/`)
 
 | Module | Role |
 |---|---|
+| `core.py` | `_ACTIONS` registry, JSON parsing, schema gen, argparse auto-build, routing, error mapping, `main()`. **Contract source of truth.** |
 | `errors.py` | `make_error()` — error envelope builder. |
 | `json_io.py` | `JsonArgumentParser`, `emit_json()`, `as_list()`, `project_top_level_fields()`. |
 | `validation.py` | `validate_text_field()`, `_invalid_input()`, `validate_json_type()` — input hardening. |
 | `session.py` | MATLAB session discovery/resolution (exact-name only), local state (`.sl_pilot_state.json`). |
+| `model_helpers.py` | `resolve_scan_root_path`, `resolve_inspect_target_path` — path resolution. |
 
-### Source modules (`skills/simulink_scan/scripts/`)
-
-| Module | Role |
-|---|---|
-| `sl_core.py` | CLI parser, JSON request parsing, schema builder, action routing. **Contract source of truth.** |
-| `sl_actions.py` | Read-only actions: `scan`, `inspect`, `highlight`, `list_opened`. |
-| `sl_connections.py` | `connections` action: port traversal, edge collection. |
-| `sl_find.py` | `find` action: block search by name/type via `find_system`. |
-
-### simulink-edit modules (`skills/simulink_edit/scripts/`)
+### Action modules (`simulink_cli/actions/`)
 
 | Module | Role |
 |---|---|
-| `sl_core.py` | CLI parser, JSON request parsing, schema builder, action routing, input validation, error mapping. |
-| `sl_set_param.py` | `set_param` implementation: dry-run, execute, rollback, read-back verification. |
+| `scan.py` | `scan` action: model/subsystem topology with optional hierarchy. |
+| `inspect_block.py` | `inspect` action: block parameter reading with effective value resolution. |
+| `connections.py` | `connections` action: port traversal, edge collection. |
+| `find.py` | `find` action: block search by name/type via `find_system`. |
+| `highlight.py` | `highlight` action: visual-only block highlighting. |
+| `list_opened.py` | `list_opened` action: enumerate open Simulink models. |
+| `set_param.py` | `set_param` action: parameter modification with dry-run and rollback. |
+| `session_cmd.py` | `session` action: MATLAB session management (list/use/current/clear). |
 
 ### Request flow
 
-`__main__.py` → `sl_core.main()` → `build_parser()` → `parse_request_args()` (`--json` or flag mode, mutually exclusive) → `validate_args()` → `run_action()` → JSON stdout
+`__main__.py` → `core.main()` → `build_parser()` → `parse_request_args()` (`--json` or flag mode, mutually exclusive) → `validate_args()` → `run_action()` → JSON stdout
 
 ### Contract docs (shipped with plugin)
 
@@ -85,16 +79,16 @@ python -m skills.simulink_edit --json '{"action":"schema"}'
 2. **Write safety**: `simulink-edit` uses `dry_run=true` by default, rollback in every response, read-back verification on execute.
 3. **Docs-as-Contract**: code + tests + docs updated together. `test_docs_contract.py` enforces.
 4. **Stable error envelope**: `{error, message, details, suggested_fix?}` — shape is fixed.
-5. **`--json` first-class**: mutually exclusive with flag mode; type-checked via `_JSON_FIELD_TYPES` in `sl_core.py`.
+5. **`--json` first-class**: mutually exclusive with flag mode; type-checked via per-action `FIELDS` dicts aggregated by `core.py`.
 6. **Session matching**: exact-name only, no fuzzy.
 7. **Version bump required**: distributable content changes require version bump before commit.
 8. **Agent-first CLI**: predictable, defensive, machine-readable design.
 
 ## Change Synchronization
 
-**CLI actions/arguments** → update `sl_core.py` + `sl_actions.py`/`sl_connections.py`/`sl_find.py` + tests + `README.md`, `README.zh-CN.md`, `SKILL.md`, `reference.md`, `test-scenarios.md`
+**CLI actions/arguments** → update `simulink_cli/core.py` + `simulink_cli/actions/*.py` + tests + `README.md`, `README.zh-CN.md`, `SKILL.md`, `reference.md`, `test-scenarios.md`
 
-**Error codes** → reuse existing codes; update `sl_core.py` + docs + `test_error_contract`, `test_runtime_error_mapping`, `test_docs_contract`
+**Error codes** → reuse existing codes; update `simulink_cli/core.py` + docs + `test_error_contract`, `test_runtime_error_mapping`, `test_docs_contract`
 
 **Output budgets** → keep `scan`→`max_blocks,fields`, `inspect`→`max_params,fields`, `connections`→`max_edges,fields`, `find`→`max_results,fields` semantics stable; update output-control tests
 
@@ -116,7 +110,7 @@ python -m skills.simulink_edit --json '{"action":"schema"}'
 | `test_edit_error_contract` | Edit error envelope + new codes |
 | `test_edit_runtime_error_mapping` | MATLAB runtime → error code mapping |
 | `test_edit_docs_contract` | Edit doc sections present |
-| `test_edit_module_entrypoint` | `python -m skills.simulink_edit` works |
+| `test_edit_module_entrypoint` | `python -m simulink_cli` works |
 | `test_cross_skill_workflow` | Read→preview→write→verify cycle |
 | `test_shared_validation` | Shared validation functions |
 | `test_shared_session` | Shared session module + PLUGIN_ROOT |

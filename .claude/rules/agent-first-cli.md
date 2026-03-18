@@ -17,7 +17,7 @@ Core distinction: **Human DX** optimizes for discoverability/forgiveness; **Agen
 ## 2. Runtime Schema Introspection
 
 - `schema` action enables full runtime self-discovery: type, required, default, enum, description, error codes.
-- `_JSON_FIELD_TYPES` in `sl_core.py` is the single source of truth for field metadata.
+- Per-action `FIELDS` dicts are the single source of truth for field metadata. `core.py` aggregates them for schema output.
 - The CLI itself is the canonical documentation source. Static docs supplement but never replace `schema` output.
 
 ## 3. Context Window Discipline

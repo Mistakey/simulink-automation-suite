@@ -1,7 +1,5 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "simulink-automation-marketplace",
-  "description": "Marketplace manifest for publishing the Simulink automation suite plugin from this repository.",
   "owner": {
     "name": "kelch"
   },
