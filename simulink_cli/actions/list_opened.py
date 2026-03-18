@@ -1,6 +1,7 @@
-from simulink_cli.json_io import as_list
+from simulink_cli.errors import make_error
 from simulink_cli.validation import validate_text_field
 from simulink_cli.session import safe_connect_to_session
+from simulink_cli.model_helpers import get_opened_models
 
 FIELDS = {
     "session": {
@@ -22,10 +23,6 @@ ERRORS = [
 DESCRIPTION = "List currently opened Simulink models."
 
 
-def _get_opened_models(eng):
-    return sorted([str(x) for x in as_list(eng.find_system("Type", "block_diagram"))])
-
-
 def validate(args):
     err = validate_text_field("session", args.get("session"))
     if err:
@@ -39,7 +36,7 @@ def execute(args):
         return err
 
     try:
-        models = _get_opened_models(eng)
+        models = get_opened_models(eng)
         return {"models": models}
     except Exception as exc:
         return make_error(

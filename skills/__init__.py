@@ -1,1 +1,1 @@
-# Empty — makes skills an explicit Python package for _shared imports.
+# Empty — makes skills a Python package for backward-compat wrappers.

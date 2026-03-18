@@ -1,7 +1,7 @@
 """Scan action — read model or subsystem topology."""
 
 from simulink_cli.errors import make_error
-from simulink_cli.json_io import as_list, project_top_level_fields
+from simulink_cli.json_io import as_list
 from simulink_cli.validation import validate_text_field
 from simulink_cli.model_helpers import resolve_scan_root_path
 from simulink_cli.session import safe_connect_to_session
