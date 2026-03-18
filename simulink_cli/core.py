@@ -4,9 +4,28 @@ import sys
 from simulink_cli.errors import make_error
 from simulink_cli.json_io import JsonArgumentParser, emit_json
 from simulink_cli.validation import validate_json_type
+from simulink_cli.actions import (
+    connections,
+    find,
+    highlight,
+    inspect_block,
+    list_opened,
+    scan,
+    session_cmd,
+    set_param,
+)
 
-# -- Action registry (populated by imports below, extended in Phase 2) --------
-_ACTIONS = {}
+# -- Action registry ----------------------------------------------------------
+_ACTIONS = {
+    "scan": scan,
+    "connections": connections,
+    "highlight": highlight,
+    "inspect": inspect_block,
+    "find": find,
+    "list_opened": list_opened,
+    "set_param": set_param,
+    "session": session_cmd,
+}
 
 
 # -- Schema generation --------------------------------------------------------
