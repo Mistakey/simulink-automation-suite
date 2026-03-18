@@ -242,7 +242,7 @@ claude plugin validate .
 
 ## 路线图
 
-- **当前阶段（v2.0.x）：** 在只读分析基础上新增参数修改能力（`set_param`，支持 dry-run 预览、回滚与写后验证），通过 `simulink-edit` 技能实现，与 `simulink-scan` 共享 `skills/_shared/` 基础设施。
+- **当前阶段（v2.0.x）：** 在只读分析基础上新增参数修改能力（`set_param`，支持 dry-run 预览、回滚与写后验证），通过统一的 `simulink_cli` 包同时服务 `simulink-scan` 和 `simulink-edit` 技能。
 - **下一阶段：** 在保持可预测契约与恢复链路的前提下，增强 Agent 工作流编排与可靠性。
 - **后续阶段：** 通过新增技能扩展到 build/repair 场景，且保持插件标识 `simulink-automation-suite` 不变。
 

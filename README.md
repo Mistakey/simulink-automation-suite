@@ -242,7 +242,7 @@ claude plugin validate .
 
 ## Roadmap
 
-- **Current (v2.0.x):** read-only analysis plus parameter modification (`set_param` with dry-run, rollback, verification) via `simulink-edit` skill, sharing `skills/_shared/` infrastructure with `simulink-scan`.
+- **Current (v2.0.x):** read-only analysis plus parameter modification (`set_param` with dry-run, rollback, verification) via unified `simulink_cli` package serving both `simulink-scan` and `simulink-edit` skills.
 - **Next:** strengthen agent workflow orchestration and reliability while preserving deterministic contracts and recovery paths.
 - **Future:** add new skills for build/repair scenarios without renaming the plugin (`simulink-automation-suite` remains the stable identity).
 

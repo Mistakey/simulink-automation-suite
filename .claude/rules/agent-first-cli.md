@@ -1,5 +1,5 @@
 ---
-globs: ["skills/**/*.py", "tests/test_input*.py", "tests/test_json*.py", "tests/test_schema*.py"]
+globs: ["simulink_cli/**/*.py", "skills/**/*.py", "tests/test_input*.py", "tests/test_json*.py", "tests/test_schema*.py"]
 ---
 
 # Agent-First CLI Design Rules
@@ -31,7 +31,7 @@ Core distinction: **Human DX** optimizes for discoverability/forgiveness; **Agen
 
 The CLI is frequently invoked by AI/LLM agents — **always assume inputs can be adversarial**.
 
-Implemented in `validate_text_field()` and `_validate_json_type()`:
+Implemented in `validate_text_field()` and `validate_json_type()`:
 
 | Threat | Validation |
 |---|---|
@@ -55,7 +55,7 @@ Anti-pattern: silently coercing or ignoring malformed input. Fail fast with stab
 
 ## 6. Multi-Surface Consistency
 
-- If MCP/extensions are added, reuse the same `_JSON_FIELD_TYPES` contract source — no split definitions.
+- If MCP/extensions are added, reuse the same per-action `FIELDS` dicts and `_ACTIONS` registry — no split definitions.
 - `schema` output is the single machine-readable contract regardless of invocation surface.
 
 ## 7. Safety Rails

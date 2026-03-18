@@ -62,7 +62,7 @@ python -m simulink_cli --json '{"action":"schema"}'
 
 ### Request flow
 
-`__main__.py` → `core.main()` → `build_parser()` → `parse_request_args()` (`--json` or flag mode, mutually exclusive) → `validate_args()` → `run_action()` → JSON stdout
+`__main__.py` → `core.main()` → `_extract_json_payload()` → `parse_json_request()` or `_parse_flag_mode()` (`--json` vs flag mode, mutually exclusive) → `run_action()` → `mod.validate()` → `mod.execute()` → `emit_json()` → JSON stdout
 
 ### Contract docs (shipped with plugin)
 
