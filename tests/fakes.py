@@ -242,6 +242,13 @@ class FakeInspectEngine:
         return list(dialog_params.keys())
 
 
+class KeywordNargoutInspectEngine(FakeInspectEngine):
+    """Inspect fake whose get_param only works when nargout is passed by keyword."""
+
+    def get_param(self, block_path, param_name, *, nargout):
+        return super().get_param(block_path, param_name)
+
+
 class FakeInspectOutputEngine:
     """Minimal fake engine for inspect output-controls tests.
 

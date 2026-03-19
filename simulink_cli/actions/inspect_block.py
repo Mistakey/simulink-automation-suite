@@ -1,3 +1,4 @@
+from simulink_cli import matlab_transport
 from simulink_cli.errors import make_error
 from simulink_cli.json_io import as_list, project_top_level_fields
 from simulink_cli.validation import validate_matlab_name_field, validate_text_field
@@ -102,7 +103,10 @@ def _to_on_off_bool(value):
 
 def _safe_get_param_list(eng, target_path, param_name):
     try:
-        return [str(x) for x in as_list(eng.get_param(target_path, param_name))]
+        return [
+            str(x)
+            for x in as_list(matlab_transport.get_param(eng, target_path, param_name)["value"])
+        ]
     except Exception:
         return []
 
@@ -222,7 +226,7 @@ def _collect_dialog_values(eng, target_path, param_keys):
     values = {}
     for key in param_keys:
         try:
-            values[key] = eng.get_param(target_path, key)
+            values[key] = matlab_transport.get_param(eng, target_path, key)["value"]
         except Exception as exc:
             values[key] = f"<unavailable: {exc}>"
     return values
@@ -252,7 +256,7 @@ def _inspect_block(
     target_path = resolved_target["target"]
 
     try:
-        eng.get_param(target_path, "Handle")
+        matlab_transport.get_param(eng, target_path, "Handle")
     except Exception as exc:
         return make_error(
             "block_not_found",
@@ -262,7 +266,7 @@ def _inspect_block(
         )
 
     try:
-        dialog_params = eng.get_param(target_path, "DialogParameters")
+        dialog_params = matlab_transport.get_param(eng, target_path, "DialogParameters")["value"]
         param_keys = sorted(str(x) for x in as_list(eng.fieldnames(dialog_params)))
         values = _collect_dialog_values(eng, target_path, param_keys)
 
@@ -280,7 +284,7 @@ def _inspect_block(
                 value = values[param_name]
             else:
                 try:
-                    value = eng.get_param(target_path, param_name)
+                    value = matlab_transport.get_param(eng, target_path, param_name)["value"]
                 except Exception:
                     return make_error(
                         "param_not_found",

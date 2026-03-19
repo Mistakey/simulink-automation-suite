@@ -44,6 +44,7 @@ class SetParamDryRunTests(unittest.TestCase):
             result = set_param.execute(_set_param_args(dry_run=True))
         required_keys = {"action", "dry_run", "target", "param", "current_value", "proposed_value", "rollback"}
         self.assertTrue(required_keys.issubset(result.keys()))
+        self.assertEqual(result["write_state"], "not_attempted")
 
     def test_execute_output_shape(self):
         eng = self._make_engine()
@@ -51,6 +52,7 @@ class SetParamDryRunTests(unittest.TestCase):
             result = set_param.execute(_set_param_args(dry_run=False))
         required_keys = {"action", "dry_run", "target", "param", "previous_value", "new_value", "verified", "rollback"}
         self.assertTrue(required_keys.issubset(result.keys()))
+        self.assertEqual(result["write_state"], "verified")
 
     def test_dry_run_defaults_true_via_parser(self):
         from simulink_cli.core import build_parser

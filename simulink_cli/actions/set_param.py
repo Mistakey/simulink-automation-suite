@@ -129,6 +129,7 @@ def execute(args):
         return {
             "action": "set_param",
             "dry_run": True,
+            "write_state": "not_attempted",
             "target": target,
             "param": param,
             "current_value": current_value,
@@ -175,6 +176,7 @@ def execute(args):
     return {
         "action": "set_param",
         "dry_run": False,
+        "write_state": "verified",
         "target": target,
         "param": param,
         "previous_value": current_value,

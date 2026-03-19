@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from simulink_cli.actions import inspect_block
-from tests.fakes import FakeInspectEngine
+from tests.fakes import FakeInspectEngine, KeywordNargoutInspectEngine
 
 
 def _inspect_args(target="m/b", model=None, param="All", active_only=False,
@@ -129,6 +129,14 @@ class InspectActiveTests(unittest.TestCase):
         with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
             result = inspect_block.execute(_inspect_args())
         self.assertEqual(result["available_params"], ["A", "B"])
+
+    def test_inspect_uses_transport_backed_get_param_reads(self):
+        eng = KeywordNargoutInspectEngine(values={"B": "2", "A": "1"})
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            result = inspect_block.execute(_inspect_args())
+        self.assertNotIn("error", result)
+        self.assertEqual(result["available_params"], ["A", "B"])
+        self.assertEqual(result["values"]["A"], "1")
 
     def test_unmasked_block_graceful_behavior(self):
         eng = FakeInspectEngine(values={"Gain": "5", "SampleTime": "0.1"})
