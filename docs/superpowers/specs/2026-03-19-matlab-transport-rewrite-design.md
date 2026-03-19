@@ -40,6 +40,7 @@ These are not isolated action bugs. They all sit at the boundary where action mo
 Add a new module: `simulink_cli/matlab_transport.py`.
 
 This module becomes the only place that knows how Python talks to MATLAB Engine. Action modules stop calling `eng.find_system`, `eng.get_param`, `eng.set_param`, and similar methods directly.
+The only intended raw-engine exceptions after the rewrite are `session.py` for session connection/discovery and `matlab_transport.py` for actual MATLAB invocation.
 
 The transport layer should expose a small, explicit API:
 
@@ -108,11 +109,13 @@ Success response remains conceptually the same:
 Failure handling becomes stronger:
 
 - `set_param_failed` remains the top-level error code for write-path failures
-- `details` should include enough state to recover safely when possible:
+- automatic rollback must **not** happen inside the CLI
+- when execute mode has already read the pre-write value, every execute-path error must include `details.rollback`
+- `details` should include enough state to recover safely:
   - attempted target/param/value
   - MATLAB cause text
   - post-write observed value when available
-  - rollback payload when a write may have happened
+  - rollback payload
   - a write-state indicator
 
 Recommended write-state field values:
@@ -124,6 +127,18 @@ Recommended write-state field values:
 - `unknown`
 
 This makes "model may already be modified" explicit instead of silently stranding the caller.
+
+The contract for each execution path should be explicit:
+
+| Case | Top-level shape | `verified` | `write_state` | `rollback` placement | Notes |
+|---|---|---|---|---|---|
+| Dry-run success | success payload | omitted | `not_attempted` | top-level `rollback` | no write attempted |
+| Execute success | success payload | `true` | `verified` | top-level `rollback` | write succeeded and read-back matched |
+| Execute failure before mutation | error envelope | omitted | `not_attempted` | `details.rollback` | safe to retry; rollback still included for contract consistency |
+| Execute failure after mutation attempt but before verification | error envelope | omitted | `attempted` or `unknown` | `details.rollback` | caller must assume model may have changed |
+| Execute verification failure | error envelope | omitted | `verification_failed` | `details.rollback` | read-back did not prove requested value; caller must inspect or rollback |
+
+There is no success case with `verified=false`. If verification does not succeed, the action returns `set_param_failed`.
 
 ### 4. Separate protocol errors from runtime/domain errors
 
@@ -171,33 +186,23 @@ Current shared validation treats control characters as universally invalid. That
 
 The rewrite should split validation by field semantics:
 
-#### Identifier-like fields
+The validation matrix must be explicit:
 
-Remain strict:
+| Field | Semantic class | JSON mode | Flag mode | Notes |
+|---|---|---|---|---|
+| `session` | session identifier | strict: reject control chars and reserved identifier punctuation | same as JSON | exact shared-engine name; not a MATLAB object path |
+| `model` | MATLAB object name | allow arbitrary string except empty/NUL/overlength | support simple shell-safe strings; complex names best-effort only | recommend JSON for control chars or multiline names |
+| `target` | MATLAB object path | allow arbitrary string except empty/NUL/overlength | support simple shell-safe strings; complex paths best-effort only | primary path field; must support embedded newlines in JSON |
+| `subsystem` | MATLAB object path fragment | allow arbitrary string except empty/NUL/overlength | support simple shell-safe strings; complex paths best-effort only | same transport rules as `target` |
+| `param` | MATLAB-facing parameter name | allow arbitrary string except empty/NUL/overlength | support simple shell-safe strings; complex names best-effort only | no reserved-punctuation denial at validation layer |
+| `value` | write payload | allow arbitrary string except empty/NUL/overlength | support simple shell-safe strings; complex values best-effort only | supports `%`, embedded newlines, and other payload characters |
 
-- `session`
-- `model`
-- action names and parser-level identifiers
+Two contract rules follow from this matrix:
 
-These fields can continue to reject control characters and reserved identifier punctuation as appropriate.
+- reserved-character denial remains only for parser/framework identifiers such as `session`, not for MATLAB-facing object names or payload strings
+- JSON mode is the canonical contract surface for complex names, paths, and values; flag mode is guaranteed only for ordinary shell-safe strings
 
-#### Payload/path fields
-
-Become transport-safe rather than character-denied:
-
-- `target`
-- `subsystem`
-- `value`
-
-These fields should allow complex strings, including embedded newlines, provided they:
-
-- are present when required
-- are within reasonable length limits
-- are serializable and transportable through the CLI/API surface
-
-The transport layer must pass these values to MATLAB without expression injection or broken quoting. JSON mode becomes the canonical recommended entrypoint for complex strings, because shell-level quoting for newline-heavy paths is not portable enough to promise across environments.
-
-Flag mode remains supported for ordinary strings, but docs should explicitly recommend JSON mode for complex paths and values.
+The transport layer must pass these values to MATLAB without expression injection or broken quoting.
 
 ### 6. Guarantee clean JSON stdout
 
@@ -207,12 +212,15 @@ The transport layer must prevent MATLAB warnings from corrupting stdout. The des
 
 - warning text must never appear before or after the JSON payload on stdout
 
-Warnings should be handled in one of two ways:
+The warning contract should be concrete:
 
-- convert meaningful warnings into a structured top-level `warnings` field in the action response
-- suppress or redirect non-actionable noise away from stdout, preferably to stderr or an internal capture path
+- all MATLAB-originated warnings are captured by transport, never printed directly to stdout
+- successful action responses may include optional top-level `warnings: string[]`
+- error responses keep the fixed error-envelope shape, so warnings go in `details.warnings`
+- transport does not emit MATLAB warnings to stderr as a normal action path
+- stderr remains reserved for local maintainer-facing infrastructure diagnostics outside the action payload contract
 
-The policy should be centralized in transport, not implemented ad hoc inside each action.
+Warnings are surfaced when they change how a caller should interpret the response. Pure noise warnings may be dropped by transport, but that policy must be action-agnostic and deterministic enough to test.
 
 ### 7. Normalize transport-facing action behavior
 
@@ -222,7 +230,7 @@ After the rewrite, action responsibilities should look like this:
 - `inspect`: uses transport for parameter access and returns `param_not_found` for missing runtime parameters
 - `scan`, `find`, `connections`: use transport wrappers for `find_system` and related parameter reads so warning behavior and path transport are consistent
 - `highlight`: uses a transport wrapper for visual-only highlighting
-- `list_opened` and helper paths may continue to use transport-backed calls where they touch MATLAB state
+- `list_opened` and helper paths must use transport-backed calls whenever they touch MATLAB state
 
 No action should need to know whether the underlying MATLAB call was a direct engine method, a function wrapper, or a no-output command.
 
@@ -238,10 +246,12 @@ Expected primary touch points:
 - `simulink_cli/actions/find.py`
 - `simulink_cli/actions/connections.py`
 - `simulink_cli/actions/highlight.py`
-- possibly `simulink_cli/model_helpers.py` for helper call plumbing
+- `simulink_cli/model_helpers.py`
 - targeted tests and docs
 
 `session.py` should remain focused on session discovery and connection, not absorb transport logic.
+
+After the rewrite, no module other than `session.py` and `matlab_transport.py` should make raw MATLAB Engine calls. `model_helpers.py` is therefore a required migration target, not optional.
 
 ## Test Strategy
 
@@ -267,6 +277,7 @@ Update and extend action tests to verify:
 - `set_param` failure after attempted write exposes rollback and write-state details
 - `inspect` missing single parameter returns `param_not_found`
 - complex `target` and `subsystem` values are accepted by validation and routed intact
+- `model_helpers.py` and model-resolution helpers do not bypass transport
 - warning-bearing `scan`/`find` flows still produce clean structured responses
 
 ### 3. CLI contract tests
@@ -282,6 +293,9 @@ Add or tighten tests for:
   - `--dry-run`
   - `--no-dry-run`
 - JSON-mode recommendation for complex path/value payloads
+- warning placement:
+  - top-level `warnings` on success
+  - `details.warnings` on error
 - stdout containing only valid JSON even when MATLAB emits warnings
 
 ### 4. Optional live smoke tests
@@ -293,6 +307,7 @@ Minimum live smoke coverage:
 - `set_param` dry-run
 - `set_param` execute
 - rollback execution
+- newline-containing `target` or `value` coverage on a real model
 - special-character path targeting
 - `scan`/`find` on a warning-prone model without stdout corruption
 
