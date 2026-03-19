@@ -35,6 +35,9 @@ class InputValidationTests(unittest.TestCase):
     def test_validate_matlab_name_field_allows_newline_for_target(self):
         self.assertIsNone(validate_matlab_name_field("target", "m/Sub\nSystem"))
 
+    def test_validate_matlab_name_field_allows_leading_and_trailing_spaces(self):
+        self.assertIsNone(validate_matlab_name_field("target", " m/Sub "))
+
     def test_validate_matlab_name_field_rejects_nul(self):
         err = validate_matlab_name_field("target", "abc\x00def")
         self.assertEqual(err["error"], "invalid_input")
@@ -45,6 +48,9 @@ class InputValidationTests(unittest.TestCase):
 
     def test_validate_value_field_allows_percent_and_newline(self):
         self.assertIsNone(validate_value_field("value", "%.3f\nnext"))
+
+    def test_validate_value_field_allows_leading_and_trailing_spaces(self):
+        self.assertIsNone(validate_value_field("value", " 1 "))
 
     def test_validate_value_field_rejects_nul(self):
         err = validate_value_field("value", "abc\x00def")
@@ -156,7 +162,7 @@ class InputValidationTests(unittest.TestCase):
         result = set_param.validate(args)
         self.assertIsNone(result)
 
-    def test_set_param_value_rejects_trim_mismatch(self):
+    def test_set_param_value_allows_trim_mismatch(self):
         args = {
             "target": "m/B",
             "param": "Gain",
@@ -166,8 +172,7 @@ class InputValidationTests(unittest.TestCase):
             "session": None,
         }
         result = set_param.validate(args)
-        self.assertIsNotNone(result)
-        self.assertEqual(result["error"], "invalid_input")
+        self.assertIsNone(result)
 
     def test_set_param_value_allows_control_characters(self):
         args = {

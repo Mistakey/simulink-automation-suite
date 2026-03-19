@@ -15,6 +15,7 @@ def _validate_string_field(
     max_len=256,
     reserved_chars=(),
     allow_control_chars=False,
+    reject_surrounding_whitespace=False,
 ):
     if value is None:
         return None
@@ -22,7 +23,7 @@ def _validate_string_field(
     text = str(value)
     if not text:
         return _invalid_input(field_name, "must not be empty")
-    if text != text.strip():
+    if reject_surrounding_whitespace and text != text.strip():
         return _invalid_input(field_name, "has leading/trailing whitespace")
     if len(text) > max_len:
         return _invalid_input(field_name, f"exceeds max length {max_len}")
@@ -41,6 +42,7 @@ def validate_session_field(field_name, value, max_len=256):
         value,
         max_len=max_len,
         reserved_chars=("?", "#", "%"),
+        reject_surrounding_whitespace=True,
     )
 
 
