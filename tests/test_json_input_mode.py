@@ -97,6 +97,11 @@ class JsonInputModeTests(unittest.TestCase):
             )
         self.assertIn("unknown_parameter", str(ctx.exception))
 
+    def test_rejects_unknown_json_field_for_schema(self):
+        with self.assertRaises(ValueError) as ctx:
+            parse_json_request('{"action":"schema","bogus":"x"}')
+        self.assertIn("unknown_parameter", str(ctx.exception))
+
     def test_rejects_unknown_json_field_for_set_param(self):
         with self.assertRaises(ValueError) as ctx:
             parse_json_request(

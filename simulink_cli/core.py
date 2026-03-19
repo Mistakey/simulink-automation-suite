@@ -60,9 +60,15 @@ def parse_json_request(raw_payload):
     action = request.get("action")
     if not isinstance(action, str) or not action.strip():
         raise ValueError("invalid_json: action is required")
-    if action == "schema":
-        return "schema", {}
     if action not in _ACTIONS:
+        if action == "schema":
+            allowed = {"action"}
+            for key in request:
+                if key not in allowed:
+                    raise ValueError(
+                        f"unknown_parameter: field '{key}' is not supported for action '{action}'"
+                    )
+            return "schema", {}
         raise ValueError(f"invalid_json: unsupported action '{action}'")
 
     mod = _ACTIONS[action]
@@ -101,6 +107,22 @@ def _add_argument_from_field(parser, name, meta):
         if "enum" in meta:
             kwargs["choices"] = meta["enum"]
         parser.add_argument(name, **kwargs)
+        return
+
+    # Optional positional arguments that also keep a flag form.
+    if meta.get("positional_optional"):
+        parser.add_argument(
+            name,
+            nargs="?",
+            help=meta.get("description", ""),
+            default=argparse.SUPPRESS,
+        )
+        parser.add_argument(
+            f"--{name.replace('_', '-')}",
+            dest=name,
+            help=meta.get("description", ""),
+            default=argparse.SUPPRESS,
+        )
         return
 
     flag = f"--{name.replace('_', '-')}"

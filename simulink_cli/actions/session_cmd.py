@@ -27,6 +27,7 @@ FIELDS = {
         "required": False,
         "default": None,
         "description": "Session name, required when session_action=use.",
+        "positional_optional": True,
     },
 }
 

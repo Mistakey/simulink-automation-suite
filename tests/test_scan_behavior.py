@@ -171,6 +171,14 @@ class SessionFlagModeTests(unittest.TestCase):
         args = parser.parse_args(["session", "list"])
         self.assertEqual(args.session_action, "list")
 
+    def test_session_use_positional_name_bare(self):
+        from simulink_cli.core import build_parser
+
+        parser = build_parser()
+        args = parser.parse_args(["session", "use", "MATLAB_123"])
+        self.assertEqual(args.session_action, "use")
+        self.assertEqual(args.name, "MATLAB_123")
+
     def test_session_use_positional_with_name(self):
         from simulink_cli.core import build_parser
 
