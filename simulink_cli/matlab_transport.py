@@ -22,6 +22,8 @@ def _drain_warnings(engine):
             message, warning_id = engine.lastwarn(nargout=2)
             text = str(message).strip()
             if text:
+                if hasattr(engine, "warning_log"):
+                    engine.warning_log.clear()
                 return [text]
         except TypeError:
             pass
@@ -34,13 +36,29 @@ def _drain_warnings(engine):
     return []
 
 
+def _should_retry_without_nargout(exc):
+    text = str(exc)
+    return (
+        "nargout" in text
+        or "unexpected keyword argument" in text
+        or "takes no keyword arguments" in text
+        or "positional arguments but" in text
+    )
+
+
+def _call_with_optional_nargout(fn, args, nargout):
+    try:
+        return fn(*args, nargout=nargout)
+    except TypeError as exc:
+        if not _should_retry_without_nargout(exc):
+            raise
+    return fn(*args)
+
+
 def call(engine, name, *args, nargout=1):
     _reset_lastwarn(engine)
     fn = getattr(engine, name)
-    try:
-        value = fn(*args, nargout=nargout)
-    except TypeError:
-        value = fn(*args)
+    value = _call_with_optional_nargout(fn, args, nargout)
     warnings = _drain_warnings(engine)
     return _result(value=value, warnings=warnings)
 
@@ -48,10 +66,7 @@ def call(engine, name, *args, nargout=1):
 def call_no_output(engine, name, *args):
     _reset_lastwarn(engine)
     fn = getattr(engine, name)
-    try:
-        fn(*args, nargout=0)
-    except TypeError:
-        fn(*args)
+    _call_with_optional_nargout(fn, args, 0)
     warnings = _drain_warnings(engine)
     return _result(value=None, warnings=warnings)
 

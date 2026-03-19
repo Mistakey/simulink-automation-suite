@@ -4,6 +4,35 @@ from tests.fakes import OutputSensitiveEngine
 from simulink_cli import matlab_transport
 
 
+class TypeErrorAfterSideEffectEngine:
+    def __init__(self):
+        self.calls = []
+
+    def set_param(self, target, param, value, nargout=1):
+        self.calls.append((target, param, value, nargout))
+        if nargout == 0:
+            raise TypeError("internal failure after side effect")
+        return None
+
+
+class LastwarnAndWarningLogEngine:
+    def __init__(self):
+        self.lastwarn_calls = []
+        self.warning_log = ["fallback warning"]
+        self._responses = [("lastwarn message", "id"), ("", "")]
+
+    def find_system(self, *args, nargout=1):
+        return ["m"]
+
+    def lastwarn(self, *args, **kwargs):
+        self.lastwarn_calls.append((args, kwargs))
+        if args == ("", "") and kwargs == {"nargout": 0}:
+            return None
+        if kwargs == {"nargout": 2}:
+            return self._responses.pop(0)
+        raise TypeError("unsupported")
+
+
 class MatlabTransportTests(unittest.TestCase):
     def test_call_no_output_forces_nargout_zero(self):
         eng = OutputSensitiveEngine()
@@ -20,3 +49,19 @@ class MatlabTransportTests(unittest.TestCase):
         eng = OutputSensitiveEngine()
         matlab_transport.set_param(eng, "m/Sub\nSystem", "FormatString", "%.3f\nnext")
         self.assertIn(("set_param", "m/Sub\nSystem", "FormatString", "%.3f\nnext", 0), eng.calls)
+
+    def test_call_no_output_does_not_retry_on_internal_typeerror(self):
+        eng = TypeErrorAfterSideEffectEngine()
+        with self.assertRaises(TypeError):
+            matlab_transport.call_no_output(eng, "set_param", "m/Gain", "Gain", "2.0")
+        self.assertEqual(eng.calls, [("m/Gain", "Gain", "2.0", 0)])
+
+    def test_warning_drain_prefers_lastwarn_and_clears_fallback_state(self):
+        eng = LastwarnAndWarningLogEngine()
+
+        first = matlab_transport.find_system(eng, "m", "Type", "block")
+        second = matlab_transport.find_system(eng, "m", "Type", "block")
+
+        self.assertEqual(first["warnings"], ["lastwarn message"])
+        self.assertEqual(second["warnings"], [])
+        self.assertEqual(eng.warning_log, [])
