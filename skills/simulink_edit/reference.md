@@ -71,6 +71,15 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 
 If the original write used an explicit `session`, the rollback payload preserves the same `session` field so it can be replayed directly.
 
+## Failure Semantics
+
+Execute-mode failures must preserve enough information for recovery:
+
+- `verification_failed` means the write ran, but read-back did not confirm the requested value.
+- The failure payload includes `write_state` so the caller can tell whether the write was not attempted, attempted, verified, or failed verification.
+- The failure payload includes `details.rollback` so the caller can restore the prior value without reconstructing it manually.
+- `set_param_failed` remains the top-level code for write-path failures before or during verification.
+
 ## Recovery Matrix
 
 | Error Code | Scenario | Suggested Fix | Success Looks Like |
@@ -78,6 +87,7 @@ If the original write used an explicit `session`, the rollback payload preserves
 | `block_not_found` | Target block path invalid | Run `simulink-scan find` to locate correct path | set_param succeeds |
 | `param_not_found` | Parameter name not on block | Run `simulink-scan inspect` to list parameters | set_param succeeds |
 | `set_param_failed` | MATLAB rejected the value | Check value format; read parameter constraints | set_param succeeds |
+| `verification_failed` | Read-back did not confirm the requested write | Inspect the target again or use `details.rollback` | set_param succeeds |
 | `engine_unavailable` | MATLAB Engine not installed | Install MATLAB Engine for Python | set_param succeeds |
 | `no_session` | No shared session | Run `matlab.engine.shareEngine` in MATLAB | set_param succeeds |
 | `session_required` | Multiple sessions, no active/explicit target | Run `session list`, then either `session use <name>` or pass explicit `--session` | set_param succeeds |

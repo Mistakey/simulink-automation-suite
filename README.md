@@ -46,7 +46,7 @@ This plugin provides a third path: direct, structured, runtime model analysis fo
 1. Claude Code invokes the `simulink-scan` skill for Simulink analysis tasks.
 2. The skill resolves MATLAB session context (`session list/use/current/clear`) with exact-name matching, using either an explicit `--session` or a previously selected active session.
 3. It executes one of the core actions: `schema`, `list_opened`, `scan`, `connections`, `inspect`, `find`, or `highlight`.
-4. Results are returned as machine-readable JSON on `stdout`.
+4. Results are returned as a single machine-readable JSON payload on `stdout`; warnings never spill raw text into stdout, and `stderr` is reserved for maintainer-facing diagnostics.
 5. Failures use stable error codes for reliable agent recovery.
 6. For parameter modification, Claude Code invokes the `simulink-edit` skill.
 7. The edit skill uses `set_param` with dry-run preview (default), rollback payloads, and read-back verification.
@@ -141,11 +141,13 @@ python -m simulink_cli find --model "my_model" --name "PID" --max-results 50 --f
 
 `--json` is a first-class entrypoint and is mutually exclusive with flag-based action arguments.
 `schema` returns structured metadata for each action field (type, required/default/enum, description).
+JSON mode is the canonical contract surface for complex strings and newlines; use it whenever values need escaping or contain embedded line breaks.
 
 ```bash
 python -m simulink_cli --json "{\"action\":\"schema\"}"
 python -m simulink_cli --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"
 python -m simulink_cli --json "{\"action\":\"scan\",\"model\":\"my_model\",\"recursive\":true,\"session\":\"MATLAB_12345\"}"
+python -m simulink_cli --json "{\"action\":\"inspect\",\"model\":\"my_model\",\"target\":\"my_model/Gain\",\"param\":\"Description\",\"summary\":true}"
 python -m simulink_cli --json '{"action":"connections","target":"my_model/Gain","direction":"both","depth":1,"detail":"summary","max_edges":50,"fields":["target","upstream_blocks","downstream_blocks"]}'
 python -m simulink_cli --json '{"action":"find","model":"my_model","name":"PID","max_results":50,"fields":["path","type"]}'
 python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0"}'
@@ -159,6 +161,7 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 - `dry_run` defaults to `true` — preview before writing
 - Every response includes a `rollback` payload for one-command undo, preserving an explicit session override when one was used
 - Execute mode reads back the value to verify the write
+- If read-back does not confirm the requested value, the action returns `verification_failed` and preserves rollback/write-state data for recovery
 - The `value` field is always a string and may legitimately include literal percent signs, for example `"%.3f"`
 - One parameter per invocation (no batch operations)
 
@@ -169,7 +172,8 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 - Session matching is exact-only (no fuzzy matching).
 - If multiple MATLAB shared sessions exist, either select one via `session use <name>` or pass `--session` explicitly for MATLAB-bound actions.
 - If no opened model can be resolved to an active root, `scan` and `find` return `model_not_found`.
-- Unknown JSON fields return `unknown_parameter`.
+- `unknown_parameter` means the caller supplied a request field or flag that is not part of the contract.
+- `param_not_found` means the target block does not expose the requested runtime parameter.
 - Invalid JSON or wrong JSON field types return `invalid_json`.
 
 Error envelope:

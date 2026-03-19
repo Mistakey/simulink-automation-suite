@@ -31,6 +31,7 @@ class EditDocsContractTests(unittest.TestCase):
     def test_skill_md_contains_safety_model(self):
         text = (EDIT_SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("Safety Model", text)
+        self.assertIn("verification_failed", text)
 
     def test_reference_md_contains_recovery_matrix(self):
         text = (EDIT_SKILL_DIR / "reference.md").read_text(encoding="utf-8")
@@ -48,6 +49,12 @@ class EditDocsContractTests(unittest.TestCase):
         text = (EDIT_SKILL_DIR / "reference.md").read_text(encoding="utf-8")
         self.assertIn("%.3f", text)
 
+    def test_reference_md_documents_write_state_and_rollback_failure(self):
+        text = (EDIT_SKILL_DIR / "reference.md").read_text(encoding="utf-8")
+        self.assertIn("verification_failed", text)
+        self.assertIn("write_state", text)
+        self.assertIn("details.rollback", text)
+
     def test_skill_md_has_frontmatter(self):
         text = (EDIT_SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
         self.assertTrue(text.startswith("---"))
@@ -56,6 +63,8 @@ class EditDocsContractTests(unittest.TestCase):
     def test_test_scenarios_contains_set_param(self):
         text = (EDIT_SKILL_DIR / "test-scenarios.md").read_text(encoding="utf-8")
         self.assertIn("set_param", text)
+        self.assertIn("verification_failed", text)
+        self.assertIn("newline", text)
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@
 
 - Dry-run preview: `--json '{"action":"set_param","target":"m/Gain1","param":"Gain","value":"2.0"}'` → dry_run=true, current_value, proposed_value, rollback
 - Execute: `--json '{"action":"set_param","target":"m/Gain1","param":"Gain","value":"2.0","dry_run":false}'` → dry_run=false, previous_value, new_value, verified, rollback
+- Execute verification failure: `--json '{"action":"set_param","target":"m/Gain1","param":"Gain","value":"2.0","dry_run":false}'` → `verification_failed`, `details.rollback`, write_state
 - Block not found: `--json '{"action":"set_param","target":"m/Missing","param":"Gain","value":"2.0"}'` → `block_not_found`
 - Param not found: `--json '{"action":"set_param","target":"m/Gain1","param":"NoSuch","value":"2.0"}'` → `param_not_found`
 - Missing required field: `--json '{"action":"set_param","target":"m/Gain1"}'` → parser error (param, value required)
@@ -11,6 +12,7 @@
 - Unknown field: `--json '{"action":"set_param","target":"m/B","param":"P","value":"1","extra":"x"}'` → `unknown_parameter`
 - Wrong type: `--json '{"action":"set_param","target":"m/B","param":"P","value":123}'` → `invalid_json` (value must be string)
 - Literal percent value: `--json '{"action":"set_param","target":"m/Display","param":"Format","value":"%.3f"}'` → accepted preview/execute contract
+- Multiline value: `--json '{"action":"set_param","target":"m/Display","param":"Comment","value":"Line 1\nLine 2"}'` → JSON mode preserves the newline payload exactly
 - Rollback payload is executable: take `rollback` from any response, pass as `--json` → restores original
 - Explicit session rollback: execute with `"session":"MATLAB_12345"` → returned rollback preserves the same session field
 

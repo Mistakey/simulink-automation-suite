@@ -111,6 +111,24 @@ Use these scenarios to validate skill behavior with and without the skill loaded
   - `session use` or `session clear` returns `state_write_failed` / `state_clear_failed`
   - Recovery step checks local state-file permissions or uses explicit `--session`
 
+## Scenario 13: JSON Mode for Complex Strings and Newlines
+
+- Prompt: "Inspect this block and preserve the exact multi-line text in the request"
+- Setup: caller must pass a payload containing quotes, escaped newlines, or other characters that would be awkward in flag mode
+- Expected:
+  - Must use `--json` as the canonical request surface
+  - Must preserve the complex string payload exactly
+  - Must keep stdout to one JSON response
+
+## Scenario 14: Clean Stdout Contract Under Warnings
+
+- Prompt: "Scan the model and report any variant warnings"
+- Setup: MATLAB emits warnings during the scan call
+- Expected:
+  - Raw warning text must not leak into stdout
+  - stdout still carries a single JSON payload
+  - Warning context is surfaced through the documented contract, not as stray console text
+
 ## Find Scenarios
 
 - Find by name: `--json '{"action":"find","model":"m","name":"PID"}'` → results with matching blocks

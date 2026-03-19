@@ -6,7 +6,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SKILL_PATH = REPO_ROOT / "skills" / "simulink_scan" / "SKILL.md"
 REFERENCE_PATH = REPO_ROOT / "skills" / "simulink_scan" / "reference.md"
 README_PATH = REPO_ROOT / "README.md"
+README_ZH_PATH = REPO_ROOT / "README.zh-CN.md"
 SCENARIOS_PATH = REPO_ROOT / "skills" / "simulink_scan" / "test-scenarios.md"
+CLAUDE_PATH = REPO_ROOT / ".claude" / "CLAUDE.md"
 
 
 class DocsContractTests(unittest.TestCase):
@@ -42,6 +44,24 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("--max-edges", text)
         self.assertIn('{"action":"connections"', text)
         self.assertIn("structured metadata", text)
+
+    def test_readme_distinguishes_unknown_parameter_and_param_not_found(self):
+        text = README_PATH.read_text(encoding="utf-8")
+        self.assertIn("unknown_parameter", text)
+        self.assertIn("param_not_found", text)
+        self.assertIn("request field or flag", text)
+        self.assertIn("runtime parameter", text)
+
+    def test_readme_recommends_json_mode_for_complex_strings_and_newlines(self):
+        text = README_PATH.read_text(encoding="utf-8")
+        self.assertIn("canonical contract surface for complex strings and newlines", text)
+        self.assertIn("--json", text)
+        self.assertIn("inspect", text)
+
+    def test_readme_documents_clean_stdout_contract(self):
+        text = README_PATH.read_text(encoding="utf-8")
+        self.assertIn("single machine-readable JSON payload", text)
+        self.assertIn("stderr", text)
 
     def test_readme_documents_matlab_prerequisites(self):
         text = README_PATH.read_text(encoding="utf-8")
@@ -105,9 +125,23 @@ class DocsContractTests(unittest.TestCase):
         text = README_PATH.read_text(encoding="utf-8")
         self.assertIn("`find`", text)
 
+    def test_readme_zh_matches_error_and_json_contract(self):
+        text = README_ZH_PATH.read_text(encoding="utf-8")
+        self.assertIn("unknown_parameter", text)
+        self.assertIn("param_not_found", text)
+        self.assertIn("复杂字符串", text)
+        self.assertIn("换行", text)
+        self.assertIn("stdout", text)
+
     def test_scenarios_include_find_examples(self):
         text = SCENARIOS_PATH.read_text(encoding="utf-8")
         self.assertIn("find", text)
+
+    def test_claude_md_separates_unit_tests_from_live_matlab_verification(self):
+        text = CLAUDE_PATH.read_text(encoding="utf-8")
+        self.assertIn("live MATLAB smoke verification", text)
+        self.assertIn("unit tests", text)
+        self.assertIn("not sufficient", text)
 
 
 if __name__ == "__main__":

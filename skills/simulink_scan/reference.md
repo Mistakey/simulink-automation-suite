@@ -5,7 +5,7 @@ The skill belongs to plugin `simulink-automation-suite`, which currently ships b
 
 ## JSON Contract
 
-- stdout is machine-readable JSON.
+- stdout is a single machine-readable JSON payload.
 - stderr is human guidance and warnings.
 
 Error envelope:
@@ -57,11 +57,13 @@ Common error codes:
 - JSON request must be an object with `action` and action-specific fields.
 - Unknown JSON fields return `unknown_parameter`.
 - Wrong JSON field types or malformed payload return `invalid_json`.
+- JSON mode is the canonical surface for complex strings and newlines.
 
 Examples:
 - `python -m simulink_cli --json "{\"action\":\"schema\"}"`
 - `python -m simulink_cli --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"`
 - `python -m simulink_cli --json "{\"action\":\"inspect\",\"model\":\"m\",\"target\":\"m/Gain\",\"param\":\"All\",\"summary\":true,\"session\":\"MATLAB_12345\"}"`
+- `python -m simulink_cli --json "{\"action\":\"inspect\",\"model\":\"m\",\"target\":\"m/Display\",\"param\":\"Description\",\"summary\":true}"`
 
 ## Schema Action
 
@@ -150,6 +152,7 @@ Examples:
 | `session_not_found` | Session name is not an exact match | `python -m simulink_cli session list` then copy exact name | action connects to requested session |
 | `model_required` | Multiple opened models and no explicit model | `python -m simulink_cli list_opened` then retry with `--model` | scan/inspect returns selected model |
 | `inactive_parameter` | Requested parameter is inactive under current mask config | retry with `--resolve-effective` or `--strict-active` | response includes effective mapping or explicit inactive failure |
+| `param_not_found` | Requested runtime parameter is not on the target block | `python -m simulink_cli inspect --model "<model>" --target "<block>" --param "All"` | inspect returns available parameters |
 | `invalid_input` (find) | Neither name nor block_type provided | provide at least one of `--name` or `--block-type` | find returns results or empty array |
 | `invalid_json` | Malformed JSON or wrong field type | validate payload using `schema`, then retry | request parses and executes |
 
