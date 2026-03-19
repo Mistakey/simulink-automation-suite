@@ -123,5 +123,6 @@ Detailed rules in `.claude/rules/` auto-load when editing matching files:
 ## Engineering Notes
 
 - `.sl_pilot_state.json` is local runtime state (gitignored)
-- Most tests use fakes/mocks; no local MATLAB required
+- Most tests use fakes/mocks; no local MATLAB required for unit tests
+- Unit tests are necessary but not sufficient for live MATLAB compatibility; live MATLAB smoke verification is still required for transport-sensitive changes
 - `simulink-edit` safety model: `dry_run` defaults true, rollback in every response, read-back verification

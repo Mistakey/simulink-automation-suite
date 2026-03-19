@@ -13,6 +13,7 @@ This skill is one capability inside plugin `simulink-automation-suite`.
 - `dry_run` defaults to `true`. Always preview before applying.
 - Persist the `rollback` payload before executing — it enables one-command undo and preserves any explicit session override.
 - After each execute, verify the `verified` field confirms the write took effect.
+- If read-back does not confirm the requested value, the action returns `verification_failed` and preserves rollback/write-state data for recovery.
 - One parameter per invocation. No batch operations.
 
 ## Preflight
@@ -44,7 +45,7 @@ This skill is one capability inside plugin `simulink-automation-suite`.
 - JSON mode (execute):
   - `python -m simulink_cli --json '{"action":"set_param","target":"<block>","param":"<name>","value":"<new_value>","dry_run":false}'`
 
-The `value` field is always a string. MATLAB `set_param` handles type conversion internally. Pass numeric values as `"2.0"`, not `2.0`. Literal percent strings such as `"%.3f"` are valid when the target parameter expects them.
+The `value` field is always a string. MATLAB `set_param` handles type conversion internally. Pass numeric values as `"2.0"`, not `2.0`. Literal percent strings such as `"%.3f"` are valid when the target parameter expects them. JSON mode is the canonical contract surface for complex strings and newlines.
 
 JSON mode is first-class and mutually exclusive with flag-mode action arguments.
 
@@ -59,6 +60,7 @@ Error-driven next actions:
 - `block_not_found` -> run `simulink-scan find` or `scan` to locate valid block path.
 - `param_not_found` -> run `simulink-scan inspect` on the target to list available parameters.
 - `set_param_failed` -> check value format/type, read parameter constraints from inspect, retry.
+- `verification_failed` -> inspect the target again or use the preserved `rollback` payload to restore the prior value.
 - `invalid_json` / `json_conflict` / `unknown_parameter` / `invalid_input` -> correct request payload and retry.
 
 For full matrix and examples, read `reference.md`.

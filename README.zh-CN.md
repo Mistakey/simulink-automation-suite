@@ -46,7 +46,7 @@ Simulink Automation Suite 的核心定位，是让 Simulink 分析能力在 Clau
 1. Claude Code 在 Simulink 分析场景下调用 `simulink-scan` 技能。
 2. 技能先解析 MATLAB 会话上下文（`session list/use/current/clear`），并使用精确会话名匹配；当存在多个会话时，可通过显式 `--session` 或预先选择的 active session 解析目标会话。
 3. 然后执行核心动作之一：`schema`、`list_opened`、`scan`、`connections`、`inspect`、`find`、`highlight`。
-4. 结果通过 `stdout` 输出为机器可读 JSON。
+4. 结果通过 `stdout` 输出为单一机器可读 JSON 负载；原始警告文本不会直接污染 stdout。
 5. 异常通过稳定错误码返回，便于 Agent 做恢复重试。
 6. 对于参数修改场景，Claude Code 会调用 `simulink-edit` 技能。
 7. 编辑技能通过 `set_param` 提供预览模式（默认开启 dry-run）、回滚负载与写后读回验证。
@@ -141,11 +141,13 @@ python -m simulink_cli find --model "my_model" --name "PID" --max-results 50 --f
 
 `--json` 是一等入口，且与基于参数的动作调用互斥。
 `schema` 返回结构化字段元数据（类型、必填/默认值/枚举、字段说明）。
+对于复杂字符串和换行，JSON 请求模式是规范入口；只要值里包含需要转义的内容，优先使用 `--json`。
 
 ```bash
 python -m simulink_cli --json "{\"action\":\"schema\"}"
 python -m simulink_cli --json "{\"action\":\"list_opened\",\"session\":\"MATLAB_12345\"}"
 python -m simulink_cli --json "{\"action\":\"scan\",\"model\":\"my_model\",\"recursive\":true,\"session\":\"MATLAB_12345\"}"
+python -m simulink_cli --json "{\"action\":\"inspect\",\"model\":\"my_model\",\"target\":\"my_model/Gain\",\"param\":\"Description\",\"summary\":true}"
 python -m simulink_cli --json '{"action":"connections","target":"my_model/Gain","direction":"both","depth":1,"detail":"summary","max_edges":50,"fields":["target","upstream_blocks","downstream_blocks"]}'
 python -m simulink_cli --json '{"action":"find","model":"my_model","name":"PID","max_results":50,"fields":["path","type"]}'
 python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0"}'
@@ -159,6 +161,7 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 - `dry_run` 默认为 `true` —— 先预览再写入
 - 每次响应都包含 `rollback` 负载，支持一条命令撤销；如果原请求显式指定了会话，回滚负载会保留该会话信息
 - 执行模式会读回参数值以验证写入结果
+- 如果读回值无法证明写入成功，动作会返回 `verification_failed`，并保留回滚与写状态信息以便恢复
 - `value` 字段始终按字符串传递，并且可以合法包含 `%`，例如 `"%.3f"`
 - 每次调用只修改一个参数（不支持批量操作）
 
@@ -169,7 +172,8 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 - 会话匹配仅支持精确匹配（不支持模糊匹配）。
 - 当 MATLAB 共享会话多于一个时，涉及 MATLAB 连接的动作必须先通过 `session use <name>` 选定会话，或显式传 `--session`。
 - 当无法从当前会话解析出活动模型根时，`scan` 和 `find` 会稳定返回 `model_not_found`。
-- JSON 中出现未知字段会返回 `unknown_parameter`。
+- `unknown_parameter` 表示调用方传入了不属于契约的请求字段或命令参数。
+- `param_not_found` 表示目标模块并未暴露请求的运行时参数。
 - JSON 非法或字段类型错误会返回 `invalid_json`。
 
 错误返回结构：

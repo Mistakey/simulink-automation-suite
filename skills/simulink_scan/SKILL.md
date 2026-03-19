@@ -61,6 +61,8 @@ Default to shallow scan first, then escalate to recursive/hierarchy only when re
   - `python -m simulink_cli find --model "<model>" --block-type "SubSystem"`
 - Search with output controls:
   - `python -m simulink_cli find --model "<model>" --name "Controller" --max-results 50 --fields "path,type"`
+- JSON mode is the canonical surface for complex strings and newlines:
+  - `python -m simulink_cli --json '{"action":"inspect","model":"<model>","target":"<block>","param":"Description","summary":true}'`
 
 JSON mode is first-class and mutually exclusive with flag-mode action arguments.
 
@@ -79,6 +81,7 @@ Error-driven next actions:
 - `block_not_found` -> run scan, select valid block path.
 - `state_write_failed` / `state_clear_failed` -> check local plugin state-file permissions, or bypass saved state by passing explicit `--session`.
 - `invalid_json` / `json_conflict` / `unknown_parameter` / `invalid_input` -> correct request payload and retry.
+- `param_not_found` -> the requested runtime parameter does not exist on the block; use `inspect` to list available parameters.
 - `inactive_parameter` -> use `--resolve-effective` or `--strict-active` according to intent.
 - `find` returns empty results → broaden name pattern, try different block_type, or widen scope (remove subsystem constraint).
 
@@ -87,6 +90,7 @@ For full matrix and examples, read `reference.md`.
 ## Output Discipline
 
 - Ground claims in tool JSON.
+- Keep stdout to a single JSON payload; warnings must not leak as raw text into stdout.
 - Keep outputs compact: selected model, scan root, recursive flag, key findings.
 - Do not dump full recursive trees unless explicitly requested.
 
