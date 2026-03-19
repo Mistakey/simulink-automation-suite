@@ -26,6 +26,8 @@ def _validate_string_field(
         return _invalid_input(field_name, "has leading/trailing whitespace")
     if len(text) > max_len:
         return _invalid_input(field_name, f"exceeds max length {max_len}")
+    if "\x00" in text:
+        return _invalid_input(field_name, "contains control characters")
     if not allow_control_chars and any(ord(char) < 32 for char in text):
         return _invalid_input(field_name, "contains control characters")
     if reserved_chars and any(char in text for char in reserved_chars):

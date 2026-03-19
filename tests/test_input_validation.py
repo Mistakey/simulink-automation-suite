@@ -35,12 +35,20 @@ class InputValidationTests(unittest.TestCase):
     def test_validate_matlab_name_field_allows_newline_for_target(self):
         self.assertIsNone(validate_matlab_name_field("target", "m/Sub\nSystem"))
 
+    def test_validate_matlab_name_field_rejects_nul(self):
+        err = validate_matlab_name_field("target", "abc\x00def")
+        self.assertEqual(err["error"], "invalid_input")
+
     def test_validate_session_field_still_rejects_control_characters(self):
         err = validate_session_field("session", "MATLAB_\n1")
         self.assertEqual(err["error"], "invalid_input")
 
     def test_validate_value_field_allows_percent_and_newline(self):
         self.assertIsNone(validate_value_field("value", "%.3f\nnext"))
+
+    def test_validate_value_field_rejects_nul(self):
+        err = validate_value_field("value", "abc\x00def")
+        self.assertEqual(err["error"], "invalid_input")
 
     def test_run_action_applies_validation_for_library_callers(self):
         result = run_action("highlight", {"target": "a?b", "session": None})
