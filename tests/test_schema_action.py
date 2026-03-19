@@ -1,6 +1,7 @@
 import unittest
 
 from simulink_cli.core import build_schema_payload
+from simulink_cli.actions import session_cmd
 
 
 class SchemaActionTests(unittest.TestCase):
@@ -62,6 +63,9 @@ class SchemaActionTests(unittest.TestCase):
 
     def test_session_action_present(self):
         self.assertIn("session", self.schema["actions"])
+
+    def test_session_action_declares_engine_unavailable(self):
+        self.assertIn("engine_unavailable", session_cmd.ERRORS)
 
     # -- Connections field metadata (from old scan schema tests) ----------------
 

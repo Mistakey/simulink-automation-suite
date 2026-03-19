@@ -30,7 +30,19 @@ def resolve_scan_root_path(eng, model_name=None, subsystem_path=None):
         if len(opened_models) == 1:
             target_model = opened_models[0]
         else:
-            target_model = eng.bdroot()
+            try:
+                target_model = eng.bdroot()
+            except Exception as exc:
+                return make_error(
+                    "model_not_found",
+                    "No active model found. Please open a Simulink model.",
+                    details={
+                        "model": model_name,
+                        "models": opened_models,
+                        "cause": str(exc),
+                    },
+                    suggested_fix="Open a Simulink model, then retry with --model if needed.",
+                )
 
     if not target_model:
         return make_error(

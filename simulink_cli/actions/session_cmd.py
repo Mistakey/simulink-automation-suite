@@ -32,6 +32,7 @@ FIELDS = {
 }
 
 ERRORS = [
+    "engine_unavailable",
     "no_session",
     "session_not_found",
     "session_required",

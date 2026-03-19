@@ -120,7 +120,7 @@ def execute(args):
     scan_root = resolved["scan_root"]
 
     try:
-        search_args = [scan_root]
+        search_args = [scan_root, "FollowLinks", "on", "LookUnderMasks", "all"]
         if name and block_type:
             safe_name = re.escape(name)
             search_args.extend(

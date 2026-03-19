@@ -1,7 +1,7 @@
 """Set-param action — set a block parameter with dry-run preview and rollback."""
 
 from simulink_cli.errors import make_error
-from simulink_cli.validation import validate_text_field
+from simulink_cli.validation import validate_text_field, validate_value_field
 from simulink_cli.session import safe_connect_to_session
 
 DESCRIPTION = "Set a block parameter with dry-run preview and rollback support."
@@ -53,10 +53,13 @@ ERRORS = [
 
 def validate(args):
     """Validate set_param arguments. Returns error dict or None."""
-    for field_name in ("target", "param", "value", "session"):
+    for field_name in ("target", "param", "session"):
         err = validate_text_field(field_name, args.get(field_name))
         if err is not None:
             return err
+    err = validate_value_field("value", args.get("value"))
+    if err is not None:
+        return err
 
     for required_field in ("target", "param", "value"):
         val = args.get(required_field)

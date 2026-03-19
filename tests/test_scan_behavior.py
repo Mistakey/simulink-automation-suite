@@ -15,6 +15,21 @@ def _scan_args(model=None, subsystem=None, recursive=False, hierarchy=False,
 
 
 class ScanBehaviorTests(unittest.TestCase):
+    def test_no_open_model_bdroot_failure_returns_model_not_found(self):
+        class FailingBdrootEngine:
+            def find_system(self, *args):
+                if args == ("Type", "block_diagram"):
+                    return []
+                raise RuntimeError("unexpected")
+
+            def bdroot(self):
+                raise RuntimeError("No system selected")
+
+        eng = FailingBdrootEngine()
+        with patch.object(scan, 'safe_connect_to_session', return_value=(eng, None)):
+            result = scan.execute(_scan_args())
+        self.assertEqual(result["error"], "model_not_found")
+
     def test_list_opened_models_returns_sorted_names(self):
         eng = FakeScanEngine(
             models=["z_model", "a_model", "m_model"],

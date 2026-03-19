@@ -15,6 +15,22 @@ def _find_args(model=None, subsystem=None, name=None, block_type=None,
 
 
 class FindBehaviorTests(unittest.TestCase):
+    def test_no_open_model_bdroot_failure_returns_model_not_found(self):
+        class FailingBdrootEngine:
+            def find_system(self, *args, **kwargs):
+                if args == ("Type", "block_diagram"):
+                    return []
+                raise RuntimeError("unexpected")
+
+            def bdroot(self):
+                raise RuntimeError("No system selected")
+
+        eng = FailingBdrootEngine()
+        with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
+            result = find.execute(_find_args(name="Gain"))
+        self.assertEqual(result["error"], "model_not_found")
+        self.assertIn("details", result)
+
     def test_find_by_name_returns_matching_blocks(self):
         eng = FakeFindEngine(
             models=["my_model"],
@@ -100,6 +116,30 @@ class FindBehaviorTests(unittest.TestCase):
         with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
             result = find.execute(_find_args(model="missing_model", name="x"))
         self.assertEqual(result["error"], "model_not_found")
+
+    def test_find_uses_scan_visibility_options(self):
+        class RecordingFindEngine(FakeFindEngine):
+            def __init__(self):
+                super().__init__(
+                    models=["m1"],
+                    find_results={"m1": ["m1/Gain1"]},
+                    valid_handles={"m1", "m1/Gain1"},
+                )
+                self.calls = []
+
+            def find_system(self, *args, **kwargs):
+                self.calls.append(args)
+                return super().find_system(*args, **kwargs)
+
+        eng = RecordingFindEngine()
+        with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
+            result = find.execute(_find_args(model="m1", name="Gain"))
+        self.assertNotIn("error", result)
+        self.assertGreaterEqual(len(eng.calls), 2)
+        self.assertEqual(
+            eng.calls[1][:5],
+            ("m1", "FollowLinks", "on", "LookUnderMasks", "all"),
+        )
 
 
 if __name__ == "__main__":

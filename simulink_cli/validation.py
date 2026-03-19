@@ -9,7 +9,7 @@ def _invalid_input(field_name, message):
     )
 
 
-def validate_text_field(field_name, value, max_len=256):
+def _validate_string_field(field_name, value, max_len=256, reserved_chars=()):
     if value is None:
         return None
 
@@ -22,9 +22,22 @@ def validate_text_field(field_name, value, max_len=256):
         return _invalid_input(field_name, f"exceeds max length {max_len}")
     if any(ord(char) < 32 for char in text):
         return _invalid_input(field_name, "contains control characters")
-    if any(char in text for char in ("?", "#", "%")):
+    if reserved_chars and any(char in text for char in reserved_chars):
         return _invalid_input(field_name, "contains reserved characters")
     return None
+
+
+def validate_text_field(field_name, value, max_len=256):
+    return _validate_string_field(
+        field_name,
+        value,
+        max_len=max_len,
+        reserved_chars=("?", "#", "%"),
+    )
+
+
+def validate_value_field(field_name, value, max_len=256):
+    return _validate_string_field(field_name, value, max_len=max_len)
 
 
 def validate_json_type(action, field_name, value, field_meta):

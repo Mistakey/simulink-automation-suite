@@ -121,6 +121,57 @@ class InputValidationTests(unittest.TestCase):
         result = set_param.validate(args)
         self.assertIsNone(result)
 
+    def test_set_param_value_allows_literal_percent(self):
+        args = {
+            "target": "m/B",
+            "param": "Format",
+            "value": "%.3f",
+            "dry_run": True,
+            "model": None,
+            "session": None,
+        }
+        result = set_param.validate(args)
+        self.assertIsNone(result)
+
+    def test_set_param_value_rejects_trim_mismatch(self):
+        args = {
+            "target": "m/B",
+            "param": "Gain",
+            "value": " 1 ",
+            "dry_run": True,
+            "model": None,
+            "session": None,
+        }
+        result = set_param.validate(args)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
+    def test_set_param_value_rejects_control_characters(self):
+        args = {
+            "target": "m/B",
+            "param": "Gain",
+            "value": "abc\x01",
+            "dry_run": True,
+            "model": None,
+            "session": None,
+        }
+        result = set_param.validate(args)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
+    def test_set_param_value_rejects_empty_string(self):
+        args = {
+            "target": "m/B",
+            "param": "Gain",
+            "value": "",
+            "dry_run": True,
+            "model": None,
+            "session": None,
+        }
+        result = set_param.validate(args)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
     def test_schema_action_returns_none_for_validate(self):
         # schema has no validate — run_action handles it directly
         result = run_action("schema", {})
