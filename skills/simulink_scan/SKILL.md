@@ -7,7 +7,7 @@ Use this skill only for Simulink read-only analysis.
 Reject write/edit requests (`set_param`, add/delete blocks/lines, save changes).
 Visual-only block highlighting via `hilite_system` is allowed because it does not mutate model data.
 Canonical skill name is `simulink-scan` (module path `simulink_cli` is internal only).
-This skill is one capability inside plugin `simulink-automation-suite`, which is designed to host additional skills over time.
+This skill is one capability inside plugin `simulink-automation-suite`, which currently also ships `simulink-edit`.
 
 ## Preflight
 
@@ -73,10 +73,11 @@ Error-driven next actions:
 - `engine_unavailable` -> install/configure MATLAB Engine for Python for the active interpreter, then retry.
 - `no_session` -> run `matlab.engine.shareEngine` in MATLAB, retry.
 - `model_required` -> rerun `list_opened`, retry with explicit `--model`.
-- `model_not_found` -> rerun `list_opened`, choose existing model.
+- `model_not_found` -> rerun `list_opened`, choose existing model, or open a Simulink model if no active model is available.
 - `subsystem_not_found` -> run shallow root scan, select valid subsystem.
 - `invalid_subsystem_type` -> choose a real SubSystem path.
 - `block_not_found` -> run scan, select valid block path.
+- `state_write_failed` / `state_clear_failed` -> check local plugin state-file permissions, or bypass saved state by passing explicit `--session`.
 - `invalid_json` / `json_conflict` / `unknown_parameter` / `invalid_input` -> correct request payload and retry.
 - `inactive_parameter` -> use `--resolve-effective` or `--strict-active` according to intent.
 - `find` returns empty results → broaden name pattern, try different block_type, or widen scope (remove subsystem constraint).

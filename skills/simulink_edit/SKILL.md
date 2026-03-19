@@ -44,7 +44,7 @@ This skill is one capability inside plugin `simulink-automation-suite`.
 - JSON mode (execute):
   - `python -m simulink_cli --json '{"action":"set_param","target":"<block>","param":"<name>","value":"<new_value>","dry_run":false}'`
 
-The `value` field is always a string. MATLAB `set_param` handles type conversion internally. Pass numeric values as `"2.0"`, not `2.0`.
+The `value` field is always a string. MATLAB `set_param` handles type conversion internally. Pass numeric values as `"2.0"`, not `2.0`. Literal percent strings such as `"%.3f"` are valid when the target parameter expects them.
 
 JSON mode is first-class and mutually exclusive with flag-mode action arguments.
 

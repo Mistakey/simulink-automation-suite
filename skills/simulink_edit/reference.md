@@ -93,4 +93,5 @@ The `value` field is always a string. MATLAB's `set_param` accepts string values
 - Numeric: `"2.0"`, `"100"`
 - Boolean-like: `"on"`, `"off"`
 - Enum: `"Continuous"`, `"Discrete"`
+- Format strings with literal percent signs: `"%.3f"`, `"%0.1f rpm"`
 - Expression: `"1/(2*pi*100)"`

@@ -7,7 +7,7 @@ It is based on known-good public plugin manifests and validator behavior.
 
 - Plugin name is product-level: `simulink-automation-suite`.
 - Skills represent capability-level boundaries and can grow over time.
-- Current released capability is `simulink-scan`.
+- Currently shipped skills are `simulink-scan` and `simulink-edit`.
 - Do not describe the full plugin as scan-only.
 
 ## Validator-Safe Rules

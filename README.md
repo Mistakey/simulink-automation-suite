@@ -159,6 +159,7 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 - `dry_run` defaults to `true` — preview before writing
 - Every response includes a `rollback` payload for one-command undo, preserving an explicit session override when one was used
 - Execute mode reads back the value to verify the write
+- The `value` field is always a string and may legitimately include literal percent signs, for example `"%.3f"`
 - One parameter per invocation (no batch operations)
 
 ---
@@ -167,6 +168,7 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 
 - Session matching is exact-only (no fuzzy matching).
 - If multiple MATLAB shared sessions exist, either select one via `session use <name>` or pass `--session` explicitly for MATLAB-bound actions.
+- If no opened model can be resolved to an active root, `scan` and `find` return `model_not_found`.
 - Unknown JSON fields return `unknown_parameter`.
 - Invalid JSON or wrong JSON field types return `invalid_json`.
 
@@ -187,9 +189,12 @@ Common error codes:
 - `invalid_json`
 - `unknown_parameter`
 - `json_conflict`
+- `engine_unavailable`
 - `no_session`
 - `session_required`
 - `session_not_found`
+- `state_write_failed`
+- `state_clear_failed`
 - `model_required`
 - `model_not_found`
 - `subsystem_not_found`
@@ -199,6 +204,8 @@ Common error codes:
 - `set_param_failed`
 - `inactive_parameter`
 - `runtime_error`
+
+Session management commands may return `state_write_failed` or `state_clear_failed` when the local plugin state file is not writable.
 
 If no MATLAB shared session exists, run `matlab.engine.shareEngine` in MATLAB and retry.
 

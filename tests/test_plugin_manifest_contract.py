@@ -23,6 +23,12 @@ class PluginManifestContractTests(unittest.TestCase):
         manifest = json.loads(PLUGIN_MANIFEST_PATH.read_text(encoding="utf-8"))
         self.assertNotIn("hooks", manifest)
 
+    def test_manifest_keywords_include_edit_without_future_placeholder(self):
+        manifest = json.loads(PLUGIN_MANIFEST_PATH.read_text(encoding="utf-8"))
+        keywords = manifest.get("keywords", [])
+        self.assertIn("edit", keywords)
+        self.assertNotIn("future-editing", keywords)
+
 
 if __name__ == "__main__":
     unittest.main()

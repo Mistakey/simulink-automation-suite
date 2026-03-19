@@ -48,6 +48,11 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("MATLAB Engine for Python", text)
         self.assertIn("matlab.engine.shareEngine", text)
 
+    def test_readme_mentions_session_state_error_codes(self):
+        text = README_PATH.read_text(encoding="utf-8")
+        self.assertIn("state_write_failed", text)
+        self.assertIn("state_clear_failed", text)
+
     def test_skill_and_reference_include_engine_unavailable_route(self):
         skill_text = SKILL_PATH.read_text(encoding="utf-8")
         reference_text = REFERENCE_PATH.read_text(encoding="utf-8")

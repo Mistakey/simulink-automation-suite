@@ -95,6 +95,22 @@ Use these scenarios to validate skill behavior with and without the skill loaded
   - Returns compact upstream/downstream module lists without custom MATLAB scripts
   - Optional escalation to `--detail ports` or `--detail lines` when requested
 
+## Scenario 11: No Active Model (`model_not_found`)
+
+- Prompt: "Scan the current model root"
+- Setup: no opened model and `bdroot()` cannot resolve an active model
+- Expected:
+  - `scan` or `find` returns `model_not_found`
+  - Recovery step opens a Simulink model or reruns with explicit `--model`
+
+## Scenario 12: Session State File Failure (`state_write_failed` / `state_clear_failed`)
+
+- Prompt: "Use session MATLAB_12345 and keep it active for later scans"
+- Setup: local plugin state file is not writable
+- Expected:
+  - `session use` or `session clear` returns `state_write_failed` / `state_clear_failed`
+  - Recovery step checks local state-file permissions or uses explicit `--session`
+
 ## Find Scenarios
 
 - Find by name: `--json '{"action":"find","model":"m","name":"PID"}'` → results with matching blocks

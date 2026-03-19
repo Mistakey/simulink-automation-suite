@@ -5,8 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Identity
 
 - Plugin: `simulink-automation-suite` (fixed name, never rename)
-- Current skill: `simulink-scan` (read-only Simulink analysis via MATLAB Engine for Python)
-- Second skill: `simulink-edit` (Simulink parameter modification via MATLAB Engine for Python)
+- Shipped skills: `simulink-scan` (read-only Simulink analysis) and `simulink-edit` (parameter modification)
 - Entrypoint: `python -m simulink_cli`
 - Version: synced in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`
 
@@ -43,7 +42,7 @@ python -m simulink_cli --json '{"action":"schema"}'
 | `core.py` | `_ACTIONS` registry, JSON parsing, schema gen, argparse auto-build, routing, error mapping, `main()`. **Contract source of truth.** |
 | `errors.py` | `make_error()` — error envelope builder. |
 | `json_io.py` | `JsonArgumentParser`, `emit_json()`, `as_list()`, `project_top_level_fields()`. |
-| `validation.py` | `validate_text_field()`, `_invalid_input()`, `validate_json_type()` — input hardening. |
+| `validation.py` | `validate_text_field()`, `validate_value_field()`, `_invalid_input()`, `validate_json_type()` — input hardening. |
 | `session.py` | MATLAB session discovery/resolution (exact-name only), local state (`.sl_pilot_state.json`). |
 | `model_helpers.py` | `resolve_scan_root_path`, `resolve_inspect_target_path` — path resolution. |
 
@@ -81,7 +80,7 @@ python -m simulink_cli --json '{"action":"schema"}'
 4. **Stable error envelope**: `{error, message, details, suggested_fix?}` — shape is fixed.
 5. **`--json` first-class**: mutually exclusive with flag mode; type-checked via per-action `FIELDS` dicts aggregated by `core.py`.
 6. **Session matching**: exact-name only, no fuzzy.
-7. **Version bump required**: distributable content changes require version bump before commit.
+7. **Version bump discipline**: bump versions for releases/published manifest updates, not for every local bugfix commit.
 8. **Agent-first CLI**: predictable, defensive, machine-readable design.
 
 ## Change Synchronization
@@ -97,20 +96,15 @@ python -m simulink_cli --json '{"action":"schema"}'
 | Test | Covers |
 |---|---|
 | `test_schema_action` | Schema contract shape |
+| `test_core_framework` | Registry, schema aggregation, JSON-mode and error-mapping behavior |
 | `test_json_input_mode`, `test_input_validation` | JSON parsing, type checking, unknown fields |
 | `test_scan_output_controls`, `test_inspect_output_controls`, `test_connections_output_controls` | Clipping + field projection |
 | `test_error_contract`, `test_runtime_error_mapping` | Error envelope + runtime error mapping |
 | `test_scan_behavior`, `test_connections_behavior`, `test_inspect_active` | Action behavior (mocked MATLAB) |
 | `test_find_behavior`, `test_find_output_controls` | find action behavior + clipping/projection |
-| `test_edit_schema_action` | Edit schema contract shape |
-| `test_edit_json_input_mode` | Edit JSON parsing, type checking |
-| `test_edit_input_validation` | Edit field validation |
 | `test_set_param_behavior` | set_param with mocked MATLAB |
 | `test_set_param_dry_run` | Dry-run format, rollback payload |
-| `test_edit_error_contract` | Edit error envelope + new codes |
-| `test_edit_runtime_error_mapping` | MATLAB runtime → error code mapping |
 | `test_edit_docs_contract` | Edit doc sections present |
-| `test_edit_module_entrypoint` | `python -m simulink_cli` works |
 | `test_cross_skill_workflow` | Read→preview→write→verify cycle |
 | `test_shared_validation` | Shared validation functions |
 | `test_shared_session` | Shared session module + PLUGIN_ROOT |

@@ -1,7 +1,7 @@
 # Simulink Scan Skill Reference
 
 This file is optional deep reference for the `simulink-scan` skill.
-The skill belongs to plugin `simulink-automation-suite`, which may include additional non-scan skills in future releases.
+The skill belongs to plugin `simulink-automation-suite`, which currently ships both `simulink-scan` and `simulink-edit`.
 
 ## JSON Contract
 
@@ -28,6 +28,8 @@ Common error codes:
 - `no_session`
 - `session_required`
 - `session_not_found`
+- `state_write_failed`
+- `state_clear_failed`
 - `model_required`
 - `model_not_found`
 - `subsystem_not_found`
@@ -41,6 +43,7 @@ Common error codes:
 - Session matching is exact-only.
 - When multiple shared sessions exist, commands that connect to MATLAB require either a previously selected active session (`session use <name>`) or an explicit `--session`.
 - Unknown exact session returns `session_not_found`.
+- `session use` / `session clear` may return `state_write_failed` / `state_clear_failed` when the local plugin state file is not writable.
 - Session management actions:
   - `python -m simulink_cli session list`
   - `python -m simulink_cli session current`
@@ -68,6 +71,7 @@ Examples:
 ## Scan Actions
 
 - If multiple models are opened and `--model` is omitted, the tool returns `model_required` with candidate models.
+- If no model is opened and no active model root can be resolved, `scan` and `find` return `model_not_found`.
 - Shallow scan:
   - `python -m simulink_cli scan --model "<model>"`
 - Recursive scan:
@@ -125,6 +129,7 @@ Examples:
 - JSON request:
   - `python -m simulink_cli --json '{"action":"find","model":"<model>","name":"PID","max_results":50,"fields":["path","type"]}'`
 - At least one of `--name` or `--block-type` is required; omitting both returns `invalid_input`.
+- `find` uses the same `FollowLinks=on` and `LookUnderMasks=all` visibility defaults as `scan`.
 - Empty results (no matches) is not an error.
 
 ## Highlight Action

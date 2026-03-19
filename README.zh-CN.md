@@ -159,6 +159,7 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 - `dry_run` 默认为 `true` —— 先预览再写入
 - 每次响应都包含 `rollback` 负载，支持一条命令撤销；如果原请求显式指定了会话，回滚负载会保留该会话信息
 - 执行模式会读回参数值以验证写入结果
+- `value` 字段始终按字符串传递，并且可以合法包含 `%`，例如 `"%.3f"`
 - 每次调用只修改一个参数（不支持批量操作）
 
 ---
@@ -167,6 +168,7 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 
 - 会话匹配仅支持精确匹配（不支持模糊匹配）。
 - 当 MATLAB 共享会话多于一个时，涉及 MATLAB 连接的动作必须先通过 `session use <name>` 选定会话，或显式传 `--session`。
+- 当无法从当前会话解析出活动模型根时，`scan` 和 `find` 会稳定返回 `model_not_found`。
 - JSON 中出现未知字段会返回 `unknown_parameter`。
 - JSON 非法或字段类型错误会返回 `invalid_json`。
 
@@ -187,9 +189,12 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 - `invalid_json`
 - `unknown_parameter`
 - `json_conflict`
+- `engine_unavailable`
 - `no_session`
 - `session_required`
 - `session_not_found`
+- `state_write_failed`
+- `state_clear_failed`
 - `model_required`
 - `model_not_found`
 - `subsystem_not_found`
@@ -199,6 +204,8 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 - `set_param_failed`
 - `inactive_parameter`
 - `runtime_error`
+
+当本地插件状态文件不可写时，`session use` / `session clear` 可能返回 `state_write_failed` 或 `state_clear_failed`。
 
 如果没有可用 MATLAB 共享会话，请先在 MATLAB 中执行 `matlab.engine.shareEngine` 再重试。
 

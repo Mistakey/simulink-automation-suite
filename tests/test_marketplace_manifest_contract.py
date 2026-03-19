@@ -49,6 +49,19 @@ class MarketplaceManifestContractTests(unittest.TestCase):
         self.assertEqual(len(matched), 1)
         self.assertEqual(matched[0].get("version"), plugin_version)
 
+    def test_marketplace_plugin_keywords_include_edit(self):
+        data = json.loads(MARKETPLACE_PATH.read_text(encoding="utf-8"))
+        plugin_manifest = json.loads(PLUGIN_MANIFEST_PATH.read_text(encoding="utf-8"))
+        plugin_name = plugin_manifest.get("name")
+
+        matched = [
+            item
+            for item in data.get("plugins", [])
+            if isinstance(item, dict) and item.get("name") == plugin_name
+        ]
+        self.assertEqual(len(matched), 1)
+        self.assertIn("edit", matched[0].get("keywords", []))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,6 @@
 {
   "name": "simulink-automation-suite",
-  "description": "Simulink automation suite plugin for Claude Code with an extensible multi-skill architecture (scan today, edit/analyze in future).",
+  "description": "Simulink automation suite plugin for Claude Code with read-only analysis and parameter editing skills.",
   "version": "2.0.0",
   "author": {
     "name": "kelch"
@@ -16,6 +16,6 @@
     "agent-first",
     "scan",
     "analysis",
-    "future-editing"
+    "edit"
   ]
 }

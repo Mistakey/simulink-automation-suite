@@ -44,6 +44,10 @@ class EditDocsContractTests(unittest.TestCase):
         text = (EDIT_SKILL_DIR / "reference.md").read_text(encoding="utf-8")
         self.assertIn("set_param_failed", text)
 
+    def test_reference_md_documents_literal_percent_value_examples(self):
+        text = (EDIT_SKILL_DIR / "reference.md").read_text(encoding="utf-8")
+        self.assertIn("%.3f", text)
+
     def test_skill_md_has_frontmatter(self):
         text = (EDIT_SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
         self.assertTrue(text.startswith("---"))

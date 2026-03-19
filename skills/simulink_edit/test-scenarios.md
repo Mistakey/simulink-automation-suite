@@ -10,6 +10,7 @@
 - Invalid JSON: `--json '{invalid}'` → `invalid_json`
 - Unknown field: `--json '{"action":"set_param","target":"m/B","param":"P","value":"1","extra":"x"}'` → `unknown_parameter`
 - Wrong type: `--json '{"action":"set_param","target":"m/B","param":"P","value":123}'` → `invalid_json` (value must be string)
+- Literal percent value: `--json '{"action":"set_param","target":"m/Display","param":"Format","value":"%.3f"}'` → accepted preview/execute contract
 - Rollback payload is executable: take `rollback` from any response, pass as `--json` → restores original
 - Explicit session rollback: execute with `"session":"MATLAB_12345"` → returned rollback preserves the same session field
 
