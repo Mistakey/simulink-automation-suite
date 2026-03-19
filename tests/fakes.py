@@ -355,3 +355,28 @@ class FakeCrossSkillEngine:
     def set_param(self, path, param, value):
         key = f"{path}::{param}"
         self._params[key] = value
+
+
+class OutputSensitiveEngine:
+    def __init__(self):
+        self.params = {"m/Gain::Gain": "1.5"}
+        self.calls = []
+        self.warning_log = []
+
+    def get_param(self, target, param, nargout=1):
+        self.calls.append(("get_param", target, param, nargout))
+        if param == "Handle":
+            return 1.0
+        return self.params[f"{target}::{param}"]
+
+    def set_param(self, target, param, value, nargout=1):
+        self.calls.append(("set_param", target, param, value, nargout))
+        if nargout != 0:
+            self.params[f"{target}::{param}"] = value
+            raise RuntimeError("Too many output arguments")
+        self.params[f"{target}::{param}"] = value
+
+    def find_system(self, *args, nargout=1):
+        self.calls.append(("find_system", args, nargout))
+        self.warning_log.append("Variant warning")
+        return ["m", "m/Gain"]
