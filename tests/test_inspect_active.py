@@ -70,8 +70,9 @@ class InspectActiveTests(unittest.TestCase):
         with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
             result = inspect_block.execute(_inspect_args(param="PolePairs", strict_active=True))
         self.assertEqual(result["error"], "inactive_parameter")
-        self.assertEqual(result["param"], "PolePairs")
-        self.assertEqual(result["effective_from"], "Mechanical[3]")
+        self.assertIn("details", result)
+        self.assertEqual(result["details"]["param"], "PolePairs")
+        self.assertEqual(result["details"]["effective_from"], "Mechanical[3]")
 
     def test_single_param_resolve_effective_returns_resolved_value(self):
         eng = FakeInspectEngine(
@@ -92,7 +93,9 @@ class InspectActiveTests(unittest.TestCase):
         with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
             result = inspect_block.execute(_inspect_args(param="NoSuchParam"))
         self.assertEqual(result["error"], "unknown_parameter")
-        self.assertEqual(result["param"], "NoSuchParam")
+        self.assertIn("details", result)
+        self.assertEqual(result["details"]["param"], "NoSuchParam")
+        self.assertIn("target", result["details"])
 
     def test_single_param_resolve_effective_without_mapping_is_safe(self):
         eng = FakeInspectEngine(

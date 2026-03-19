@@ -21,7 +21,7 @@ This skill is one capability inside plugin `simulink-automation-suite`, which is
    - `python -m simulink_cli list_opened`
 3. Resolve session strictly:
    - Exact session names only.
-   - If multiple sessions exist for MATLAB-bound actions, require explicit `--session`.
+   - If multiple sessions exist for MATLAB-bound actions, either run `session use <name>` first or pass explicit `--session`.
 
 ## Action Selection
 
@@ -68,7 +68,7 @@ JSON mode is first-class and mutually exclusive with flag-mode action arguments.
 
 Error-driven next actions:
 
-- `session_required` -> run `session list`, then retry with explicit `--session`.
+- `session_required` -> run `session list`, then either `session use <name>` or retry with explicit `--session`.
 - `session_not_found` -> rerun `session list`, copy exact name, retry.
 - `engine_unavailable` -> install/configure MATLAB Engine for Python for the active interpreter, then retry.
 - `no_session` -> run `matlab.engine.shareEngine` in MATLAB, retry.

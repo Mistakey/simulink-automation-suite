@@ -11,7 +11,7 @@ This skill is one capability inside plugin `simulink-automation-suite`.
 ## Safety Model
 
 - `dry_run` defaults to `true`. Always preview before applying.
-- Persist the `rollback` payload before executing — it enables one-command undo.
+- Persist the `rollback` payload before executing — it enables one-command undo and preserves any explicit session override.
 - After each execute, verify the `verified` field confirms the write took effect.
 - One parameter per invocation. No batch operations.
 
@@ -52,7 +52,7 @@ JSON mode is first-class and mutually exclusive with flag-mode action arguments.
 
 Error-driven next actions:
 
-- `session_required` -> run `session list` via simulink-scan, retry with explicit `--session`.
+- `session_required` -> run `session list` via simulink-scan, then either `session use <name>` or retry with explicit `--session`.
 - `session_not_found` -> rerun `session list`, copy exact name, retry.
 - `engine_unavailable` -> install/configure MATLAB Engine for Python, retry.
 - `no_session` -> run `matlab.engine.shareEngine` in MATLAB, retry.

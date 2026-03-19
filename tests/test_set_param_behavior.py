@@ -50,6 +50,14 @@ class SetParamBehaviorTests(unittest.TestCase):
         self.assertEqual(rollback["value"], "1.5")
         self.assertFalse(rollback["dry_run"])
 
+    def test_rollback_includes_resolved_session(self):
+        eng = self._make_engine()
+        with patch.object(set_param, 'safe_connect_to_session', return_value=(eng, None)):
+            result = set_param.execute(
+                _set_param_args(dry_run=False, session="MATLAB_12345")
+            )
+        self.assertEqual(result["rollback"]["session"], "MATLAB_12345")
+
     def test_block_not_found_error(self):
         eng = FakeSetParamEngine(params={}, valid_handles=set())
         with patch.object(set_param, 'safe_connect_to_session', return_value=(eng, None)):

@@ -110,6 +110,8 @@ def execute(args):
         "value": current_value,
         "dry_run": False,
     }
+    if args.get("session") is not None:
+        rollback["session"] = args["session"]
 
     # 2. Dry-run: return diff, do NOT write
     if dry_run:

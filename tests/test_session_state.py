@@ -21,7 +21,7 @@ class SessionStateTests(unittest.TestCase):
 
         self.assertEqual(str(context.exception), "engine_unavailable")
 
-    def test_session_current_does_not_activate_saved_when_multiple_sessions(self):
+    def test_session_current_uses_saved_selection_when_multiple_sessions(self):
         with mock.patch.object(
             sl_session, "discover_sessions", return_value=["MATLAB_A", "MATLAB_B"]
         ), mock.patch.object(
@@ -29,13 +29,27 @@ class SessionStateTests(unittest.TestCase):
         ):
             result = sl_session.command_session_current()
 
-        self.assertIsNone(result["active_session"])
-        self.assertEqual(result["active_source"], "required")
+        self.assertEqual(result["active_session"], "MATLAB_A")
+        self.assertEqual(result["active_source"], "configured")
         self.assertEqual(result["configured_session"], "MATLAB_A")
 
-    def test_resolve_target_session_requires_explicit_when_multiple_sessions(self):
+    def test_resolve_target_session_uses_saved_selection_when_available(self):
         with mock.patch.object(
             sl_session, "discover_sessions", return_value=["MATLAB_A", "MATLAB_B"]
+        ), mock.patch.object(
+            sl_session, "get_saved_session_name", return_value="MATLAB_A"
+        ):
+            target, sessions, source = sl_session.resolve_target_session()
+
+        self.assertEqual(target, "MATLAB_A")
+        self.assertEqual(sessions, ["MATLAB_A", "MATLAB_B"])
+        self.assertEqual(source, "configured")
+
+    def test_resolve_target_session_requires_explicit_when_multiple_sessions_without_saved_selection(self):
+        with mock.patch.object(
+            sl_session, "discover_sessions", return_value=["MATLAB_A", "MATLAB_B"]
+        ), mock.patch.object(
+            sl_session, "get_saved_session_name", return_value=None
         ):
             with self.assertRaises(RuntimeError) as context:
                 sl_session.resolve_target_session()

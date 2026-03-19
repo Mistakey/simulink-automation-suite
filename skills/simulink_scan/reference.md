@@ -39,7 +39,7 @@ Common error codes:
 ## Session Behavior
 
 - Session matching is exact-only.
-- When multiple shared sessions exist, commands that connect to MATLAB require explicit `--session`.
+- When multiple shared sessions exist, commands that connect to MATLAB require either a previously selected active session (`session use <name>`) or an explicit `--session`.
 - Unknown exact session returns `session_not_found`.
 - Session management actions:
   - `python -m simulink_cli session list`
@@ -141,7 +141,7 @@ Examples:
 | Error Code | Likely Cause | Next Command | Expected Success Signal |
 |---|---|---|---|
 | `engine_unavailable` | MATLAB Engine for Python is not available in active interpreter | install/configure MATLAB Engine for Python and rerun the same command | command runs without `engine_unavailable` |
-| `session_required` | Multiple MATLAB shared sessions and no explicit target | `python -m simulink_cli session list` then retry with `--session` | action returns payload without `error` |
+| `session_required` | Multiple MATLAB shared sessions and no active/explicit target | `python -m simulink_cli session list` then either `python -m simulink_cli session use <name>` or retry with `--session` | action returns payload without `error` |
 | `session_not_found` | Session name is not an exact match | `python -m simulink_cli session list` then copy exact name | action connects to requested session |
 | `model_required` | Multiple opened models and no explicit model | `python -m simulink_cli list_opened` then retry with `--model` | scan/inspect returns selected model |
 | `inactive_parameter` | Requested parameter is inactive under current mask config | retry with `--resolve-effective` or `--strict-active` | response includes effective mapping or explicit inactive failure |

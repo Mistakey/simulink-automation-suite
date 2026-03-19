@@ -25,6 +25,15 @@ class SchemaActionTests(unittest.TestCase):
         codes = self.schema["error_codes"]
         self.assertEqual(codes, sorted(codes))
 
+    def test_framework_error_codes_present(self):
+        for code in (
+            "invalid_input",
+            "invalid_json",
+            "json_conflict",
+            "unknown_parameter",
+        ):
+            self.assertIn(code, self.schema["error_codes"])
+
     # -- All 9 actions present (8 + schema) ------------------------------------
 
     def test_schema_action_present(self):

@@ -69,6 +69,8 @@ Use the `rollback` payload from any response to undo the change:
 python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"1.5","dry_run":false}'
 ```
 
+If the original write used an explicit `session`, the rollback payload preserves the same `session` field so it can be replayed directly.
+
 ## Recovery Matrix
 
 | Error Code | Scenario | Suggested Fix | Success Looks Like |
@@ -78,7 +80,7 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 | `set_param_failed` | MATLAB rejected the value | Check value format; read parameter constraints | set_param succeeds |
 | `engine_unavailable` | MATLAB Engine not installed | Install MATLAB Engine for Python | set_param succeeds |
 | `no_session` | No shared session | Run `matlab.engine.shareEngine` in MATLAB | set_param succeeds |
-| `session_required` | Multiple sessions, none specified | Pass explicit `--session` | set_param succeeds |
+| `session_required` | Multiple sessions, no active/explicit target | Run `session list`, then either `session use <name>` or pass explicit `--session` | set_param succeeds |
 | `session_not_found` | Named session not found | Check session name, rerun `session list` | set_param succeeds |
 | `invalid_input` | Field validation failed | Fix input (control chars, whitespace, length) | set_param succeeds |
 | `invalid_json` | Malformed JSON payload | Fix JSON syntax | set_param succeeds |

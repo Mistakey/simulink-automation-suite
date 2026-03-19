@@ -29,11 +29,18 @@ _ACTIONS = {
     "session": session_cmd,
 }
 
+_FRAMEWORK_ERRORS = {
+    "invalid_input",
+    "invalid_json",
+    "json_conflict",
+    "unknown_parameter",
+}
+
 
 # -- Schema generation --------------------------------------------------------
 def build_schema_payload():
     actions = {}
-    all_errors = set()
+    all_errors = set(_FRAMEWORK_ERRORS)
     for name, mod in _ACTIONS.items():
         actions[name] = {
             "description": mod.DESCRIPTION,

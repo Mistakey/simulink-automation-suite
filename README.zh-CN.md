@@ -44,7 +44,7 @@ Simulink Automation Suite 的核心定位，是让 Simulink 分析能力在 Clau
 ## 工作方式
 
 1. Claude Code 在 Simulink 分析场景下调用 `simulink-scan` 技能。
-2. 技能先解析 MATLAB 会话上下文（`session list/use/current/clear`），并使用精确会话名匹配。
+2. 技能先解析 MATLAB 会话上下文（`session list/use/current/clear`），并使用精确会话名匹配；当存在多个会话时，可通过显式 `--session` 或预先选择的 active session 解析目标会话。
 3. 然后执行核心动作之一：`schema`、`list_opened`、`scan`、`connections`、`inspect`、`find`、`highlight`。
 4. 结果通过 `stdout` 输出为机器可读 JSON。
 5. 异常通过稳定错误码返回，便于 Agent 做恢复重试。
@@ -120,7 +120,7 @@ matlab.engine.shareEngine
 | `highlight` | 在 Simulink 中高亮目标模块（仅 UI 定位，不修改模型） | `python -m simulink_cli highlight --target "my_model/Gain"` |
 | `find` | 按名称模式和/或模块类型搜索模块 | `python -m simulink_cli find --model "my_model" --name "PID"` |
 | `set_param` | 设置模块参数（支持预览与回滚） | `python -m simulink_cli set_param --target "my_model/Gain1" --param "Gain" --value "2.0"` |
-| `session` | 管理当前 MATLAB 共享会话 | `python -m simulink_cli session list` |
+| `session` | 管理或选择当前 MATLAB 共享会话 | `python -m simulink_cli session list` |
 
 ---
 
@@ -157,7 +157,7 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 ## 安全模型（simulink-edit）
 
 - `dry_run` 默认为 `true` —— 先预览再写入
-- 每次响应都包含 `rollback` 负载，支持一条命令撤销
+- 每次响应都包含 `rollback` 负载，支持一条命令撤销；如果原请求显式指定了会话，回滚负载会保留该会话信息
 - 执行模式会读回参数值以验证写入结果
 - 每次调用只修改一个参数（不支持批量操作）
 
@@ -166,7 +166,7 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 ## 严格默认行为与错误契约
 
 - 会话匹配仅支持精确匹配（不支持模糊匹配）。
-- 当 MATLAB 共享会话多于一个时，涉及 MATLAB 连接的动作必须显式传 `--session`。
+- 当 MATLAB 共享会话多于一个时，涉及 MATLAB 连接的动作必须先通过 `session use <name>` 选定会话，或显式传 `--session`。
 - JSON 中出现未知字段会返回 `unknown_parameter`。
 - JSON 非法或字段类型错误会返回 `invalid_json`。
 

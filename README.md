@@ -44,7 +44,7 @@ This plugin provides a third path: direct, structured, runtime model analysis fo
 ## How It Works
 
 1. Claude Code invokes the `simulink-scan` skill for Simulink analysis tasks.
-2. The skill resolves MATLAB session context (`session list/use/current/clear`) with exact-name matching.
+2. The skill resolves MATLAB session context (`session list/use/current/clear`) with exact-name matching, using either an explicit `--session` or a previously selected active session.
 3. It executes one of the core actions: `schema`, `list_opened`, `scan`, `connections`, `inspect`, `find`, or `highlight`.
 4. Results are returned as machine-readable JSON on `stdout`.
 5. Failures use stable error codes for reliable agent recovery.
@@ -120,7 +120,7 @@ For end-to-end Claude Code prompts and screenshots (single bilingual page), see:
 | `highlight` | Highlight a block in Simulink (UI-only, no model mutation) | `python -m simulink_cli highlight --target "my_model/Gain"` |
 | `find` | Search blocks by name pattern and/or block type | `python -m simulink_cli find --model "my_model" --name "PID"` |
 | `set_param` | Set a block parameter with dry-run preview and rollback | `python -m simulink_cli set_param --target "my_model/Gain1" --param "Gain" --value "2.0"` |
-| `session` | Manage active MATLAB shared session | `python -m simulink_cli session list` |
+| `session` | Manage or select the active MATLAB shared session | `python -m simulink_cli session list` |
 
 ---
 
@@ -157,7 +157,7 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 ## Safety Model (simulink-edit)
 
 - `dry_run` defaults to `true` — preview before writing
-- Every response includes a `rollback` payload for one-command undo
+- Every response includes a `rollback` payload for one-command undo, preserving an explicit session override when one was used
 - Execute mode reads back the value to verify the write
 - One parameter per invocation (no batch operations)
 
@@ -166,7 +166,7 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 ## Strict Defaults and Error Contract
 
 - Session matching is exact-only (no fuzzy matching).
-- If multiple MATLAB shared sessions exist, pass `--session` explicitly for MATLAB-bound actions.
+- If multiple MATLAB shared sessions exist, either select one via `session use <name>` or pass `--session` explicitly for MATLAB-bound actions.
 - Unknown JSON fields return `unknown_parameter`.
 - Invalid JSON or wrong JSON field types return `invalid_json`.
 

@@ -282,11 +282,12 @@ def _inspect_block(
                 try:
                     value = eng.get_param(target_path, param_name)
                 except Exception:
-                    return {
-                        "error": "unknown_parameter",
-                        "param": param_name,
-                        "message": f"Parameter '{param_name}' is not available on target block.",
-                    }
+                    return make_error(
+                        "unknown_parameter",
+                        f"Parameter '{param_name}' is not available on target block.",
+                        details={"target": target_path, "param": param_name},
+                        suggested_fix="Run inspect with --param \"All\" to list available parameters.",
+                    )
 
             meta = parameter_meta.get(
                 param_name,
@@ -301,14 +302,15 @@ def _inspect_block(
             resolution = resolution_map.get(param_name)
 
             if strict_active and not is_active:
-                error_output = {
-                    "error": "inactive_parameter",
-                    "param": param_name,
-                    "message": "Requested parameter is inactive in current configuration.",
-                }
+                details = {"target": target_path, "param": param_name}
                 if resolution:
-                    error_output["effective_from"] = resolution.get("resolved_path")
-                return error_output
+                    details["effective_from"] = resolution.get("resolved_path")
+                return make_error(
+                    "inactive_parameter",
+                    "Requested parameter is inactive in current configuration.",
+                    details=details,
+                    suggested_fix="Retry with --resolve-effective or omit --strict-active.",
+                )
 
             output = {
                 "target": target_path,

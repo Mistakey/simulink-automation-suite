@@ -11,6 +11,7 @@
 - Unknown field: `--json '{"action":"set_param","target":"m/B","param":"P","value":"1","extra":"x"}'` → `unknown_parameter`
 - Wrong type: `--json '{"action":"set_param","target":"m/B","param":"P","value":123}'` → `invalid_json` (value must be string)
 - Rollback payload is executable: take `rollback` from any response, pass as `--json` → restores original
+- Explicit session rollback: execute with `"session":"MATLAB_12345"` → returned rollback preserves the same session field
 
 ## Schema Scenarios
 

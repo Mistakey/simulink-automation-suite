@@ -34,6 +34,13 @@ class SharedSessionTests(unittest.TestCase):
             self.assertIsNone(effective)
             self.assertEqual(source, "required")
 
+    def test_get_effective_session_uses_saved_selection_when_available(self):
+        with mock.patch.object(sl_session, "get_saved_session_name", return_value="MATLAB_A"):
+            effective, source, saved = sl_session.get_effective_session(["MATLAB_A", "MATLAB_B"])
+            self.assertEqual(effective, "MATLAB_A")
+            self.assertEqual(source, "configured")
+            self.assertEqual(saved, "MATLAB_A")
+
     def test_plugin_root_points_to_repo_root(self):
         self.assertTrue(sl_session.PLUGIN_ROOT.exists())
         self.assertTrue((sl_session.PLUGIN_ROOT / ".claude-plugin" / "plugin.json").exists())

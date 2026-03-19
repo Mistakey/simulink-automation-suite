@@ -122,6 +122,8 @@ def get_effective_session(sessions):
     saved = get_saved_session_name()
     if len(sessions) == 1:
         return sessions[0], "single", saved
+    if saved and saved in sessions:
+        return saved, "configured", saved
     if sessions:
         return None, "required", saved
     return None, "none", saved
@@ -140,6 +142,11 @@ def resolve_target_session(explicit_session=None):
 
     if len(sessions) == 1:
         return sessions[0], sessions, "single"
+
+    saved = get_saved_session_name()
+    if saved and saved in sessions:
+        return saved, sessions, "configured"
+
     raise RuntimeError("session_required")
 
 
