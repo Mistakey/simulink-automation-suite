@@ -1,3 +1,4 @@
+from simulink_cli import matlab_transport
 from simulink_cli.errors import make_error
 from simulink_cli.validation import validate_text_field
 from simulink_cli.session import safe_connect_to_session
@@ -55,7 +56,7 @@ def execute(args):
         return err
 
     try:
-        eng.get_param(target, "Handle")
+        matlab_transport.get_param(eng, target, "Handle")
     except Exception as exc:
         return make_error(
             "block_not_found",
@@ -65,7 +66,7 @@ def execute(args):
         )
 
     try:
-        eng.hilite_system(target, "find", nargout=0)
+        matlab_transport.call_no_output(eng, "hilite_system", target, "find")
         return {"status": "success", "highlighted": target}
     except Exception as exc:
         return make_error(

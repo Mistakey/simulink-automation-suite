@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from simulink_cli.actions import find
-from tests.fakes import FakeFindEngine
+from tests.fakes import FakeFindEngine, OutputSensitiveEngine
 
 
 def _find_args(model=None, subsystem=None, name=None, block_type=None,
@@ -59,6 +59,13 @@ class FindBehaviorTests(unittest.TestCase):
             result = find.execute(_find_args(model="my_model", block_type="Gain"))
         self.assertNotIn("error", result)
         self.assertEqual(result["total_results"], 2)
+
+    def test_find_includes_warnings_from_find_system(self):
+        eng = OutputSensitiveEngine()
+        with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
+            result = find.execute(_find_args(model="m", name="Gain"))
+        self.assertIn("warnings", result)
+        self.assertEqual(result["warnings"], ["Variant warning"])
 
     def test_find_requires_name_or_block_type(self):
         result = find.validate(_find_args(model="my_model"))

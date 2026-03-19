@@ -15,6 +15,23 @@ def _scan_args(model=None, subsystem=None, recursive=False, hierarchy=False,
     }
 
 
+class WarningBearingScanEngine(FakeScanEngine):
+    def __init__(self):
+        super().__init__(
+            models=["m"],
+            active_root="m",
+            shallow_blocks={"m": ["m", "m/Gain"]},
+            recursive_blocks={"m": ["m", "m/Gain"]},
+            block_types={"m": "SubSystem", "m/Gain": "Gain"},
+            valid_handles={"m", "m/Gain"},
+        )
+        self.warning_log = []
+
+    def find_system(self, *args):
+        self.warning_log.append("Variant warning")
+        return super().find_system(*args)
+
+
 class ScanBehaviorTests(unittest.TestCase):
     def test_resolve_scan_root_uses_bdroot_when_no_models_are_open(self):
         class BdrootOnlyEngine:
@@ -92,6 +109,13 @@ class ScanBehaviorTests(unittest.TestCase):
         self.assertFalse(result["recursive"])
         self.assertEqual(result["blocks"], [{"name": "m1/Gain", "type": "Gain"}])
         self.assertNotIn("connections", result)
+
+    def test_single_model_includes_warnings_from_find_system(self):
+        eng = WarningBearingScanEngine()
+        with patch.object(scan, 'safe_connect_to_session', return_value=(eng, None)):
+            result = scan.execute(_scan_args(model="m"))
+        self.assertIn("warnings", result)
+        self.assertEqual(result["warnings"], ["Variant warning"])
 
     def test_unknown_explicit_model_returns_available_models(self):
         eng = FakeScanEngine(

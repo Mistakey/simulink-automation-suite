@@ -1,5 +1,6 @@
 """Connections action — read upstream/downstream block relationships."""
 
+from simulink_cli import matlab_transport
 from simulink_cli.errors import make_error
 from simulink_cli.json_io import as_list, project_top_level_fields
 from simulink_cli.validation import validate_text_field
@@ -121,15 +122,18 @@ def _extract_block_port_handles(port_handles, key):
 
 
 def _read_port_info(eng, port_handle):
+    parent_result = matlab_transport.get_param(eng, port_handle, "Parent")
+    port_number_result = matlab_transport.get_param(eng, port_handle, "PortNumber")
     return {
-        "block": str(eng.get_param(port_handle, "Parent")),
-        "port": int(float(eng.get_param(port_handle, "PortNumber"))),
+        "block": str(parent_result["value"]),
+        "port": int(float(port_number_result["value"])),
     }
 
 
 def _read_signal_name(eng, line_handle):
     try:
-        return str(eng.get_param(line_handle, "Name") or "")
+        name_result = matlab_transport.get_param(eng, line_handle, "Name")
+        return str(name_result["value"] or "")
     except Exception:
         return ""
 
@@ -137,18 +141,24 @@ def _read_signal_name(eng, line_handle):
 def _collect_block_edges(eng, block_path):
     """Collect all edges (inport + outport) for a single block."""
     edges = []
-    port_handles = eng.get_param(block_path, "PortHandles")
+    port_handles = matlab_transport.get_param(eng, block_path, "PortHandles")[
+        "value"
+    ]
     out_ports = _extract_block_port_handles(port_handles, "Outport")
     in_ports = _extract_block_port_handles(port_handles, "Inport")
 
     for src_port in out_ports:
-        line_handles = _extract_handles(eng.get_param(src_port, "Line"))
+        line_handles = _extract_handles(
+            matlab_transport.get_param(eng, src_port, "Line")["value"]
+        )
         if not line_handles:
             continue
         src_info = _read_port_info(eng, src_port)
         for line_handle in line_handles:
             dst_ports = _extract_handles(
-                eng.get_param(line_handle, "DstPortHandle")
+                matlab_transport.get_param(eng, line_handle, "DstPortHandle")[
+                    "value"
+                ]
             )
             signal_name = _read_signal_name(eng, line_handle)
             for dst_port in dst_ports:
@@ -165,13 +175,17 @@ def _collect_block_edges(eng, block_path):
                 )
 
     for dst_port in in_ports:
-        line_handles = _extract_handles(eng.get_param(dst_port, "Line"))
+        line_handles = _extract_handles(
+            matlab_transport.get_param(eng, dst_port, "Line")["value"]
+        )
         if not line_handles:
             continue
         dst_info = _read_port_info(eng, dst_port)
         for line_handle in line_handles:
             src_ports = _extract_handles(
-                eng.get_param(line_handle, "SrcPortHandle")
+                matlab_transport.get_param(eng, line_handle, "SrcPortHandle")[
+                    "value"
+                ]
             )
             signal_name = _read_signal_name(eng, line_handle)
             for src_port in src_ports:
@@ -294,7 +308,7 @@ def execute(args):
 
     target_path = resolved_target["target"]
     try:
-        eng.get_param(target_path, "Handle")
+        matlab_transport.get_param(eng, target_path, "Handle")
     except Exception as exc:
         return make_error(
             "block_not_found",

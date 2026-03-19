@@ -2,6 +2,7 @@
 
 import re
 
+from simulink_cli import matlab_transport
 from simulink_cli.errors import make_error
 from simulink_cli.json_io import as_list
 from simulink_cli.validation import validate_text_field
@@ -120,6 +121,7 @@ def execute(args):
     scan_root = resolved["scan_root"]
 
     try:
+        warnings = []
         search_args = [scan_root, "FollowLinks", "on", "LookUnderMasks", "all"]
         if name and block_type:
             safe_name = re.escape(name)
@@ -141,7 +143,9 @@ def execute(args):
         else:
             search_args.extend(["BlockType", block_type])
 
-        raw_results = as_list(eng.find_system(*search_args))
+        search_result = matlab_transport.find_system(eng, *search_args)
+        warnings.extend(search_result["warnings"])
+        raw_results = as_list(search_result["value"])
 
         results = []
         for path in raw_results:
@@ -151,7 +155,9 @@ def execute(args):
             block_name = path.rsplit("/", 1)[-1] if "/" in path else path
             parent = path.rsplit("/", 1)[0] if "/" in path else ""
             try:
-                btype = str(eng.get_param(path, "BlockType"))
+                btype_result = matlab_transport.get_param(eng, path, "BlockType")
+                warnings.extend(btype_result["warnings"])
+                btype = str(btype_result["value"])
             except Exception:
                 btype = ""
             results.append(
@@ -181,7 +187,7 @@ def execute(args):
                 for item in results
             ]
 
-        return {
+        output = {
             "model": target_model,
             "scan_root": scan_root,
             "query": {"name": name, "block_type": block_type},
@@ -189,6 +195,9 @@ def execute(args):
             "total_results": total_results,
             "truncated": truncated,
         }
+        if warnings:
+            output["warnings"] = warnings
+        return output
     except Exception as exc:
         return make_error(
             "runtime_error",
