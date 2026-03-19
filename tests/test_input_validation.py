@@ -1,6 +1,11 @@
 import unittest
 
-from simulink_cli.validation import validate_text_field
+from simulink_cli.validation import (
+    validate_matlab_name_field,
+    validate_session_field,
+    validate_text_field,
+    validate_value_field,
+)
 from simulink_cli.core import run_action
 from simulink_cli.actions import connections, inspect_block, scan, set_param
 
@@ -26,6 +31,16 @@ class InputValidationTests(unittest.TestCase):
     def test_accepts_normal_text(self):
         result = validate_text_field("model", "my_model")
         self.assertIsNone(result)
+
+    def test_validate_matlab_name_field_allows_newline_for_target(self):
+        self.assertIsNone(validate_matlab_name_field("target", "m/Sub\nSystem"))
+
+    def test_validate_session_field_still_rejects_control_characters(self):
+        err = validate_session_field("session", "MATLAB_\n1")
+        self.assertEqual(err["error"], "invalid_input")
+
+    def test_validate_value_field_allows_percent_and_newline(self):
+        self.assertIsNone(validate_value_field("value", "%.3f\nnext"))
 
     def test_run_action_applies_validation_for_library_callers(self):
         result = run_action("highlight", {"target": "a?b", "session": None})
@@ -146,7 +161,7 @@ class InputValidationTests(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertEqual(result["error"], "invalid_input")
 
-    def test_set_param_value_rejects_control_characters(self):
+    def test_set_param_value_allows_control_characters(self):
         args = {
             "target": "m/B",
             "param": "Gain",
@@ -156,8 +171,7 @@ class InputValidationTests(unittest.TestCase):
             "session": None,
         }
         result = set_param.validate(args)
-        self.assertIsNotNone(result)
-        self.assertEqual(result["error"], "invalid_input")
+        self.assertIsNone(result)
 
     def test_set_param_value_rejects_empty_string(self):
         args = {
