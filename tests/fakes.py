@@ -380,3 +380,18 @@ class OutputSensitiveEngine:
         self.calls.append(("find_system", args, nargout))
         self.warning_log.append("Variant warning")
         return ["m", "m/Gain"]
+
+
+class WriteThenFailEngine(OutputSensitiveEngine):
+    def set_param(self, target, param, value, nargout=1):
+        self.calls.append(("set_param", target, param, value, nargout))
+        self.params[f"{target}::{param}"] = value
+        raise RuntimeError("Persistent write failure")
+
+
+class VerificationMismatchEngine(OutputSensitiveEngine):
+    def get_param(self, target, param, nargout=1):
+        value = super().get_param(target, param, nargout=nargout)
+        if param == "Gain" and value == "2.0":
+            return "1.5"
+        return value

@@ -133,17 +133,15 @@ class InputValidationTests(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertEqual(result["error"], "invalid_input")
 
-    def test_set_param_control_characters_in_target_rejected(self):
+    def test_set_param_target_allows_matlab_control_characters(self):
         args = {"target": "m/B\x01", "param": "P", "value": "1", "dry_run": True, "model": None, "session": None}
         result = set_param.validate(args)
-        self.assertIsNotNone(result)
-        self.assertEqual(result["error"], "invalid_input")
+        self.assertIsNone(result)
 
-    def test_set_param_reserved_characters_in_param_rejected(self):
+    def test_set_param_param_allows_matlab_reserved_characters(self):
         args = {"target": "m/B", "param": "P?", "value": "1", "dry_run": True, "model": None, "session": None}
         result = set_param.validate(args)
-        self.assertIsNotNone(result)
-        self.assertEqual(result["error"], "invalid_input")
+        self.assertIsNone(result)
 
     def test_set_param_valid_args_returns_none(self):
         args = {"target": "m/B", "param": "Gain", "value": "2.0", "dry_run": True, "model": None, "session": None}

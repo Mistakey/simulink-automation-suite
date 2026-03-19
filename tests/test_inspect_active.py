@@ -92,7 +92,7 @@ class InspectActiveTests(unittest.TestCase):
         eng = FakeInspectEngine(values={"Gain": "5", "SampleTime": "0.1"})
         with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
             result = inspect_block.execute(_inspect_args(param="NoSuchParam"))
-        self.assertEqual(result["error"], "unknown_parameter")
+        self.assertEqual(result["error"], "param_not_found")
         self.assertIn("details", result)
         self.assertEqual(result["details"]["param"], "NoSuchParam")
         self.assertIn("target", result["details"])

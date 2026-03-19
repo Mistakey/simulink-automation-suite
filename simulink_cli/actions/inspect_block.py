@@ -1,6 +1,6 @@
 from simulink_cli.errors import make_error
 from simulink_cli.json_io import as_list, project_top_level_fields
-from simulink_cli.validation import validate_text_field
+from simulink_cli.validation import validate_matlab_name_field, validate_text_field
 from simulink_cli.model_helpers import resolve_inspect_target_path
 from simulink_cli.session import safe_connect_to_session
 
@@ -78,7 +78,7 @@ ERRORS = [
     "session_required",
     "model_not_found",
     "block_not_found",
-    "unknown_parameter",
+    "param_not_found",
     "inactive_parameter",
     "runtime_error",
 ]
@@ -283,10 +283,10 @@ def _inspect_block(
                     value = eng.get_param(target_path, param_name)
                 except Exception:
                     return make_error(
-                        "unknown_parameter",
+                        "param_not_found",
                         f"Parameter '{param_name}' is not available on target block.",
                         details={"target": target_path, "param": param_name},
-                        suggested_fix="Run inspect with --param \"All\" to list available parameters.",
+                        suggested_fix='Run inspect with --param "All" to list available parameters.',
                     )
 
             meta = parameter_meta.get(
@@ -448,10 +448,13 @@ def _inspect_block(
 
 
 def validate(args):
-    for field_name in ("model", "target", "session"):
-        error = validate_text_field(field_name, args.get(field_name))
+    for field_name in ("model", "target"):
+        error = validate_matlab_name_field(field_name, args.get(field_name))
         if error is not None:
             return error
+    error = validate_text_field("session", args.get("session"))
+    if error is not None:
+        return error
 
     if not args.get("target"):
         return make_error(
