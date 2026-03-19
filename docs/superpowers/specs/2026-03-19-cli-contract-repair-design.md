@@ -41,16 +41,38 @@ The repair should align runtime behavior, tests, docs, and metadata in a single 
 - `find` may let the exception escape before action-level error handling.
 - `scan` may degrade the situation into a generic `runtime_error`.
 
-The helper should instead treat "cannot resolve an active model" as a stable domain error and return `model_not_found` with actionable details. The repair should preserve the current `model_required` behavior when multiple opened models exist and no explicit model is given.
+The helper should instead treat "cannot resolve an active model" as a stable domain error and return a structured error payload, not raise. The contract after repair is:
+
+- `resolve_scan_root_path()` continues to return either:
+  - a success dict: `{"model": ..., "scan_root": ...}`
+  - or an error dict produced by `make_error(...)`
+- When `bdroot()` fails during the "no explicit model + no opened models" fallback, the helper returns:
+  - `error = "model_not_found"`
+  - actionable `details` including the explicit model input and the currently opened model list
+- `scan` and `find` must both consume that helper result the same way:
+  - if `"error" in resolved`, return it directly
+  - otherwise continue normal action execution
+
+This keeps the interface boundary single and explicit. The repair should preserve the current `model_required` behavior when multiple opened models exist and no explicit model is given.
 
 ### 2. Consistent `find_system` visibility
 
-`scan` already uses:
+`scan` already uses the following search-option prefix before action-specific arguments:
 
 - `FollowLinks = on`
 - `LookUnderMasks = all`
 
-`find` should use the same defaults so users and agents do not observe different model visibility depending on which action is used first. This is a behavior-alignment change, not a new feature.
+`find` should use the same visibility defaults so users and agents do not observe different model visibility depending on which action is used first. The required `find` construction after repair is:
+
+- shared option prefix copied from `scan`:
+  - `scan_root`
+  - `"FollowLinks", "on"`
+  - `"LookUnderMasks", "all"`
+- followed by existing query-specific predicates already used by `find`:
+  - `"RegExp", "on"` + `"Name", ...` when `name` is provided
+  - `"BlockType", ...` when `block_type` is provided
+
+No additional `scan`-specific arguments are implied by this change. In particular, `find` does not gain `SearchDepth` logic or recursive/shallow mode flags; the alignment is intentionally limited to visibility-related `find_system` options.
 
 ### 3. Field-specific validation for `set_param.value`
 
@@ -81,6 +103,26 @@ Two opportunistic cleanup items are included because they are isolated and contr
 - When local session state cannot be parsed, continue the current non-fatal fallback to `{}`, but emit a concise stderr warning so corruption is diagnosable.
 
 The warning must remain advisory only and must not block command execution.
+
+## Implementation Order
+
+The work should be planned and implemented in three bounded stages:
+
+1. **Runtime contract fixes**
+   - stable no-model error path
+   - `find` visibility option alignment
+   - `set_param.value` field-specific validation
+   - `session_cmd.ERRORS` completion
+   - tests that lock these behaviors
+2. **Docs and metadata synchronization**
+   - user-facing docs
+   - maintainer docs
+   - plugin and marketplace metadata
+3. **Low-risk cleanup**
+   - redundant `int()` cleanup
+   - local-state corruption warning on stderr
+
+Stages 2 and 3 are part of the same overall repair, but they are intentionally downstream of stage 1 so the plan stays anchored on contract repair rather than drifting into an open-ended cleanup sweep.
 
 ## Test Strategy
 
