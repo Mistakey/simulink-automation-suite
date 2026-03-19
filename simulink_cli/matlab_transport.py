@@ -16,22 +16,34 @@ def _reset_lastwarn(engine):
             pass
 
 
+def _fallback_warning_log(engine):
+    try:
+        warning_log = getattr(engine, "warning_log")
+    except Exception:
+        return None
+    if isinstance(warning_log, list):
+        return warning_log
+    return None
+
+
 def _drain_warnings(engine):
     if hasattr(engine, "lastwarn"):
         try:
             message, warning_id = engine.lastwarn(nargout=2)
             text = str(message).strip()
             if text:
-                if hasattr(engine, "warning_log"):
-                    engine.warning_log.clear()
+                warning_log = _fallback_warning_log(engine)
+                if warning_log is not None:
+                    warning_log.clear()
                 return [text]
         except TypeError:
             pass
         except Exception:
             pass
-    if hasattr(engine, "warning_log"):
-        warnings = list(engine.warning_log)
-        engine.warning_log.clear()
+    warning_log = _fallback_warning_log(engine)
+    if warning_log is not None:
+        warnings = list(warning_log)
+        warning_log.clear()
         return warnings
     return []
 

@@ -16,12 +16,13 @@ def _validate_string_field(
     reserved_chars=(),
     allow_control_chars=False,
     reject_surrounding_whitespace=False,
+    allow_empty=False,
 ):
     if value is None:
         return None
 
     text = str(value)
-    if not text:
+    if not text and not allow_empty:
         return _invalid_input(field_name, "must not be empty")
     if reject_surrounding_whitespace and text != text.strip():
         return _invalid_input(field_name, "has leading/trailing whitespace")
@@ -63,6 +64,7 @@ def validate_matlab_payload_field(field_name, value, max_len=256):
         max_len=max_len,
         reserved_chars=(),
         allow_control_chars=True,
+        allow_empty=True,
     )
 
 

@@ -100,6 +100,28 @@ class SetParamBehaviorTests(unittest.TestCase):
         self.assertEqual(result["error"], "set_param_failed")
         self.assertEqual(result["details"]["write_state"], "verification_failed")
 
+    def test_execute_rollback_with_empty_previous_value_is_replayable(self):
+        eng = self._make_engine(param="Description", value="")
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            result = set_param.execute(
+                _set_param_args(param="Description", value="Line 1\nLine 2", dry_run=False)
+            )
+        self.assertNotIn("error", result)
+        self.assertEqual(result["rollback"]["value"], "")
+
+        rollback = result["rollback"]
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            rollback_result = set_param.execute(
+                _set_param_args(
+                    target=rollback["target"],
+                    param=rollback["param"],
+                    value=rollback["value"],
+                    dry_run=rollback["dry_run"],
+                )
+            )
+        self.assertNotIn("error", rollback_result)
+        self.assertEqual(rollback_result["new_value"], "")
+
     def test_result_includes_target_and_param(self):
         eng = self._make_engine()
         with patch.object(set_param, 'safe_connect_to_session', return_value=(eng, None)):

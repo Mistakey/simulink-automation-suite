@@ -71,7 +71,11 @@ def validate(args):
 
     for required_field in ("target", "param", "value"):
         val = args.get(required_field)
-        if val is None or (isinstance(val, str) and not val):
+        if val is None or (
+            required_field != "value"
+            and isinstance(val, str)
+            and not val
+        ):
             return make_error(
                 "invalid_input",
                 f"Field '{required_field}' is required.",

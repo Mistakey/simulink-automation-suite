@@ -39,6 +39,26 @@ class BdrootOutputSensitiveEngine(OutputSensitiveEngine):
         return self.current_root
 
 
+class MatlabFuncLike:
+    def __call__(self, *args, **kwargs):
+        raise TypeError("unsupported")
+
+
+class DynamicAttributeEngine:
+    def find_system(self, *args, nargout=1):
+        return []
+
+    def lastwarn(self, *args, **kwargs):
+        if args == ("", "") and kwargs == {"nargout": 0}:
+            return None
+        if kwargs == {"nargout": 2}:
+            return ("", "")
+        raise TypeError("unsupported")
+
+    def __getattr__(self, name):
+        return MatlabFuncLike()
+
+
 class MatlabTransportTests(unittest.TestCase):
     def test_call_no_output_forces_nargout_zero(self):
         eng = OutputSensitiveEngine()
@@ -78,3 +98,9 @@ class MatlabTransportTests(unittest.TestCase):
         eng.current_root = "m"
         result = matlab_transport.bdroot(eng)
         self.assertEqual(result["value"], "m")
+
+    def test_warning_drain_ignores_dynamic_non_log_attribute(self):
+        eng = DynamicAttributeEngine()
+        result = matlab_transport.find_system(eng, "Type", "block_diagram")
+        self.assertEqual(result["value"], [])
+        self.assertEqual(result["warnings"], [])
