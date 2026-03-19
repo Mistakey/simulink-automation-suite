@@ -33,6 +33,12 @@ class LastwarnAndWarningLogEngine:
         raise TypeError("unsupported")
 
 
+class BdrootOutputSensitiveEngine(OutputSensitiveEngine):
+    def bdroot(self, *, nargout):
+        self.calls.append(("bdroot", nargout))
+        return self.current_root
+
+
 class MatlabTransportTests(unittest.TestCase):
     def test_call_no_output_forces_nargout_zero(self):
         eng = OutputSensitiveEngine()
@@ -65,3 +71,10 @@ class MatlabTransportTests(unittest.TestCase):
         self.assertEqual(first["warnings"], ["lastwarn message"])
         self.assertEqual(second["warnings"], [])
         self.assertEqual(eng.warning_log, [])
+
+    def test_bdroot_fallback_is_transport_backed(self):
+        eng = BdrootOutputSensitiveEngine()
+        eng.open_models = []
+        eng.current_root = "m"
+        result = matlab_transport.bdroot(eng)
+        self.assertEqual(result["value"], "m")

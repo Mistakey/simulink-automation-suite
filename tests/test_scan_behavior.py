@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from simulink_cli.actions import scan, highlight, list_opened
+from simulink_cli import model_helpers
 from tests.fakes import FakeScanEngine
 
 
@@ -15,6 +16,27 @@ def _scan_args(model=None, subsystem=None, recursive=False, hierarchy=False,
 
 
 class ScanBehaviorTests(unittest.TestCase):
+    def test_resolve_scan_root_uses_bdroot_when_no_models_are_open(self):
+        class BdrootOnlyEngine:
+            def __init__(self):
+                self.calls = []
+
+            def find_system(self, *args, nargout):
+                self.calls.append(("find_system", args, nargout))
+                if args == ("Type", "block_diagram") and nargout == 1:
+                    return []
+                raise RuntimeError("unexpected")
+
+            def bdroot(self, *, nargout):
+                self.calls.append(("bdroot", (), nargout))
+                return "m1"
+
+        eng = BdrootOnlyEngine()
+
+        result = model_helpers.resolve_scan_root_path(eng)
+
+        self.assertEqual(result, {"model": "m1", "scan_root": "m1"})
+
     def test_no_open_model_bdroot_failure_returns_model_not_found(self):
         class FailingBdrootEngine:
             def find_system(self, *args):

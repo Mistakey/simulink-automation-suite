@@ -1,9 +1,15 @@
+from simulink_cli import matlab_transport
 from simulink_cli.json_io import as_list
 from simulink_cli.errors import make_error
 
 
 def get_opened_models(eng):
-    models = [str(x) for x in as_list(eng.find_system("Type", "block_diagram"))]
+    models = [
+        str(x)
+        for x in as_list(
+            matlab_transport.find_system(eng, "Type", "block_diagram")["value"]
+        )
+    ]
     return sorted(models)
 
 
@@ -31,7 +37,7 @@ def resolve_scan_root_path(eng, model_name=None, subsystem_path=None):
             target_model = opened_models[0]
         else:
             try:
-                target_model = eng.bdroot()
+                target_model = matlab_transport.bdroot(eng)["value"]
             except Exception as exc:
                 return make_error(
                     "model_not_found",
@@ -61,7 +67,7 @@ def resolve_scan_root_path(eng, model_name=None, subsystem_path=None):
         full_path = f"{target_model}/{subsystem_path}"
 
     try:
-        eng.get_param(full_path, "Handle")
+        matlab_transport.get_param(eng, full_path, "Handle")["value"]
     except Exception as exc:
         return make_error(
             "subsystem_not_found",
@@ -72,7 +78,8 @@ def resolve_scan_root_path(eng, model_name=None, subsystem_path=None):
 
     if full_path != target_model:
         try:
-            if eng.get_param(full_path, "BlockType") != "SubSystem":
+            block_type = matlab_transport.get_param(eng, full_path, "BlockType")["value"]
+            if block_type != "SubSystem":
                 return make_error(
                     "invalid_subsystem_type",
                     f"Path '{full_path}' is not a SubSystem block.",
