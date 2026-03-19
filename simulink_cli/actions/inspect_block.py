@@ -222,12 +222,14 @@ def build_effective_resolution_map(values, parameter_meta):
     return resolution_map
 
 
-def _collect_dialog_values(eng, target_path, param_keys):
+def _collect_dialog_values(eng, target_path, param_keys, warnings=None):
     values = {}
     for key in param_keys:
         try:
             values[key] = matlab_transport.get_param(eng, target_path, key)["value"]
         except Exception as exc:
+            if warnings is not None:
+                warnings.extend(getattr(exc, "matlab_warnings", []))
             values[key] = f"<unavailable: {exc}>"
     return values
 
@@ -249,26 +251,45 @@ def _inspect_block(
     max_params=None,
     fields=None,
 ):
-    resolved_target = resolve_inspect_target_path(eng, block_path, model_name)
-    if "error" in resolved_target:
-        return resolved_target
-
-    target_path = resolved_target["target"]
+    helper_warnings = []
+    target_path = block_path
+    try:
+        resolved_target = resolve_inspect_target_path(eng, block_path, model_name)
+        if "error" in resolved_target:
+            return resolved_target
+        helper_warnings.extend(resolved_target.get("warnings", []))
+        target_path = resolved_target["target"]
+    except Exception as exc:
+        details = {"target": target_path, "cause": str(exc)}
+        all_warnings = list(helper_warnings)
+        all_warnings.extend(getattr(exc, "matlab_warnings", []))
+        if all_warnings:
+            details["warnings"] = all_warnings
+        return make_error(
+            "runtime_error",
+            "Failed to inspect block parameters.",
+            details=details,
+        )
 
     try:
         matlab_transport.get_param(eng, target_path, "Handle")
     except Exception as exc:
+        details = {"target": target_path, "cause": str(exc)}
+        all_warnings = list(helper_warnings)
+        all_warnings.extend(getattr(exc, "matlab_warnings", []))
+        if all_warnings:
+            details["warnings"] = all_warnings
         return make_error(
             "block_not_found",
             f"Block not found '{target_path}'.",
-            details={"target": target_path, "cause": str(exc)},
+            details=details,
             suggested_fix="Run scan to discover valid block paths, then retry with --target.",
         )
 
     try:
         dialog_params = matlab_transport.get_param(eng, target_path, "DialogParameters")["value"]
         param_keys = sorted(str(x) for x in as_list(eng.fieldnames(dialog_params)))
-        values = _collect_dialog_values(eng, target_path, param_keys)
+        values = _collect_dialog_values(eng, target_path, param_keys, helper_warnings)
 
         mask_names = _safe_get_param_list(eng, target_path, "MaskNames")
         mask_visibilities = _safe_get_param_list(eng, target_path, "MaskVisibilities")
@@ -285,11 +306,16 @@ def _inspect_block(
             else:
                 try:
                     value = matlab_transport.get_param(eng, target_path, param_name)["value"]
-                except Exception:
+                except Exception as exc:
+                    details = {"target": target_path, "param": param_name}
+                    all_warnings = list(helper_warnings)
+                    all_warnings.extend(getattr(exc, "matlab_warnings", []))
+                    if all_warnings:
+                        details["warnings"] = all_warnings
                     return make_error(
                         "param_not_found",
                         f"Parameter '{param_name}' is not available on target block.",
-                        details={"target": target_path, "param": param_name},
+                        details=details,
                         suggested_fix='Run inspect with --param "All" to list available parameters.',
                     )
 
@@ -307,6 +333,8 @@ def _inspect_block(
 
             if strict_active and not is_active:
                 details = {"target": target_path, "param": param_name}
+                if helper_warnings:
+                    details["warnings"] = list(helper_warnings)
                 if resolution:
                     details["effective_from"] = resolution.get("resolved_path")
                 return make_error(
@@ -324,6 +352,7 @@ def _inspect_block(
             }
 
             warnings = list(meta_warnings)
+            warnings[:0] = helper_warnings
             if not is_active:
                 output["effective_note"] = (
                     "Parameter is inactive in current mask configuration."
@@ -385,7 +414,7 @@ def _inspect_block(
                 "total_params": total_params,
                 "truncated": truncated,
             }
-            warnings = meta_warnings + conflict_warnings
+            warnings = list(helper_warnings) + meta_warnings + conflict_warnings
             if warnings:
                 output["warnings"] = warnings
             return project_top_level_fields(output, fields)
@@ -434,15 +463,20 @@ def _inspect_block(
             output["inactive_params"] = inactive_params
             output["effective_overrides"] = effective_overrides
 
-        warnings = meta_warnings + conflict_warnings
+        warnings = list(helper_warnings) + meta_warnings + conflict_warnings
         if warnings:
             output["warnings"] = warnings
         return project_top_level_fields(output, fields)
     except Exception as exc:
+        details = {"target": target_path, "cause": str(exc)}
+        all_warnings = list(helper_warnings)
+        all_warnings.extend(getattr(exc, "matlab_warnings", []))
+        if all_warnings:
+            details["warnings"] = all_warnings
         return make_error(
             "runtime_error",
             "Failed to inspect block parameters.",
-            details={"target": target_path, "cause": str(exc)},
+            details=details,
         )
 
 

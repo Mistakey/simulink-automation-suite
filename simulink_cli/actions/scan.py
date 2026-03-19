@@ -121,12 +121,14 @@ def execute(args):
     if err is not None:
         return err
 
+    error_warnings = []
     try:
         resolved = resolve_scan_root_path(
             eng, args.get("model"), args.get("subsystem")
         )
         if "error" in resolved:
             return resolved
+        error_warnings.extend(resolved.get("warnings", []))
 
         target_model = resolved["model"]
         scan_root = resolved["scan_root"]
@@ -135,7 +137,8 @@ def execute(args):
         use_recursive = recursive or hierarchy
         max_blocks = args.get("max_blocks")
         fields = args.get("fields")
-        warnings = []
+        output_warnings = []
+        output_warnings.extend(resolved.get("warnings", []))
 
         search_options = ["FollowLinks", "on", "LookUnderMasks", "all"]
 
@@ -153,7 +156,8 @@ def execute(args):
                 "Type",
                 "block",
             )
-        warnings.extend(search_result["warnings"])
+        error_warnings.extend(search_result["warnings"])
+        output_warnings.extend(search_result["warnings"])
         blocks = as_list(search_result["value"])
 
         block_list = []
@@ -161,7 +165,8 @@ def execute(args):
             if blk == scan_root:
                 continue
             block_type_result = matlab_transport.get_param(eng, blk, "BlockType")
-            warnings.extend(block_type_result["warnings"])
+            error_warnings.extend(block_type_result["warnings"])
+            output_warnings.extend(block_type_result["warnings"])
             block_list.append(
                 {"name": blk, "type": block_type_result["value"]}
             )
@@ -198,13 +203,18 @@ def execute(args):
             ]
 
         output["blocks"] = block_list
-        if warnings:
-            output["warnings"] = warnings
+        if output_warnings:
+            output["warnings"] = output_warnings
 
         return output
     except Exception as exc:
+        details = {"cause": str(exc)}
+        all_warnings = list(error_warnings)
+        all_warnings.extend(getattr(exc, "matlab_warnings", []))
+        if all_warnings:
+            details["warnings"] = all_warnings
         return make_error(
             "runtime_error",
             "Failed to scan model structure.",
-            details={"cause": str(exc)},
+            details=details,
         )

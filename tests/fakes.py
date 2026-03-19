@@ -385,7 +385,8 @@ class OutputSensitiveEngine:
 
     def find_system(self, *args, nargout=1):
         self.calls.append(("find_system", args, nargout))
-        self.warning_log.append("Variant warning")
+        if args != ("Type", "block_diagram"):
+            self.warning_log.append("Variant warning")
         return ["m", "m/Gain"]
 
 

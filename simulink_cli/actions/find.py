@@ -112,16 +112,18 @@ def execute(args):
     block_type = args.get("block_type")
     max_results = args.get("max_results", 200)
     fields = args.get("fields")
-
-    resolved = resolve_scan_root_path(eng, model_name, subsystem)
-    if "error" in resolved:
-        return resolved
-
-    target_model = resolved["model"]
-    scan_root = resolved["scan_root"]
+    error_warnings = []
 
     try:
-        warnings = []
+        resolved = resolve_scan_root_path(eng, model_name, subsystem)
+        if "error" in resolved:
+            return resolved
+        error_warnings.extend(resolved.get("warnings", []))
+
+        target_model = resolved["model"]
+        scan_root = resolved["scan_root"]
+        output_warnings = []
+        output_warnings.extend(resolved.get("warnings", []))
         search_args = [scan_root, "FollowLinks", "on", "LookUnderMasks", "all"]
         if name and block_type:
             safe_name = re.escape(name)
@@ -144,7 +146,8 @@ def execute(args):
             search_args.extend(["BlockType", block_type])
 
         search_result = matlab_transport.find_system(eng, *search_args)
-        warnings.extend(search_result["warnings"])
+        error_warnings.extend(search_result["warnings"])
+        output_warnings.extend(search_result["warnings"])
         raw_results = as_list(search_result["value"])
 
         results = []
@@ -156,9 +159,13 @@ def execute(args):
             parent = path.rsplit("/", 1)[0] if "/" in path else ""
             try:
                 btype_result = matlab_transport.get_param(eng, path, "BlockType")
-                warnings.extend(btype_result["warnings"])
+                error_warnings.extend(btype_result["warnings"])
+                output_warnings.extend(btype_result["warnings"])
                 btype = str(btype_result["value"])
-            except Exception:
+            except Exception as exc:
+                swallowed_warnings = list(getattr(exc, "matlab_warnings", []))
+                error_warnings.extend(swallowed_warnings)
+                output_warnings.extend(swallowed_warnings)
                 btype = ""
             results.append(
                 {
@@ -195,12 +202,17 @@ def execute(args):
             "total_results": total_results,
             "truncated": truncated,
         }
-        if warnings:
-            output["warnings"] = warnings
+        if output_warnings:
+            output["warnings"] = output_warnings
         return output
     except Exception as exc:
+        details = {"cause": str(exc)}
+        all_warnings = list(error_warnings)
+        all_warnings.extend(getattr(exc, "matlab_warnings", []))
+        if all_warnings:
+            details["warnings"] = all_warnings
         return make_error(
             "runtime_error",
             "Failed to search blocks.",
-            details={"cause": str(exc)},
+            details=details,
         )

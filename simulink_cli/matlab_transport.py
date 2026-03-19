@@ -46,6 +46,13 @@ def _should_retry_without_nargout(exc):
     )
 
 
+def _attach_exception_warnings(exc, warnings):
+    if not warnings:
+        return
+    existing = list(getattr(exc, "matlab_warnings", []))
+    exc.matlab_warnings = existing + list(warnings)
+
+
 def _call_with_optional_nargout(fn, args, nargout):
     try:
         return fn(*args, nargout=nargout)
@@ -58,7 +65,11 @@ def _call_with_optional_nargout(fn, args, nargout):
 def call(engine, name, *args, nargout=1):
     _reset_lastwarn(engine)
     fn = getattr(engine, name)
-    value = _call_with_optional_nargout(fn, args, nargout)
+    try:
+        value = _call_with_optional_nargout(fn, args, nargout)
+    except Exception as exc:
+        _attach_exception_warnings(exc, _drain_warnings(engine))
+        raise
     warnings = _drain_warnings(engine)
     return _result(value=value, warnings=warnings)
 
@@ -66,7 +77,11 @@ def call(engine, name, *args, nargout=1):
 def call_no_output(engine, name, *args):
     _reset_lastwarn(engine)
     fn = getattr(engine, name)
-    _call_with_optional_nargout(fn, args, 0)
+    try:
+        _call_with_optional_nargout(fn, args, 0)
+    except Exception as exc:
+        _attach_exception_warnings(exc, _drain_warnings(engine))
+        raise
     warnings = _drain_warnings(engine)
     return _result(value=None, warnings=warnings)
 
