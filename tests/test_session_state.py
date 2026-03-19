@@ -1,5 +1,8 @@
 import unittest
 from unittest import mock
+import io
+import tempfile
+from pathlib import Path
 
 from simulink_cli import session as sl_session
 
@@ -105,6 +108,20 @@ class SessionStateTests(unittest.TestCase):
         self.assertEqual(result["error"], "state_clear_failed")
         self.assertIn("clear denied", result["message"])
         self.assertIn("details", result)
+
+    def test_load_state_warns_and_recovers_from_invalid_json(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_file = Path(temp_dir) / ".sl_pilot_state.json"
+            state_file.write_text("{invalid", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with mock.patch.object(sl_session, "STATE_FILE", state_file), mock.patch.object(
+                sl_session.sys, "stderr", stderr
+            ):
+                result = sl_session.load_state()
+
+        self.assertEqual(result, {})
+        self.assertIn("Warning: failed to load session state", stderr.getvalue())
 
 
 if __name__ == "__main__":

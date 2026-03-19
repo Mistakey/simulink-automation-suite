@@ -314,7 +314,7 @@ def execute(args):
         edges = []
         edge_keys = set()
 
-        for _ in range(int(depth)):
+        for _ in range(depth):
             if not frontier:
                 break
             next_frontier = set()
@@ -348,7 +348,7 @@ def execute(args):
         output = {
             "target": target_path,
             "direction": direction,
-            "depth": int(depth),
+            "depth": depth,
             "detail": detail,
             "upstream_blocks": sorted(upstream_blocks),
             "downstream_blocks": sorted(downstream_blocks),

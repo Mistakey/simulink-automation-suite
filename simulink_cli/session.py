@@ -48,7 +48,10 @@ def load_state():
             data = json.load(handle)
         if isinstance(data, dict):
             return data
-    except Exception:
+    except Exception as exc:
+        sys.stderr.write(
+            f"Warning: failed to load session state from '{STATE_FILE}': {exc}\n"
+        )
         return {}
     return {}
 
