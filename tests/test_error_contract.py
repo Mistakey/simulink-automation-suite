@@ -45,6 +45,14 @@ class ErrorContractTests(unittest.TestCase):
         error_codes = build_schema_payload()["error_codes"]
         self.assertIn("set_param_failed", error_codes)
 
+    def test_precondition_failed_in_error_codes(self):
+        error_codes = build_schema_payload()["error_codes"]
+        self.assertIn("precondition_failed", error_codes)
+
+    def test_verification_failed_in_error_codes(self):
+        error_codes = build_schema_payload()["error_codes"]
+        self.assertIn("verification_failed", error_codes)
+
     def test_action_error_codes_present_in_schema(self):
         # Action-level error codes are aggregated by build_schema_payload.
         error_codes = build_schema_payload()["error_codes"]

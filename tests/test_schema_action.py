@@ -130,6 +130,7 @@ class SchemaActionTests(unittest.TestCase):
         self.assertIn("param", sp_fields)
         self.assertIn("value", sp_fields)
         self.assertIn("dry_run", sp_fields)
+        self.assertIn("expected_current_value", sp_fields)
 
     def test_set_param_target_is_required(self):
         target_meta = self.schema["actions"]["set_param"]["fields"]["target"]
@@ -140,6 +141,11 @@ class SchemaActionTests(unittest.TestCase):
         self.assertTrue(dry_run_meta["default"])
         self.assertEqual(dry_run_meta["type"], "boolean")
 
+    def test_set_param_expected_current_value_metadata(self):
+        meta = self.schema["actions"]["set_param"]["fields"]["expected_current_value"]
+        self.assertEqual(meta["type"], "string")
+        self.assertFalse(meta["required"])
+
     # -- Error codes from edit side --------------------------------------------
 
     def test_param_not_found_error_code_present(self):
@@ -147,6 +153,12 @@ class SchemaActionTests(unittest.TestCase):
 
     def test_set_param_failed_error_code_present(self):
         self.assertIn("set_param_failed", self.schema["error_codes"])
+
+    def test_precondition_failed_error_code_present(self):
+        self.assertIn("precondition_failed", self.schema["error_codes"])
+
+    def test_verification_failed_error_code_present(self):
+        self.assertIn("verification_failed", self.schema["error_codes"])
 
 
 if __name__ == "__main__":

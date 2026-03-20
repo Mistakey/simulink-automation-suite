@@ -74,6 +74,14 @@ class JsonInputModeTests(unittest.TestCase):
         self.assertEqual(args["param"], "Gain")
         self.assertEqual(args["value"], "2.0")
 
+    def test_parse_json_set_param_with_expected_current_value(self):
+        action, args = parse_json_request(
+            '{"action":"set_param","target":"m/Gain1","param":"Gain","value":"2.0",'
+            '"dry_run":false,"expected_current_value":"1.5"}'
+        )
+        self.assertEqual(action, "set_param")
+        self.assertEqual(args["expected_current_value"], "1.5")
+
     # -- Rejection: invalid JSON payload ---------------------------------------
 
     def test_rejects_invalid_json_payload(self):

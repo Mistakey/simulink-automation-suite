@@ -30,6 +30,12 @@ FIELDS = {
         "default": None,
         "description": "New parameter value (always string — MATLAB handles conversion).",
     },
+    "expected_current_value": {
+        "type": "string",
+        "required": False,
+        "default": None,
+        "description": "Optional guarded-execute precondition from a dry-run preview.",
+    },
     "dry_run": {
         "type": "boolean",
         "required": False,
@@ -52,6 +58,8 @@ ERRORS = [
     "block_not_found",
     "param_not_found",
     "set_param_failed",
+    "precondition_failed",
+    "verification_failed",
     "runtime_error",
 ]
 
@@ -65,9 +73,10 @@ def validate(args):
     err = validate_text_field("session", args.get("session"))
     if err is not None:
         return err
-    err = validate_value_field("value", args.get("value"))
-    if err is not None:
-        return err
+    for field_name in ("value", "expected_current_value"):
+        err = validate_value_field(field_name, args.get(field_name))
+        if err is not None:
+            return err
 
     for required_field in ("target", "param", "value"):
         val = args.get(required_field)
@@ -125,8 +134,18 @@ def execute(args):
         "value": current_value,
         "dry_run": False,
     }
+
+    apply_payload = {
+        "action": "set_param",
+        "target": target,
+        "param": param,
+        "value": str(value),
+        "dry_run": False,
+        "expected_current_value": current_value,
+    }
     if args.get("session") is not None:
         rollback["session"] = args["session"]
+        apply_payload["session"] = args["session"]
 
     # 2. Dry-run: return diff, do NOT write
     if dry_run:
@@ -138,6 +157,7 @@ def execute(args):
             "param": param,
             "current_value": current_value,
             "proposed_value": str(value),
+            "apply_payload": apply_payload,
             "rollback": rollback,
         }
 

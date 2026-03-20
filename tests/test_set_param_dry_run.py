@@ -6,10 +6,11 @@ from tests.fakes import FakeSetParamEngine
 
 
 def _set_param_args(target="my_model/PID/Kp", param="Kp", value="3.0",
-                    dry_run=True, session=None):
+                    dry_run=True, session=None, expected_current_value=None):
     return {
         "target": target, "param": param, "value": value,
         "dry_run": dry_run, "session": session,
+        "expected_current_value": expected_current_value,
     }
 
 
@@ -42,9 +43,34 @@ class SetParamDryRunTests(unittest.TestCase):
         eng = self._make_engine()
         with patch.object(set_param, 'safe_connect_to_session', return_value=(eng, None)):
             result = set_param.execute(_set_param_args(dry_run=True))
-        required_keys = {"action", "dry_run", "target", "param", "current_value", "proposed_value", "rollback"}
+        required_keys = {
+            "action",
+            "dry_run",
+            "target",
+            "param",
+            "current_value",
+            "proposed_value",
+            "apply_payload",
+            "rollback",
+        }
         self.assertTrue(required_keys.issubset(result.keys()))
         self.assertEqual(result["write_state"], "not_attempted")
+
+    def test_dry_run_output_includes_apply_payload(self):
+        eng = self._make_engine()
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            result = set_param.execute(_set_param_args(dry_run=True))
+        self.assertFalse(result["apply_payload"]["dry_run"])
+        self.assertEqual(result["apply_payload"]["expected_current_value"], "1.5")
+
+    def test_dry_run_preserves_explicit_session_in_apply_and_rollback(self):
+        eng = self._make_engine()
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            result = set_param.execute(
+                _set_param_args(dry_run=True, session="MATLAB_12345")
+            )
+        self.assertEqual(result["apply_payload"]["session"], "MATLAB_12345")
+        self.assertEqual(result["rollback"]["session"], "MATLAB_12345")
 
     def test_execute_output_shape(self):
         eng = self._make_engine()

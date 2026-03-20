@@ -196,6 +196,18 @@ class InputValidationTests(unittest.TestCase):
         result = set_param.validate(args)
         self.assertIsNone(result)
 
+    def test_set_param_expected_current_value_uses_payload_validation(self):
+        args = {
+            "target": "m/B",
+            "param": "Gain",
+            "value": "2.0",
+            "expected_current_value": "",
+            "dry_run": False,
+            "session": None,
+        }
+        result = set_param.validate(args)
+        self.assertIsNone(result)
+
     def test_schema_action_returns_none_for_validate(self):
         # schema has no validate — run_action handles it directly
         result = run_action("schema", {})
