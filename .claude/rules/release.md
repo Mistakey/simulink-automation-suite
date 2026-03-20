@@ -6,6 +6,10 @@ globs: [".claude-plugin/**", "README*", ".github/workflows/release.yml", "docs/r
 
 Default release path in this repository is **tag-driven GitHub auto release**. Manual GitHub web-page release authoring is no longer the primary path.
 
+## Agent Guidance Placement
+
+Detailed release policy belongs in this rule file. `.claude/CLAUDE.md` may point agents here and mention the workflow entrypoint, but it should not duplicate the detailed release flow, release notes precedence, or validation checklist.
+
 ## Files to Check First
 
 1. `.github/workflows/release.yml`

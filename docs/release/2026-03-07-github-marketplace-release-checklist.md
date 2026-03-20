@@ -1,7 +1,7 @@
 # GitHub Marketplace Release Checklist
 
 Scope: release `simulink-automation-suite` through the repository's GitHub marketplace and GitHub Release page.
-Current manifest version in repo: `2.0.1`.
+Current manifest version in repo: `2.0.2`.
 
 Default path is **auto release from tag push**. Creating a GitHub Release manually in the web UI is now a fallback, not the recommended workflow.
 
