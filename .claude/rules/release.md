@@ -71,6 +71,24 @@ Add a curated release document when any of these are true:
 
 Curated release docs are optional only for trivial metadata-only or emergency republish cases. If the doc is missing, automation still publishes using fallback notes.
 
+## Bilingual Curated Release Notes
+
+For curated release docs that live at the top level of `docs/release/` and are selected by `scripts/build_release_notes.py`, default to a bilingual body:
+
+- use one top-level curated file: `docs/release/<date>-vX.Y.Z.md`
+- keep the full English release notes first
+- add a matching Chinese section such as `## 中文说明` for the user-facing summary, highlights, and compatibility guidance
+- `Validation` may stay English-only unless the release specifically needs translated operator instructions
+
+If the combined bilingual body becomes too long for the GitHub Release page:
+
+- keep the top-level curated file as the single selected release body
+- keep the full English notes there
+- include a shorter Chinese summary in the main file
+- link to a detailed Chinese companion doc under `docs/release/zh-CN/<date>-vX.Y.Z.md`
+
+Do not add a second top-level version-matching markdown file under `docs/release/`. `scripts/build_release_notes.py` expects a single matching top-level curated release doc and treats multiple matches as an error.
+
 ## Default Release Flow
 
 1. Pick `X.Y.Z`

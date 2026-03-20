@@ -30,6 +30,19 @@ Add `docs/release/<date>-vX.Y.Z.md` when:
 
 If the doc is missing, auto release still works; the fallback body includes `Summary`, `Highlights`, `Compatibility / Upgrade Notes`, and `Validation`.
 
+Default curated release-doc style is bilingual:
+- keep one top-level curated file at `docs/release/<date>-vX.Y.Z.md`
+- put English notes first
+- add `## 中文说明` for the Chinese user-facing summary, highlights, and upgrade notes
+- `Validation` can stay English-only
+
+If the bilingual body becomes too long:
+- keep the main release body in `docs/release/<date>-vX.Y.Z.md`
+- keep a short Chinese summary in that main file
+- place the full Chinese companion notes under `docs/release/zh-CN/<date>-vX.Y.Z.md`
+
+Do not create a second version-matching top-level markdown file in `docs/release/`; the auto selector expects one curated release doc match.
+
 ## 3. Validation Before Tagging
 
 Run at minimum:

@@ -9,6 +9,7 @@ RELEASE_RULE_PATH = REPO_ROOT / ".claude" / "rules" / "release.md"
 AGENT_FIRST_RULE_PATH = REPO_ROOT / ".claude" / "rules" / "agent-first-cli.md"
 CHECKLIST_PATH = REPO_ROOT / "docs" / "release" / "2026-03-07-github-marketplace-release-checklist.md"
 CODEX_INSTRUCTIONS_PATH = REPO_ROOT / ".codex" / "instructions.md"
+RELEASE_TEMPLATE_PATH = REPO_ROOT / "docs" / "release" / "bilingual-template.md"
 
 
 class ReleaseWorkflowContractTests(unittest.TestCase):
@@ -59,6 +60,20 @@ class ReleaseWorkflowContractTests(unittest.TestCase):
         self.assertIn("Subagent delegation is allowed", codex_text)
         self.assertIn(".github/workflows/release.yml", codex_text)
         self.assertIn("scripts/check_release_metadata.py", codex_text)
+
+    def test_curated_release_doc_guidance_supports_bilingual_notes(self):
+        release_rule_text = RELEASE_RULE_PATH.read_text(encoding="utf-8")
+        checklist_text = CHECKLIST_PATH.read_text(encoding="utf-8")
+
+        self.assertTrue(RELEASE_TEMPLATE_PATH.exists(), "bilingual release template is missing")
+
+        template_text = RELEASE_TEMPLATE_PATH.read_text(encoding="utf-8")
+        self.assertIn("bilingual", release_rule_text.lower())
+        self.assertIn("中文", release_rule_text)
+        self.assertIn("bilingual", checklist_text.lower())
+        self.assertIn("中文", checklist_text)
+        self.assertIn("## 中文说明", template_text)
+        self.assertIn("docs/release/zh-CN/", template_text)
 
 
 if __name__ == "__main__":
