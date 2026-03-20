@@ -49,7 +49,7 @@ Simulink Automation Suite 的核心定位，是让 Simulink 分析能力在 Clau
 4. 结果通过 `stdout` 输出为单一机器可读 JSON 负载；原始警告文本不会直接污染 stdout。
 5. 异常通过稳定错误码返回，便于 Agent 做恢复重试。
 6. 对于参数修改场景，Claude Code 会调用 `simulink-edit` 技能。
-7. 编辑技能通过 `set_param` 提供预览模式（默认开启 dry-run）、回滚负载与写后读回验证。
+7. 编辑技能通过 `set_param` 提供预览模式（默认开启 dry-run）、机器可回放的 `apply_payload`、基于 `expected_current_value` 的 guarded execute、回滚负载与写后读回验证。
 
 ---
 
@@ -151,19 +151,59 @@ python -m simulink_cli --json "{\"action\":\"inspect\",\"model\":\"my_model\",\"
 python -m simulink_cli --json '{"action":"connections","target":"my_model/Gain","direction":"both","depth":1,"detail":"summary","max_edges":50,"fields":["target","upstream_blocks","downstream_blocks"]}'
 python -m simulink_cli --json '{"action":"find","model":"my_model","name":"PID","max_results":50,"fields":["path","type"]}'
 python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0"}'
-python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0","dry_run":false}'
 ```
 
 ---
 
 ## 安全模型（simulink-edit）
 
-- `dry_run` 默认为 `true` —— 先预览再写入
-- 每次响应都包含 `rollback` 负载，支持一条命令撤销；如果原请求显式指定了会话，回滚负载会保留该会话信息
+- `dry_run` 默认为 `true`，并返回 `rollback` 与机器可回放的 `apply_payload`
+- `apply_payload` 会携带 `expected_current_value`，用于在 execute 时拒绝过期预览
+- 执行时应直接回放返回的 `apply_payload`，不要手工重建 guarded execute 负载
+- 如果预览已经过期，回放会返回 `precondition_failed`，且不会误改模型
 - 执行模式会读回参数值以验证写入结果
-- 如果读回值无法证明写入成功，动作会返回 `verification_failed`，并保留回滚与写状态信息以便恢复
+- 如果读回值无法证明写入成功，动作会返回 `verification_failed`，并保留回滚与恢复元数据
+- 每次响应都包含 `rollback` 负载，支持一条命令撤销；如果原请求显式指定了会话，回滚负载会保留该会话信息
 - `value` 字段始终按字符串传递，并且可以合法包含 `%`，例如 `"%.3f"`
 - 每次调用只修改一个参数（不支持批量操作）
+
+## Guarded Edit Loop
+
+标准的单参数 Agent 编辑回路是：
+
+1. 先用 `inspect` 确认当前参数状态。
+2. 运行 `set_param` 且 `dry_run=true`。
+3. 原样回放返回的 `apply_payload`。
+4. 再次 `inspect` 确认新值。
+5. 如需恢复，原样回放 `rollback`。
+
+预览响应示例：
+
+```json
+{
+  "action": "set_param",
+  "dry_run": true,
+  "current_value": "1.5",
+  "proposed_value": "2.0",
+  "apply_payload": {
+    "action": "set_param",
+    "target": "my_model/Gain1",
+    "param": "Gain",
+    "value": "2.0",
+    "dry_run": false,
+    "expected_current_value": "1.5"
+  },
+  "rollback": {
+    "action": "set_param",
+    "target": "my_model/Gain1",
+    "param": "Gain",
+    "value": "1.5",
+    "dry_run": false
+  }
+}
+```
+
+如果目标在 preview 和 execute 之间发生变化，回放这份保存下来的 `apply_payload` 会返回 `precondition_failed`；如果写入执行了但读回验证未确认成功，则会返回 `verification_failed`。
 
 ---
 
@@ -205,7 +245,9 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 - `invalid_subsystem_type`
 - `block_not_found`
 - `param_not_found`
+- `precondition_failed`
 - `set_param_failed`
+- `verification_failed`
 - `inactive_parameter`
 - `runtime_error`
 
@@ -260,7 +302,7 @@ claude plugin validate .
 
 ## 路线图
 
-- **当前阶段（v2.0.x）：** 在只读分析基础上新增参数修改能力（`set_param`，支持 dry-run 预览、回滚与写后验证），通过统一的 `simulink_cli` 包同时服务 `simulink-scan` 和 `simulink-edit` 技能。
+- **当前阶段（v2.0.x）：** 在只读分析基础上新增 guarded 参数修改能力（`set_param`，支持 dry-run 预览、`apply_payload`、回滚、前置条件检查与写后验证），通过统一的 `simulink_cli` 包同时服务 `simulink-scan` 和 `simulink-edit` 技能。
 - **下一阶段：** 在保持可预测契约与恢复链路的前提下，增强 Agent 工作流编排与可靠性。
 - **后续阶段：** 通过新增技能扩展到 build/repair 场景，且保持插件标识 `simulink-automation-suite` 不变。
 

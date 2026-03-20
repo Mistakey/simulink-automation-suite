@@ -21,6 +21,14 @@ Output:
   "param": "Gain",
   "current_value": "1.5",
   "proposed_value": "2.0",
+  "apply_payload": {
+    "action": "set_param",
+    "target": "my_model/Gain1",
+    "param": "Gain",
+    "value": "2.0",
+    "dry_run": false,
+    "expected_current_value": "1.5"
+  },
   "rollback": {
     "action": "set_param",
     "target": "my_model/Gain1",
@@ -33,12 +41,14 @@ Output:
 
 ### Execute
 
+Replay the `apply_payload` from preview instead of reconstructing the execute request:
+
 ```bash
-python -m simulink_cli set_param --target "my_model/Gain1" --param "Gain" --value "2.0" --no-dry-run
+python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0","dry_run":false,"expected_current_value":"1.5"}'
 ```
 
 ```bash
-python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0","dry_run":false}'
+python -m simulink_cli --json '<paste apply_payload from preview response verbatim>'
 ```
 
 Output:
@@ -71,14 +81,33 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 
 If the original write used an explicit `session`, the rollback payload preserves the same `session` field so it can be replayed directly.
 
+### Stale Preview Rejection
+
+If the current value changes after preview, replaying the saved `apply_payload` returns `precondition_failed` without mutating the model:
+
+```json
+{
+  "error": "precondition_failed",
+  "details": {
+    "expected_current_value": "1.5",
+    "observed_current_value": "9.0",
+    "write_state": "not_attempted",
+    "safe_to_retry": true,
+    "recommended_recovery": "rerun_dry_run"
+  }
+}
+```
+
 ## Failure Semantics
 
 Execute-mode failures must preserve enough information for recovery:
 
+- `precondition_failed` means the preview is stale; the write was not attempted.
 - `verification_failed` means the write ran, but read-back did not confirm the requested value.
 - The failure payload includes `write_state` so the caller can tell whether the write was not attempted, attempted, verified, or failed verification.
+- The failure payload includes `safe_to_retry` and `recommended_recovery` for machine recovery routing.
 - The failure payload includes `details.rollback` so the caller can restore the prior value without reconstructing it manually.
-- `set_param_failed` remains the top-level code for write-path failures before or during verification.
+- `set_param_failed` remains the top-level code for write-call failures.
 
 ## Recovery Matrix
 
@@ -86,7 +115,8 @@ Execute-mode failures must preserve enough information for recovery:
 |---|---|---|---|
 | `block_not_found` | Target block path invalid | Run `simulink-scan find` to locate correct path | set_param succeeds |
 | `param_not_found` | Parameter name not on block | Run `simulink-scan inspect` to list parameters | set_param succeeds |
-| `set_param_failed` | MATLAB rejected the value | Check value format; read parameter constraints | set_param succeeds |
+| `precondition_failed` | Preview is stale | Rerun dry-run and replay the new `apply_payload` | set_param succeeds |
+| `set_param_failed` | MATLAB rejected the value or write-call failed | Check value format, inspect constraints, then retry cautiously | set_param succeeds |
 | `verification_failed` | Read-back did not confirm the requested write | Inspect the target again or use `details.rollback` | set_param succeeds |
 | `engine_unavailable` | MATLAB Engine not installed | Install MATLAB Engine for Python | set_param succeeds |
 | `no_session` | No shared session | Run `matlab.engine.shareEngine` in MATLAB | set_param succeeds |

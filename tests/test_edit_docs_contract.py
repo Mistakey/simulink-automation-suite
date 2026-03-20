@@ -33,6 +33,11 @@ class EditDocsContractTests(unittest.TestCase):
         self.assertIn("Safety Model", text)
         self.assertIn("verification_failed", text)
 
+    def test_skill_md_contains_precondition_failed(self):
+        text = (EDIT_SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("precondition_failed", text)
+        self.assertIn("apply_payload", text)
+
     def test_reference_md_contains_recovery_matrix(self):
         text = (EDIT_SKILL_DIR / "reference.md").read_text(encoding="utf-8")
         self.assertIn("Recovery Matrix", text)
@@ -55,6 +60,12 @@ class EditDocsContractTests(unittest.TestCase):
         self.assertIn("write_state", text)
         self.assertIn("details.rollback", text)
 
+    def test_reference_md_documents_apply_payload(self):
+        text = (EDIT_SKILL_DIR / "reference.md").read_text(encoding="utf-8")
+        self.assertIn("apply_payload", text)
+        self.assertIn("expected_current_value", text)
+        self.assertIn("precondition_failed", text)
+
     def test_skill_md_has_frontmatter(self):
         text = (EDIT_SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
         self.assertTrue(text.startswith("---"))
@@ -65,6 +76,9 @@ class EditDocsContractTests(unittest.TestCase):
         self.assertIn("set_param", text)
         self.assertIn("verification_failed", text)
         self.assertIn("newline", text)
+        self.assertIn("apply_payload", text)
+        self.assertIn("precondition_failed", text)
+        self.assertIn("rollback", text)
 
 
 if __name__ == "__main__":

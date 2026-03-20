@@ -2,8 +2,9 @@
 
 ## set_param Scenarios
 
-- Dry-run preview: `--json '{"action":"set_param","target":"m/Gain1","param":"Gain","value":"2.0"}'` → dry_run=true, current_value, proposed_value, rollback
-- Execute: `--json '{"action":"set_param","target":"m/Gain1","param":"Gain","value":"2.0","dry_run":false}'` → dry_run=false, previous_value, new_value, verified, rollback
+- Dry-run preview: `--json '{"action":"set_param","target":"m/Gain1","param":"Gain","value":"2.0"}'` → dry_run=true, current_value, proposed_value, apply_payload, rollback
+- Replay apply_payload: capture `apply_payload` from preview, pass it back as `--json` verbatim → dry_run=false, previous_value, new_value, verified, rollback
+- Stale preview replay: capture `apply_payload`, change the target externally, then replay the saved payload → `precondition_failed`, `recommended_recovery="rerun_dry_run"`, no accidental mutation
 - Execute verification failure: `--json '{"action":"set_param","target":"m/Gain1","param":"Gain","value":"2.0","dry_run":false}'` → `verification_failed`, `details.rollback`, write_state
 - Block not found: `--json '{"action":"set_param","target":"m/Missing","param":"Gain","value":"2.0"}'` → `block_not_found`
 - Param not found: `--json '{"action":"set_param","target":"m/Gain1","param":"NoSuch","value":"2.0"}'` → `param_not_found`
@@ -19,9 +20,9 @@
 ## Schema Scenarios
 
 - Schema: `--json '{"action":"schema"}'` → actions includes set_param with fields
-- Schema includes error codes: `param_not_found`, `set_param_failed` in error_codes list
+- Schema includes error codes: `param_not_found`, `precondition_failed`, `set_param_failed`, `verification_failed` in error_codes list
 
 ## Cross-Skill Scenarios
 
-- Full workflow: scan → find → inspect → set_param (dry) → set_param (execute) → inspect (verify)
-- Rollback workflow: set_param (execute) → use rollback payload → verify original restored
+- Full workflow: scan → find → inspect → set_param (dry_run) → replay apply_payload → inspect (verify)
+- Rollback workflow: replay apply_payload → use rollback payload → inspect confirms original restored

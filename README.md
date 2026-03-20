@@ -49,7 +49,7 @@ This plugin provides a third path: direct, structured, runtime model analysis fo
 4. Results are returned as a single machine-readable JSON payload on `stdout`; warnings never spill raw text into stdout, and `stderr` is reserved for maintainer-facing diagnostics.
 5. Failures use stable error codes for reliable agent recovery.
 6. For parameter modification, Claude Code invokes the `simulink-edit` skill.
-7. The edit skill uses `set_param` with dry-run preview (default), rollback payloads, and read-back verification.
+7. The edit skill uses `set_param` with dry-run preview (default), machine-executable `apply_payload`, rollback payloads, guarded execute via `expected_current_value`, and read-back verification.
 
 ---
 
@@ -151,19 +151,59 @@ python -m simulink_cli --json "{\"action\":\"inspect\",\"model\":\"my_model\",\"
 python -m simulink_cli --json '{"action":"connections","target":"my_model/Gain","direction":"both","depth":1,"detail":"summary","max_edges":50,"fields":["target","upstream_blocks","downstream_blocks"]}'
 python -m simulink_cli --json '{"action":"find","model":"my_model","name":"PID","max_results":50,"fields":["path","type"]}'
 python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0"}'
-python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0","dry_run":false}'
 ```
 
 ---
 
 ## Safety Model (simulink-edit)
 
-- `dry_run` defaults to `true` — preview before writing
-- Every response includes a `rollback` payload for one-command undo, preserving an explicit session override when one was used
+- `dry_run` defaults to `true` and returns both `rollback` and machine-executable `apply_payload`
+- `apply_payload` carries `expected_current_value`, so execute can reject stale previews instead of mutating blindly
+- Replay the returned `apply_payload` exactly; do not manually reconstruct the guarded execute payload
+- Stale preview replay returns `precondition_failed` without mutating the model
 - Execute mode reads back the value to verify the write
-- If read-back does not confirm the requested value, the action returns `verification_failed` and preserves rollback/write-state data for recovery
+- If read-back does not confirm the requested value, the action returns `verification_failed` and preserves rollback/write-state recovery metadata
+- Every response includes a `rollback` payload for one-command undo, preserving an explicit session override when one was used
 - The `value` field is always a string and may legitimately include literal percent signs, for example `"%.3f"`
 - One parameter per invocation (no batch operations)
+
+## Guarded Edit Loop
+
+The standard single-parameter agent loop is:
+
+1. `inspect` the current parameter state.
+2. Run `set_param` with `dry_run=true`.
+3. Replay the returned `apply_payload`.
+4. `inspect` again to confirm the new value.
+5. Replay `rollback` if you need to restore the original value.
+
+Preview response excerpt:
+
+```json
+{
+  "action": "set_param",
+  "dry_run": true,
+  "current_value": "1.5",
+  "proposed_value": "2.0",
+  "apply_payload": {
+    "action": "set_param",
+    "target": "my_model/Gain1",
+    "param": "Gain",
+    "value": "2.0",
+    "dry_run": false,
+    "expected_current_value": "1.5"
+  },
+  "rollback": {
+    "action": "set_param",
+    "target": "my_model/Gain1",
+    "param": "Gain",
+    "value": "1.5",
+    "dry_run": false
+  }
+}
+```
+
+If the target changes between preview and execute, replaying that saved `apply_payload` returns `precondition_failed`. If the write runs but read-back does not confirm it, the action returns `verification_failed`.
 
 ---
 
@@ -205,7 +245,9 @@ Common error codes:
 - `invalid_subsystem_type`
 - `block_not_found`
 - `param_not_found`
+- `precondition_failed`
 - `set_param_failed`
+- `verification_failed`
 - `inactive_parameter`
 - `runtime_error`
 
@@ -260,7 +302,7 @@ claude plugin validate .
 
 ## Roadmap
 
-- **Current (v2.0.x):** read-only analysis plus parameter modification (`set_param` with dry-run, rollback, verification) via unified `simulink_cli` package serving both `simulink-scan` and `simulink-edit` skills.
+- **Current (v2.0.x):** read-only analysis plus guarded parameter modification (`set_param` with dry-run, `apply_payload`, rollback, precondition checks, and verification) via unified `simulink_cli` package serving both `simulink-scan` and `simulink-edit` skills.
 - **Next:** strengthen agent workflow orchestration and reliability while preserving deterministic contracts and recovery paths.
 - **Future:** add new skills for build/repair scenarios without renaming the plugin (`simulink-automation-suite` remains the stable identity).
 

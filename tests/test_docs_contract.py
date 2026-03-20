@@ -73,6 +73,13 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("state_write_failed", text)
         self.assertIn("state_clear_failed", text)
 
+    def test_readme_documents_guarded_edit_loop(self):
+        text = README_PATH.read_text(encoding="utf-8")
+        self.assertIn("apply_payload", text)
+        self.assertIn("precondition_failed", text)
+        self.assertIn("verification_failed", text)
+        self.assertIn("expected_current_value", text)
+
     def test_skill_and_reference_include_engine_unavailable_route(self):
         skill_text = SKILL_PATH.read_text(encoding="utf-8")
         reference_text = REFERENCE_PATH.read_text(encoding="utf-8")
@@ -132,6 +139,13 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("复杂字符串", text)
         self.assertIn("换行", text)
         self.assertIn("stdout", text)
+
+    def test_readme_zh_documents_guarded_edit_loop(self):
+        text = README_ZH_PATH.read_text(encoding="utf-8")
+        self.assertIn("apply_payload", text)
+        self.assertIn("precondition_failed", text)
+        self.assertIn("verification_failed", text)
+        self.assertIn("expected_current_value", text)
 
     def test_scenarios_include_find_examples(self):
         text = SCENARIOS_PATH.read_text(encoding="utf-8")
