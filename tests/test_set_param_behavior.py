@@ -6,10 +6,12 @@ from tests.fakes import FakeSetParamEngine, WriteThenFailEngine, VerificationMis
 
 
 def _set_param_args(target="my_model/Gain1", param="Gain", value="2.0",
-                    dry_run=True, model=None, session=None):
+                    dry_run=True, model=None, session=None,
+                    expected_current_value=None):
     return {
         "target": target, "param": param, "value": value,
         "dry_run": dry_run, "model": model, "session": session,
+        "expected_current_value": expected_current_value,
     }
 
 
@@ -84,6 +86,21 @@ class SetParamBehaviorTests(unittest.TestCase):
             result = set_param.execute(_set_param_args(value="invalid", dry_run=False))
         self.assertEqual(result["error"], "set_param_failed")
 
+    def test_execute_rejects_stale_preview_without_writing(self):
+        eng = self._make_engine()
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            preview = set_param.execute(_set_param_args(dry_run=True))
+        eng.force_param_value("my_model/Gain1", "Gain", "9.0")
+
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            result = set_param.execute(preview["apply_payload"])
+
+        self.assertEqual(result["error"], "precondition_failed")
+        self.assertEqual(result["details"]["expected_current_value"], "1.5")
+        self.assertEqual(result["details"]["observed_current_value"], "9.0")
+        self.assertTrue(result["details"]["safe_to_retry"])
+        self.assertEqual(eng.get_param("my_model/Gain1", "Gain"), "9.0")
+
     def test_execute_failure_after_attempt_includes_rollback_and_write_state(self):
         eng = WriteThenFailEngine()
         with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
@@ -93,12 +110,34 @@ class SetParamBehaviorTests(unittest.TestCase):
         self.assertIn("rollback", result["details"])
         self.assertEqual(result["details"]["rollback"]["target"], "m/Gain")
 
+    def test_execute_failure_after_attempt_includes_recovery_metadata(self):
+        eng = WriteThenFailEngine()
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            result = set_param.execute(
+                _set_param_args(target="m/Gain", param="Gain", value="2.0", dry_run=False)
+            )
+
+        self.assertEqual(result["details"]["write_state"], "attempted")
+        self.assertFalse(result["details"]["safe_to_retry"])
+        self.assertEqual(result["details"]["recommended_recovery"], "rollback")
+
     def test_execute_verification_failure_returns_error_not_verified_false(self):
         eng = VerificationMismatchEngine()
         with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
             result = set_param.execute(_set_param_args(target="m/Gain", param="Gain", value="2.0", dry_run=False))
-        self.assertEqual(result["error"], "set_param_failed")
+        self.assertEqual(result["error"], "verification_failed")
         self.assertEqual(result["details"]["write_state"], "verification_failed")
+
+    def test_verification_failure_includes_recovery_metadata(self):
+        eng = VerificationMismatchEngine()
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            result = set_param.execute(
+                _set_param_args(target="m/Gain", param="Gain", value="2.0", dry_run=False)
+            )
+
+        self.assertEqual(result["details"]["write_state"], "verification_failed")
+        self.assertFalse(result["details"]["safe_to_retry"])
+        self.assertEqual(result["details"]["recommended_recovery"], "rollback")
 
     def test_execute_rollback_with_empty_previous_value_is_replayable(self):
         eng = self._make_engine(param="Description", value="")

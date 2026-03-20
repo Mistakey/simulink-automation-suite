@@ -335,6 +335,9 @@ class FakeSetParamEngine:
             raise RuntimeError(f"Parameter '{param}' not found on '{path}'")
         self._params[key] = value
 
+    def force_param_value(self, path, param, value):
+        self._params[f"{path}::{param}"] = value
+
 
 class FakeCrossSkillEngine:
     """Simulates a MATLAB engine with get_param and set_param.

@@ -161,6 +161,23 @@ def execute(args):
             "rollback": rollback,
         }
 
+    expected_current_value = args.get("expected_current_value")
+    if expected_current_value is not None and current_value != expected_current_value:
+        return make_error(
+            "precondition_failed",
+            "Preview is stale; current value changed before execute.",
+            details={
+                "target": target,
+                "param": param,
+                "expected_current_value": expected_current_value,
+                "observed_current_value": current_value,
+                "write_state": "not_attempted",
+                "safe_to_retry": True,
+                "recommended_recovery": "rerun_dry_run",
+            },
+            suggested_fix="Rerun dry-run to capture the latest value before executing.",
+        )
+
     # 3. Execute: write + read-back verification
     write_state = "not_attempted"
     try:
@@ -177,15 +194,17 @@ def execute(args):
                 "value": str(value),
                 "write_state": write_state,
                 "rollback": rollback,
+                "safe_to_retry": False,
+                "recommended_recovery": "rollback",
                 "cause": str(exc),
             },
-            suggested_fix="Check that the value is valid for this parameter type.",
+            suggested_fix="Inspect the current value and use rollback if the model may have changed.",
         )
 
     if observed != str(value):
         return make_error(
-            "set_param_failed",
-            f"Failed to set parameter '{param}' on '{target}'.",
+            "verification_failed",
+            f"Write could not be verified for parameter '{param}' on '{target}'.",
             details={
                 "target": target,
                 "param": param,
@@ -193,8 +212,10 @@ def execute(args):
                 "write_state": "verification_failed",
                 "rollback": rollback,
                 "observed": observed,
+                "safe_to_retry": False,
+                "recommended_recovery": "rollback",
             },
-            suggested_fix="Check that the value is valid for this parameter type.",
+            suggested_fix="Inspect the observed value and replay rollback if you need to restore the prior state.",
         )
 
     return {
