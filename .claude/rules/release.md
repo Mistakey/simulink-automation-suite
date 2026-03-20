@@ -1,60 +1,132 @@
 ---
-globs: [".claude-plugin/**", "README*"]
+globs: [".claude-plugin/**", "README*", ".github/workflows/release.yml", "docs/release/**", "scripts/check_release_metadata.py", "scripts/build_release_notes.py"]
 ---
 
 # Release and Version Bump Rules
 
-> From former AGENTS.md §8 and `docs/release/2026-03-07-github-marketplace-release-checklist.md`.
+Default release path in this repository is **tag-driven GitHub auto release**. Manual GitHub web-page release authoring is no longer the primary path.
 
-## Commit-Time Version Discipline
+## Files to Check First
 
-Any commit changing **distributable plugin content** requires a version bump in the same work cycle.
+1. `.github/workflows/release.yml`
+2. `scripts/check_release_metadata.py`
+3. `scripts/build_release_notes.py`
+4. `.claude-plugin/plugin.json`
+5. `.claude-plugin/marketplace.json`
+6. `simulink_cli/core.py`
+7. `docs/release/`
 
-Distributable content: `skills/**`, `.claude-plugin/**`, `README*`, runtime/tests/docs contract files affecting shipped behavior.
+## When To Bump Version
 
-Rules:
-1. `plugin.json.version` must equal `marketplace.json.plugins[0].version`
-2. New version must be higher than previous (semver)
-3. "Will bump later when releasing" is **not allowed** for shipped behavior changes
+Bump plugin version when the change is intended for a distributable release or changes shipped plugin/runtime/docs contract behavior.
 
-Minimum checks before concluding a commit with distributable changes:
+Usually includes:
+- `.claude-plugin/**`
+- `skills/**`
+- `README*`
+- `simulink_cli/**`
+- tests/docs that define shipped contract behavior
+
+Usually does not require a plugin version bump by itself:
+- `.github/workflows/**`
+- `.claude/rules/**`
+- internal planning/docs that do not ship with the plugin bundle
+
+Do not leave shipped behavior changes on an old release version with a plan to "bump later".
+
+## Required Version Sync Rules
+
+For release version `X.Y.Z`:
+
+1. `.claude-plugin/plugin.json.version` must equal `X.Y.Z`
+2. `.claude-plugin/marketplace.json.plugins[0].version` must equal `X.Y.Z`
+3. `simulink_cli/core.py` → `build_schema_payload()["version"]` must equal `X.Y`
+4. Release tag must be exactly `vX.Y.Z`
+
+If any of these diverge, `scripts/check_release_metadata.py` must fail.
+
+## Release Notes Source Priority
+
+`scripts/build_release_notes.py` writes the GitHub Release body with this priority:
+
+1. Use a curated release document from `docs/release/` whose filename matches `vX.Y.Z`
+2. If no matching document exists, generate deterministic fallback notes from git history
+
+Fallback generation is intentional and auditable:
+- no external AI service
+- commit range is computed from the highest earlier semver tag
+- required sections are always present: `Summary`, `Highlights`, `Compatibility / Upgrade Notes`, `Validation`
+
+## When `docs/release/<...>.md` Is Required
+
+Add a curated release document when any of these are true:
+- release is major or minor
+- patch release changes user-facing behavior in more than one notable way
+- upgrade or compatibility guidance is needed
+- release includes behavior that should be summarized more clearly than raw commit subjects
+
+Curated release docs are optional only for trivial metadata-only or emergency republish cases. If the doc is missing, automation still publishes using fallback notes.
+
+## Default Release Flow
+
+1. Pick `X.Y.Z`
+2. Update:
+   - `.claude-plugin/plugin.json`
+   - `.claude-plugin/marketplace.json`
+   - `simulink_cli/core.py` schema version when major.minor changes
+   - `docs/release/<date>-vX.Y.Z.md` when required or recommended
+3. Validate locally:
 
 ```bash
+python scripts/check_release_metadata.py --tag vX.Y.Z
 python -m unittest tests.test_plugin_manifest_contract tests.test_marketplace_manifest_contract -v
-claude plugin validate .
-```
-
-## Release Checklist
-
-### 1. Version Sync
-- Pick version `X.Y.Z`
-- Update `.claude-plugin/plugin.json` → `version`
-- Update `.claude-plugin/marketplace.json` → `plugins[0].version`
-- Verify plugin names consistent across both manifests
-- Sync schema version string in `simulink_cli/core.py` → `build_schema_payload()` → `"version"` field
-  - Rule: schema `"version"` must match the plugin major.minor (e.g., plugin `2.1.0` → schema `"2.1"`)
-  - Check: `simulink_cli/core.py` `build_schema_payload()` version string
-
-### 2. Validation
-```bash
 python -m unittest discover -s tests -p "test_*.py" -v
 claude plugin validate .
+python scripts/build_release_notes.py --tag vX.Y.Z --ref HEAD
 ```
 
-### 3. Tag and Publish
+4. Commit release changes
+5. Create and push annotated tag:
+
 ```bash
-git status && git branch --show-current
-git add <specific-files>
-git commit -m "chore(release): bump plugin version to X.Y.Z"
 git tag -a vX.Y.Z -m "Release vX.Y.Z"
-git push && git push origin vX.Y.Z
+git push origin <branch>
+git push origin vX.Y.Z
 ```
-Create GitHub Release from tag with key changes and migration notes.
 
-### 4. Post-Release Verification
-In a fresh environment:
-```bash
-/plugin marketplace add <owner>/<repo>
-/plugin install simulink-automation-suite@simulink-automation-marketplace
-```
-Confirm plugin runs a known command.
+6. Let `.github/workflows/release.yml` create or update the GitHub Release automatically
+
+## When To Use `workflow_dispatch`
+
+Use `workflow_dispatch` only when:
+- the tag already exists
+- the original release job failed or was skipped
+- the GitHub Release body must be regenerated after fixing docs or release scripts
+
+Run `workflow_dispatch` from the branch or commit that contains the release-doc/script fix you want to publish. The workflow uses that checkout for validation and note selection, but still uses the requested tag as the release ref for git-history calculations and GitHub Release creation.
+
+Do not use `workflow_dispatch` as the normal first publish path when pushing a new release tag is possible.
+
+## GitHub Actions Validation Rules
+
+The release workflow must run, in this order:
+
+1. `scripts/check_release_metadata.py --tag vX.Y.Z`
+2. `python -m unittest discover -s tests -p "test_*.py" -v`
+3. `claude plugin validate .` when `claude` is available on the runner
+4. deterministic fallback validation when `claude` is unavailable:
+   - `python -m unittest tests.test_plugin_manifest_contract tests.test_marketplace_manifest_contract -v`
+   - `python scripts/check_release_metadata.py --tag vX.Y.Z`
+5. `scripts/build_release_notes.py`
+6. `gh release create` or `gh release edit`
+
+## Agent Checklist
+
+Before finishing release-related work, confirm:
+
+- release tag format is `vX.Y.Z`
+- manifest versions match
+- schema version matches plugin major.minor
+- release notes source is understood
+- minimum validation set ran
+- any stale docs still describing manual-only release flow were updated

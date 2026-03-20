@@ -27,5 +27,13 @@ Keeping this manifest explicit and conservative prevents install-time breakage a
 1. Validate JSON shape in `.claude-plugin/plugin.json`.
 2. Run `python -m unittest tests/test_plugin_manifest_contract.py -v`.
 3. Validate marketplace shape in `.claude-plugin/marketplace.json` when marketplace publishing is enabled.
-4. Run `python -m unittest discover -s tests -p "test_*.py" -v`.
-5. Optionally run `claude plugin validate .` when CLI is available.
+4. Run `python scripts/check_release_metadata.py --tag vX.Y.Z` for release candidates.
+5. Run `python scripts/build_release_notes.py --tag vX.Y.Z --ref HEAD` to confirm release notes source.
+6. Run `python -m unittest discover -s tests -p "test_*.py" -v`.
+7. Run `claude plugin validate .` when CLI is available.
+
+## Auto Release Notes
+
+- GitHub Release publication is driven by `.github/workflows/release.yml`.
+- The workflow prefers curated `docs/release/*vX.Y.Z*.md` files and falls back to deterministic git-history notes when no matching document exists.
+- Schema major.minor mismatch is treated as a release-blocking manifest error.

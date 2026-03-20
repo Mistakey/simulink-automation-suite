@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Shipped skills: `simulink-scan` (read-only Simulink analysis) and `simulink-edit` (parameter modification)
 - Entrypoint: `python -m simulink_cli`
 - Version: synced in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`
+- Auto release workflow: `.github/workflows/release.yml`
 
 ## Commands
 
@@ -27,6 +28,10 @@ python -m unittest tests.test_docs_contract -v
 # Manifest validation (when .claude-plugin/ or README* change)
 python -m unittest tests.test_plugin_manifest_contract tests.test_marketplace_manifest_contract -v
 claude plugin validate .
+
+# Release automation checks
+python scripts/check_release_metadata.py --tag v2.0.1
+python scripts/build_release_notes.py --tag v2.0.1 --ref HEAD
 
 # Local invocation
 python -m simulink_cli schema
@@ -80,8 +85,10 @@ python -m simulink_cli --json '{"action":"schema"}'
 4. **Stable error envelope**: `{error, message, details, suggested_fix?}` — shape is fixed.
 5. **`--json` first-class**: mutually exclusive with flag mode; type-checked via per-action `FIELDS` dicts aggregated by `core.py`.
 6. **Session matching**: exact-name only, no fuzzy.
-7. **Version bump discipline**: bump versions for releases/published manifest updates, not for every local bugfix commit.
-8. **Agent-first CLI**: predictable, defensive, machine-readable design.
+7. **Release path**: default publish path is tag-driven GitHub auto release via `.github/workflows/release.yml`.
+8. **Version sync discipline**: release tags use `vX.Y.Z`; `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` must share `X.Y.Z`; `simulink_cli/core.py` schema version must match plugin major.minor.
+9. **Release notes discipline**: matching `docs/release/*vX.Y.Z*.md` is used first; if no document exists, `scripts/build_release_notes.py` generates deterministic fallback notes from git history.
+10. **Agent-first CLI**: predictable, defensive, machine-readable design.
 
 ## Change Synchronization
 
@@ -90,6 +97,27 @@ python -m simulink_cli --json '{"action":"schema"}'
 **Error codes** → reuse existing codes; update `simulink_cli/core.py` + docs + `test_error_contract`, `test_runtime_error_mapping`, `test_docs_contract`
 
 **Output budgets** → keep `scan`→`max_blocks,fields`, `inspect`→`max_params,fields`, `connections`→`max_edges,fields`, `find`→`max_results,fields` semantics stable; update output-control tests
+
+**Release metadata** → update `.claude-plugin/plugin.json` + `.claude-plugin/marketplace.json` + `simulink_cli/core.py` + `docs/release/*.md` (when required) + `.claude/rules/release.md`; validate with `scripts/check_release_metadata.py`
+
+## Release Automation
+
+- Default path: commit release changes, push annotated tag `vX.Y.Z`, let `.github/workflows/release.yml` validate and create/update the GitHub Release.
+- Manual backfill: use `workflow_dispatch` only when the tag already exists and the release must be re-created or repaired.
+- Release notes source priority:
+  1. Matching curated doc under `docs/release/` with `vX.Y.Z` in the filename.
+  2. Deterministic fallback notes from `scripts/build_release_notes.py`.
+- Minimum validation for a distributable release:
+  - `python scripts/check_release_metadata.py --tag vX.Y.Z`
+  - `python -m unittest discover -s tests -p "test_*.py" -v`
+  - `claude plugin validate .` when the Claude Code CLI is available
+- First files to inspect for release work:
+  - `.claude/rules/release.md`
+  - `.github/workflows/release.yml`
+  - `.claude-plugin/plugin.json`
+  - `.claude-plugin/marketplace.json`
+  - `simulink_cli/core.py`
+  - `docs/release/`
 
 ## Test Map
 
@@ -111,6 +139,7 @@ python -m simulink_cli --json '{"action":"schema"}'
 | `test_session_state` | Session resolution + state file |
 | `test_docs_contract` | Required doc sections present |
 | `test_plugin_manifest_contract`, `test_marketplace_manifest_contract` | Manifest shape + version sync |
+| `test_release_metadata`, `test_build_release_notes`, `test_release_workflow_contract` | Auto release metadata, notes selection/fallback, workflow/doc contract |
 | `test_short_module_entrypoint` | Module entrypoint works |
 
 ## On-Demand Rules

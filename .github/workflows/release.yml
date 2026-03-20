@@ -1,0 +1,101 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to publish, for example v2.0.1
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Resolve release context
+        id: release_context
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            release_tag="${{ inputs.tag }}"
+            checkout_ref="${{ github.sha }}"
+          else
+            release_tag="${GITHUB_REF_NAME}"
+            checkout_ref="${release_tag}"
+          fi
+
+          if [[ ! "${release_tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Release workflow only supports tags matching vX.Y.Z, got: ${release_tag}" >&2
+            exit 1
+          fi
+
+          echo "tag=${release_tag}" >> "${GITHUB_OUTPUT}"
+          echo "checkout_ref=${checkout_ref}" >> "${GITHUB_OUTPUT}"
+          echo "release_ref=${release_tag}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout release ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.release_context.outputs.checkout_ref }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Show tool versions
+        shell: bash
+        run: |
+          python --version
+          git --version
+          gh --version
+
+      - name: Validate release metadata
+        run: python scripts/check_release_metadata.py --tag "${{ steps.release_context.outputs.tag }}"
+
+      - name: Run release validation test suite
+        run: python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Validate plugin bundle
+        shell: bash
+        run: |
+          if command -v claude >/dev/null 2>&1; then
+            claude plugin validate .
+          else
+            echo "Claude Code CLI is unavailable on this runner; using deterministic fallback validation."
+            python -m unittest tests.test_plugin_manifest_contract tests.test_marketplace_manifest_contract -v
+            python scripts/check_release_metadata.py --tag "${{ steps.release_context.outputs.tag }}"
+          fi
+
+      - name: Build release notes
+        run: |
+          python scripts/build_release_notes.py \
+            --tag "${{ steps.release_context.outputs.tag }}" \
+            --ref "${{ steps.release_context.outputs.release_ref }}" \
+            --output "${{ runner.temp }}/release-notes.md"
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release_context.outputs.tag }}
+          RELEASE_NOTES: ${{ runner.temp }}/release-notes.md
+        shell: bash
+        run: |
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release edit "${RELEASE_TAG}" \
+              --title "${RELEASE_TAG}" \
+              --notes-file "${RELEASE_NOTES}"
+          else
+            gh release create "${RELEASE_TAG}" \
+              --title "${RELEASE_TAG}" \
+              --notes-file "${RELEASE_NOTES}" \
+              --verify-tag
+          fi
