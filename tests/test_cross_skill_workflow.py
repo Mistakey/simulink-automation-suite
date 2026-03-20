@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from simulink_cli.actions import set_param
+from simulink_cli.actions import inspect_block, set_param
 from tests.fakes import FakeCrossSkillEngine
 
 
@@ -12,47 +12,62 @@ def _set_param_args(target, param, value, dry_run=True, model=None, session=None
     }
 
 
+def _inspect_args():
+    return {
+        "model": None,
+        "target": "my_model/Gain1",
+        "param": "Gain",
+        "active_only": False,
+        "strict_active": False,
+        "resolve_effective": False,
+        "summary": False,
+        "session": None,
+        "max_params": None,
+        "fields": None,
+    }
+
+
 class CrossSkillWorkflowTests(unittest.TestCase):
-    def test_preview_then_execute_then_rollback(self):
+    def test_inspect_preview_apply_and_rollback_loop(self):
         eng = FakeCrossSkillEngine()
+        inspect_args = _inspect_args()
 
-        # Step 1: Preview (dry-run)
         with patch.object(set_param, 'safe_connect_to_session', return_value=(eng, None)):
-            preview = set_param.execute(_set_param_args(
-                target="my_model/Gain1", param="Gain", value="3.0", dry_run=True
-            ))
-        self.assertNotIn("error", preview)
-        self.assertTrue(preview["dry_run"])
+            with patch.object(inspect_block, "safe_connect_to_session", return_value=(eng, None)):
+                before = inspect_block.execute(inspect_args)
+                preview = set_param.execute(_set_param_args(
+                    target="my_model/Gain1", param="Gain", value="3.0", dry_run=True
+                ))
+                execute = set_param.execute(preview["apply_payload"])
+                after = inspect_block.execute(inspect_args)
+                rollback_result = set_param.execute(execute["rollback"])
+                restored = inspect_block.execute(inspect_args)
+
+        self.assertEqual(before["value"], "1.5")
         self.assertEqual(preview["current_value"], "1.5")
-        self.assertEqual(preview["proposed_value"], "3.0")
-
-        # Step 2: Execute
-        with patch.object(set_param, 'safe_connect_to_session', return_value=(eng, None)):
-            execute = set_param.execute(_set_param_args(
-                target="my_model/Gain1", param="Gain", value="3.0", dry_run=False
-            ))
-        self.assertNotIn("error", execute)
-        self.assertFalse(execute["dry_run"])
-        self.assertEqual(execute["new_value"], "3.0")
         self.assertTrue(execute["verified"])
-
-        # Step 3: Verify the write happened
-        self.assertEqual(eng.get_param("my_model/Gain1", "Gain"), "3.0")
-
-        # Step 4: Rollback using the rollback payload from execute response
-        rollback_payload = execute["rollback"]
-        with patch.object(set_param, 'safe_connect_to_session', return_value=(eng, None)):
-            rollback_result = set_param.execute(_set_param_args(
-                target=rollback_payload["target"],
-                param=rollback_payload["param"],
-                value=rollback_payload["value"],
-                dry_run=rollback_payload["dry_run"],
-            ))
-        self.assertNotIn("error", rollback_result)
+        self.assertEqual(after["value"], "3.0")
         self.assertEqual(rollback_result["new_value"], "1.5")
+        self.assertEqual(restored["value"], "1.5")
 
-        # Step 5: Verify rollback restored the value
-        self.assertEqual(eng.get_param("my_model/Gain1", "Gain"), "1.5")
+    def test_stale_preview_requires_new_dry_run(self):
+        eng = FakeCrossSkillEngine()
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            preview = set_param.execute(
+                _set_param_args(
+                    target="my_model/Gain1",
+                    param="Gain",
+                    value="3.0",
+                    dry_run=True,
+                )
+            )
+        eng.force_param_value("my_model/Gain1", "Gain", "9.0")
+
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            result = set_param.execute(preview["apply_payload"])
+
+        self.assertEqual(result["error"], "precondition_failed")
+        self.assertEqual(result["details"]["recommended_recovery"], "rerun_dry_run")
 
     def test_rollback_payload_is_self_consistent(self):
         eng = FakeCrossSkillEngine()

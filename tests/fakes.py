@@ -357,6 +357,14 @@ class FakeCrossSkillEngine:
             if path not in self._valid_handles:
                 raise RuntimeError(f"Invalid block path: {path}")
             return 1.0
+        if param == "DialogParameters":
+            return {"Gain": {}}
+        if param == "MaskNames":
+            raise RuntimeError("not masked")
+        if param == "MaskVisibilities":
+            raise RuntimeError("not masked")
+        if param == "MaskEnables":
+            raise RuntimeError("not masked")
         key = f"{path}::{param}"
         if key not in self._params:
             raise RuntimeError(f"Parameter '{param}' not found on '{path}'")
@@ -365,6 +373,12 @@ class FakeCrossSkillEngine:
     def set_param(self, path, param, value):
         key = f"{path}::{param}"
         self._params[key] = value
+
+    def fieldnames(self, dialog_params):
+        return list(dialog_params.keys())
+
+    def force_param_value(self, path, param, value):
+        self._params[f"{path}::{param}"] = value
 
 
 class OutputSensitiveEngine:
