@@ -1,5 +1,6 @@
 """Connections action — read upstream/downstream block relationships."""
 
+from simulink_cli import matlab_transport
 from simulink_cli.errors import make_error
 from simulink_cli.json_io import as_list, project_top_level_fields
 from simulink_cli.validation import validate_text_field
@@ -120,39 +121,59 @@ def _extract_block_port_handles(port_handles, key):
         return []
 
 
-def _read_port_info(eng, port_handle):
+def _read_port_info(eng, port_handle, warnings=None):
+    parent_result = matlab_transport.get_param(eng, port_handle, "Parent")
+    if warnings is not None:
+        warnings.extend(parent_result["warnings"])
+    port_number_result = matlab_transport.get_param(eng, port_handle, "PortNumber")
+    if warnings is not None:
+        warnings.extend(port_number_result["warnings"])
     return {
-        "block": str(eng.get_param(port_handle, "Parent")),
-        "port": int(float(eng.get_param(port_handle, "PortNumber"))),
+        "block": str(parent_result["value"]),
+        "port": int(float(port_number_result["value"])),
     }
 
 
-def _read_signal_name(eng, line_handle):
+def _read_signal_name(eng, line_handle, warnings=None):
     try:
-        return str(eng.get_param(line_handle, "Name") or "")
-    except Exception:
+        name_result = matlab_transport.get_param(eng, line_handle, "Name")
+        if warnings is not None:
+            warnings.extend(name_result["warnings"])
+        return str(name_result["value"] or "")
+    except Exception as exc:
+        if warnings is not None:
+            warnings.extend(getattr(exc, "matlab_warnings", []))
         return ""
 
 
-def _collect_block_edges(eng, block_path):
+def _collect_block_edges(eng, block_path, warnings=None):
     """Collect all edges (inport + outport) for a single block."""
     edges = []
-    port_handles = eng.get_param(block_path, "PortHandles")
+    port_handles_result = matlab_transport.get_param(eng, block_path, "PortHandles")
+    if warnings is not None:
+        warnings.extend(port_handles_result["warnings"])
+    port_handles = port_handles_result["value"]
     out_ports = _extract_block_port_handles(port_handles, "Outport")
     in_ports = _extract_block_port_handles(port_handles, "Inport")
 
     for src_port in out_ports:
-        line_handles = _extract_handles(eng.get_param(src_port, "Line"))
+        line_result = matlab_transport.get_param(eng, src_port, "Line")
+        if warnings is not None:
+            warnings.extend(line_result["warnings"])
+        line_handles = _extract_handles(line_result["value"])
         if not line_handles:
             continue
-        src_info = _read_port_info(eng, src_port)
+        src_info = _read_port_info(eng, src_port, warnings)
         for line_handle in line_handles:
-            dst_ports = _extract_handles(
-                eng.get_param(line_handle, "DstPortHandle")
+            dst_result = matlab_transport.get_param(
+                eng, line_handle, "DstPortHandle"
             )
-            signal_name = _read_signal_name(eng, line_handle)
+            if warnings is not None:
+                warnings.extend(dst_result["warnings"])
+            dst_ports = _extract_handles(dst_result["value"])
+            signal_name = _read_signal_name(eng, line_handle, warnings)
             for dst_port in dst_ports:
-                dst_info = _read_port_info(eng, dst_port)
+                dst_info = _read_port_info(eng, dst_port, warnings)
                 edges.append(
                     {
                         "src_block": src_info["block"],
@@ -165,17 +186,23 @@ def _collect_block_edges(eng, block_path):
                 )
 
     for dst_port in in_ports:
-        line_handles = _extract_handles(eng.get_param(dst_port, "Line"))
+        line_result = matlab_transport.get_param(eng, dst_port, "Line")
+        if warnings is not None:
+            warnings.extend(line_result["warnings"])
+        line_handles = _extract_handles(line_result["value"])
         if not line_handles:
             continue
-        dst_info = _read_port_info(eng, dst_port)
+        dst_info = _read_port_info(eng, dst_port, warnings)
         for line_handle in line_handles:
-            src_ports = _extract_handles(
-                eng.get_param(line_handle, "SrcPortHandle")
+            src_result = matlab_transport.get_param(
+                eng, line_handle, "SrcPortHandle"
             )
-            signal_name = _read_signal_name(eng, line_handle)
+            if warnings is not None:
+                warnings.extend(src_result["warnings"])
+            src_ports = _extract_handles(src_result["value"])
+            signal_name = _read_signal_name(eng, line_handle, warnings)
             for src_port in src_ports:
-                src_info = _read_port_info(eng, src_port)
+                src_info = _read_port_info(eng, src_port, warnings)
                 edges.append(
                     {
                         "src_block": src_info["block"],
@@ -214,6 +241,14 @@ def _project_connection_edges(edges, detail, include_handles):
             row["line_handle"] = edge["line_handle"]
         projected.append(row)
     return projected
+
+
+def _dedupe_warnings(warnings):
+    unique = []
+    for item in warnings:
+        if item not in unique:
+            unique.append(item)
+    return unique
 
 
 # ---------------------------------------------------------------------------
@@ -287,19 +322,41 @@ def execute(args):
     include_handles = args.get("include_handles", False)
     max_edges = args.get("max_edges")
     fields = args.get("fields")
+    warnings = []
+    target_path = block_path
 
-    resolved_target = resolve_inspect_target_path(eng, block_path, model_name)
-    if "error" in resolved_target:
-        return resolved_target
-
-    target_path = resolved_target["target"]
     try:
-        eng.get_param(target_path, "Handle")
+        resolved_target = resolve_inspect_target_path(eng, block_path, model_name)
+        if "error" in resolved_target:
+            return resolved_target
+
+        warnings.extend(resolved_target.get("warnings", []))
+        target_path = resolved_target["target"]
     except Exception as exc:
+        all_warnings = list(warnings)
+        all_warnings.extend(getattr(exc, "matlab_warnings", []))
+        details = {"target": target_path, "cause": str(exc)}
+        if all_warnings:
+            details["warnings"] = _dedupe_warnings(all_warnings)
+        return make_error(
+            "runtime_error",
+            "Failed to read block connections.",
+            details=details,
+        )
+
+    try:
+        handle_result = matlab_transport.get_param(eng, target_path, "Handle")
+        warnings.extend(handle_result["warnings"])
+    except Exception as exc:
+        all_warnings = list(warnings)
+        all_warnings.extend(getattr(exc, "matlab_warnings", []))
+        details = {"target": target_path, "cause": str(exc)}
+        if all_warnings:
+            details["warnings"] = _dedupe_warnings(all_warnings)
         return make_error(
             "block_not_found",
             f"Block not found '{target_path}'.",
-            details={"target": target_path, "cause": str(exc)},
+            details=details,
             suggested_fix="Run scan to discover valid block paths, then retry with --target.",
         )
 
@@ -319,7 +376,7 @@ def execute(args):
                 break
             next_frontier = set()
             for node in sorted(frontier):
-                node_edges = _collect_block_edges(eng, node)
+                node_edges = _collect_block_edges(eng, node, warnings)
                 for edge in node_edges:
                     if use_downstream and edge["src_block"] == node:
                         edge_key = _edge_key(edge)
@@ -370,10 +427,17 @@ def execute(args):
             output["total_edges"] = total_edges
             output["truncated"] = truncated
 
+        if warnings:
+            output["warnings"] = _dedupe_warnings(warnings)
         return project_top_level_fields(output, fields)
     except Exception as exc:
+        all_warnings = list(warnings)
+        all_warnings.extend(getattr(exc, "matlab_warnings", []))
+        details = {"target": target_path, "cause": str(exc)}
+        if all_warnings:
+            details["warnings"] = _dedupe_warnings(all_warnings)
         return make_error(
             "runtime_error",
             "Failed to read block connections.",
-            details={"target": target_path, "cause": str(exc)},
+            details=details,
         )

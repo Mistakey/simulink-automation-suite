@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from simulink_cli.actions import scan, highlight, list_opened
+from simulink_cli import model_helpers
 from tests.fakes import FakeScanEngine
 
 
@@ -14,7 +15,142 @@ def _scan_args(model=None, subsystem=None, recursive=False, hierarchy=False,
     }
 
 
+class WarningBearingScanEngine(FakeScanEngine):
+    def __init__(self):
+        super().__init__(
+            models=["m"],
+            active_root="m",
+            shallow_blocks={"m": ["m", "m/Gain"]},
+            recursive_blocks={"m": ["m", "m/Gain"]},
+            block_types={"m": "SubSystem", "m/Gain": "Gain"},
+            valid_handles={"m", "m/Gain"},
+        )
+        self.warning_log = []
+
+    def find_system(self, *args):
+        if args != ("Type", "block_diagram"):
+            self.warning_log.append("Variant warning")
+        return super().find_system(*args)
+
+
+class WarningThenBlockTypeFailureScanEngine(WarningBearingScanEngine):
+    def get_param(self, block_path, param_name):
+        if block_path == "m/Gain" and param_name == "BlockType":
+            raise RuntimeError("boom")
+        return super().get_param(block_path, param_name)
+
+
+class HelperWarningThenBlockTypeFailureScanEngine(FakeScanEngine):
+    def __init__(self):
+        super().__init__(
+            models=["m"],
+            active_root="m",
+            shallow_blocks={"m": ["m", "m/Gain"]},
+            recursive_blocks={"m": ["m", "m/Gain"]},
+            block_types={"m": "SubSystem", "m/Gain": "Gain"},
+            valid_handles={"m", "m/Gain"},
+        )
+        self.warning_log = []
+
+    def find_system(self, *args):
+        if args == ("Type", "block_diagram"):
+            self.warning_log.append("Variant warning")
+            return ["m"]
+        return super().find_system(*args)
+
+    def get_param(self, block_path, param_name):
+        if block_path == "m/Gain" and param_name == "BlockType":
+            raise RuntimeError("boom")
+        return super().get_param(block_path, param_name)
+
+
+class HelperWarningScanEngine(FakeScanEngine):
+    def __init__(self):
+        super().__init__(
+            models=["m"],
+            active_root="m",
+            shallow_blocks={"m": ["m", "m/Gain"]},
+            recursive_blocks={"m": ["m", "m/Gain"]},
+            block_types={"m": "SubSystem", "m/Gain": "Gain"},
+            valid_handles={"m", "m/Gain"},
+        )
+        self.warning_log = []
+
+    def find_system(self, *args):
+        if args == ("Type", "block_diagram"):
+            self.warning_log.append("Variant warning")
+            return ["m"]
+        return super().find_system(*args)
+
+
+class WarningBearingHighlightEngine(FakeScanEngine):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.warning_log = []
+
+    def get_param(self, block_path, param_name):
+        if block_path == "m1/Gain" and param_name == "Handle":
+            self.warning_log.append("Variant warning")
+        return super().get_param(block_path, param_name)
+
+
+class WarningFailingHighlightCallEngine(FakeScanEngine):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.warning_log = []
+
+    def hilite_system(self, block_path, mode, nargout=0):
+        self.highlight_calls.append((block_path, mode, nargout))
+        self.warning_log.append("Variant warning")
+        raise RuntimeError("highlight failed")
+
+
+class WarningThenMissingSubsystemEngine(FakeScanEngine):
+    def __init__(self):
+        super().__init__(
+            models=["m"],
+            active_root="m",
+            shallow_blocks={},
+            recursive_blocks={},
+            block_types={},
+            valid_handles={"m"},
+        )
+        self.warning_log = []
+
+    def get_param(self, block_path, param_name):
+        if block_path == "m/missing" and param_name == "Handle":
+            self.warning_log.append("Variant warning")
+            raise RuntimeError("not found")
+        return super().get_param(block_path, param_name)
+
+
+class UnstringableModelName:
+    def __str__(self):
+        raise RuntimeError("boom")
+
+
 class ScanBehaviorTests(unittest.TestCase):
+    def test_resolve_scan_root_uses_bdroot_when_no_models_are_open(self):
+        class BdrootOnlyEngine:
+            def __init__(self):
+                self.calls = []
+
+            def find_system(self, *args, nargout):
+                self.calls.append(("find_system", args, nargout))
+                if args == ("Type", "block_diagram") and nargout == 1:
+                    return []
+                raise RuntimeError("unexpected")
+
+            def bdroot(self, *, nargout):
+                self.calls.append(("bdroot", (), nargout))
+                return "m1"
+
+        eng = BdrootOnlyEngine()
+
+        result = model_helpers.resolve_scan_root_path(eng)
+
+        self.assertEqual(result, {"model": "m1", "scan_root": "m1"})
+
     def test_no_open_model_bdroot_failure_returns_model_not_found(self):
         class FailingBdrootEngine:
             def find_system(self, *args):
@@ -55,6 +191,23 @@ class ScanBehaviorTests(unittest.TestCase):
         self.assertEqual(result["error"], "model_required")
         self.assertEqual(result["details"]["models"], ["m1", "m2"])
 
+    def test_multiple_models_warning_preserves_details_warnings(self):
+        class WarningThenModelRequiredEngine:
+            def __init__(self):
+                self.warning_log = []
+
+            def find_system(self, *args):
+                if args == ("Type", "block_diagram"):
+                    self.warning_log.append("Variant warning")
+                    return ["m1", "m2"]
+                raise RuntimeError("unexpected")
+
+        eng = WarningThenModelRequiredEngine()
+        with patch.object(scan, 'safe_connect_to_session', return_value=(eng, None)):
+            result = scan.execute(_scan_args())
+        self.assertEqual(result["error"], "model_required")
+        self.assertEqual(result["details"]["warnings"], ["Variant warning"])
+
     def test_single_model_defaults_to_only_open_model(self):
         eng = FakeScanEngine(
             models=["m1"],
@@ -70,6 +223,50 @@ class ScanBehaviorTests(unittest.TestCase):
         self.assertFalse(result["recursive"])
         self.assertEqual(result["blocks"], [{"name": "m1/Gain", "type": "Gain"}])
         self.assertNotIn("connections", result)
+
+    def test_single_model_includes_warnings_from_find_system(self):
+        eng = WarningBearingScanEngine()
+        with patch.object(scan, 'safe_connect_to_session', return_value=(eng, None)):
+            result = scan.execute(_scan_args(model="m"))
+        self.assertIn("warnings", result)
+        self.assertEqual(result["warnings"], ["Variant warning"])
+
+    def test_scan_helper_warning_success_surfaces_top_level_warnings(self):
+        eng = HelperWarningScanEngine()
+        with patch.object(scan, 'safe_connect_to_session', return_value=(eng, None)):
+            result = scan.execute(_scan_args(model="m"))
+        self.assertEqual(result["warnings"], ["Variant warning"])
+
+    def test_scan_failure_after_warning_preserves_details_warnings(self):
+        eng = WarningThenBlockTypeFailureScanEngine()
+        with patch.object(scan, 'safe_connect_to_session', return_value=(eng, None)):
+            result = scan.execute(_scan_args(model="m"))
+        self.assertEqual(result["error"], "runtime_error")
+        self.assertEqual(result["details"]["warnings"], ["Variant warning"])
+
+    def test_scan_helper_warning_then_failure_preserves_details_warnings(self):
+        eng = HelperWarningThenBlockTypeFailureScanEngine()
+        with patch.object(scan, 'safe_connect_to_session', return_value=(eng, None)):
+            result = scan.execute(_scan_args(model="m"))
+        self.assertEqual(result["error"], "runtime_error")
+        self.assertEqual(result["details"]["warnings"], ["Variant warning"])
+
+    def test_scan_helper_exception_after_warning_preserves_details_warnings(self):
+        class WarningThenUnstringableModelsEngine:
+            def __init__(self):
+                self.warning_log = []
+
+            def find_system(self, *args):
+                if args == ("Type", "block_diagram"):
+                    self.warning_log.append("Variant warning")
+                    return [UnstringableModelName()]
+                raise RuntimeError("unexpected")
+
+        eng = WarningThenUnstringableModelsEngine()
+        with patch.object(scan, 'safe_connect_to_session', return_value=(eng, None)):
+            result = scan.execute(_scan_args())
+        self.assertEqual(result["error"], "runtime_error")
+        self.assertEqual(result["details"]["warnings"], ["Variant warning"])
 
     def test_unknown_explicit_model_returns_available_models(self):
         eng = FakeScanEngine(
@@ -97,6 +294,13 @@ class ScanBehaviorTests(unittest.TestCase):
             result = scan.execute(_scan_args(model="m1", subsystem="bad/sub"))
         self.assertEqual(result["error"], "subsystem_not_found")
         self.assertEqual(result["details"]["model"], "m1")
+
+    def test_invalid_subsystem_warning_preserves_details_warnings(self):
+        eng = WarningThenMissingSubsystemEngine()
+        with patch.object(scan, 'safe_connect_to_session', return_value=(eng, None)):
+            result = scan.execute(_scan_args(model="m", subsystem="missing"))
+        self.assertEqual(result["error"], "subsystem_not_found")
+        self.assertEqual(result["details"]["warnings"], ["Variant warning"])
 
     def test_non_subsystem_path_returns_invalid_subsystem_type(self):
         eng = FakeScanEngine(
@@ -127,6 +331,19 @@ class ScanBehaviorTests(unittest.TestCase):
         self.assertEqual(result["highlighted"], "m1/Gain")
         self.assertEqual(eng.highlight_calls, [("m1/Gain", "find", 0)])
 
+    def test_highlight_warning_success_surfaces_top_level_warnings(self):
+        eng = WarningBearingHighlightEngine(
+            models=[],
+            active_root="",
+            shallow_blocks={},
+            recursive_blocks={},
+            block_types={},
+            valid_handles={"m1/Gain"},
+        )
+        with patch.object(highlight, 'safe_connect_to_session', return_value=(eng, None)):
+            result = highlight.execute({"target": "m1/Gain", "session": None})
+        self.assertEqual(result["warnings"], ["Variant warning"])
+
     def test_highlight_block_missing_target_returns_block_not_found(self):
         eng = FakeScanEngine(
             models=[],
@@ -142,7 +359,7 @@ class ScanBehaviorTests(unittest.TestCase):
         self.assertEqual(result["details"]["target"], "m1/Gain")
 
     def test_highlight_block_runtime_failure_returns_runtime_error(self):
-        eng = FakeScanEngine(
+        eng = WarningBearingHighlightEngine(
             models=[],
             active_root="",
             shallow_blocks={},
@@ -155,6 +372,21 @@ class ScanBehaviorTests(unittest.TestCase):
             result = highlight.execute({"target": "m1/Gain", "session": None})
         self.assertEqual(result["error"], "runtime_error")
         self.assertEqual(result["details"]["target"], "m1/Gain")
+        self.assertEqual(result["details"]["warnings"], ["Variant warning"])
+
+    def test_highlight_failure_warning_from_hilite_call_preserves_details_warnings(self):
+        eng = WarningFailingHighlightCallEngine(
+            models=[],
+            active_root="",
+            shallow_blocks={},
+            recursive_blocks={},
+            block_types={},
+            valid_handles={"m1/Gain"},
+        )
+        with patch.object(highlight, 'safe_connect_to_session', return_value=(eng, None)):
+            result = highlight.execute({"target": "m1/Gain", "session": None})
+        self.assertEqual(result["error"], "runtime_error")
+        self.assertEqual(result["details"]["warnings"], ["Variant warning"])
 
 
     def test_hierarchy_with_fields_does_not_crash(self):

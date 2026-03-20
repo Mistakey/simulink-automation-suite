@@ -15,6 +15,101 @@ def _conn_args(target, model=None, direction="both", depth=1, detail="summary",
 
 
 class ConnectionsBehaviorTests(unittest.TestCase):
+    def test_connections_helper_exception_after_warning_preserves_details_warnings(self):
+        class UnstringableModelName:
+            def __str__(self):
+                raise RuntimeError("boom")
+
+        class WarningThenUnstringableModelsEngine(FakeConnectionsEngine):
+            def __init__(self):
+                super().__init__()
+                self.warning_log = []
+
+            def find_system(self, *args, **kwargs):
+                if args == ("Type", "block_diagram"):
+                    self.warning_log.append("Variant warning")
+                    return [UnstringableModelName()]
+                raise RuntimeError("unexpected")
+
+        eng = WarningThenUnstringableModelsEngine()
+        with patch.object(connections, 'safe_connect_to_session', return_value=(eng, None)):
+            result = connections.execute(_conn_args(target="B", model="m1"))
+        self.assertEqual(result["error"], "runtime_error")
+        self.assertEqual(result["details"]["warnings"], ["Variant warning"])
+
+    def test_connections_helper_warning_success_surfaces_top_level_warnings(self):
+        class HelperWarningConnectionsEngine(FakeConnectionsEngine):
+            def __init__(self):
+                super().__init__()
+                self.warning_log = []
+
+            def find_system(self, *args, **kwargs):
+                if args == ("Type", "block_diagram"):
+                    self.warning_log.append("Variant warning")
+                    return ["m1"]
+                raise RuntimeError("unexpected")
+
+        eng = HelperWarningConnectionsEngine()
+        with patch.object(connections, 'safe_connect_to_session', return_value=(eng, None)):
+            result = connections.execute(_conn_args(target="B", model="m1"))
+        self.assertEqual(result["warnings"], ["Variant warning"])
+
+    def test_connections_helper_warning_failure_preserves_details_warnings(self):
+        class HelperWarningConnectionsEngine(FakeConnectionsEngine):
+            def __init__(self):
+                super().__init__()
+                self.warning_log = []
+
+            def find_system(self, *args, **kwargs):
+                if args == ("Type", "block_diagram"):
+                    self.warning_log.append("Variant warning")
+                    return ["m1"]
+                raise RuntimeError("unexpected")
+
+        eng = HelperWarningConnectionsEngine()
+        with patch.object(connections, 'safe_connect_to_session', return_value=(eng, None)):
+            result = connections.execute(_conn_args(target="UNKNOWN", model="m1"))
+        self.assertEqual(result["error"], "block_not_found")
+        self.assertEqual(result["details"]["warnings"], ["Variant warning"])
+
+    def test_connections_signal_name_fallback_preserves_warning(self):
+        class WarningThenMissingSignalNameEngine(FakeConnectionsEngine):
+            def __init__(self):
+                super().__init__()
+                self.warning_log = []
+
+            def get_param(self, target, param_name):
+                if isinstance(target, (int, float)) and int(target) in self.line_meta:
+                    if param_name == "Name":
+                        self.warning_log.append("Variant warning")
+                        raise RuntimeError("boom")
+                return super().get_param(target, param_name)
+
+        eng = WarningThenMissingSignalNameEngine()
+        with patch.object(connections, 'safe_connect_to_session', return_value=(eng, None)):
+            result = connections.execute(_conn_args(target="m1/B", detail="ports"))
+        self.assertEqual(result["warnings"], ["Variant warning"])
+        self.assertEqual(result["edges"][0]["signal_name"], "")
+
+    def test_connections_port_info_failure_preserves_prior_warning(self):
+        class WarningThenMissingPortNumberEngine(FakeConnectionsEngine):
+            def __init__(self):
+                super().__init__()
+                self.warning_log = []
+
+            def get_param(self, target, param_name):
+                if target == 21 and param_name == "Parent":
+                    self.warning_log.append("Variant warning")
+                if target == 21 and param_name == "PortNumber":
+                    raise RuntimeError("boom")
+                return super().get_param(target, param_name)
+
+        eng = WarningThenMissingPortNumberEngine()
+        with patch.object(connections, 'safe_connect_to_session', return_value=(eng, None)):
+            result = connections.execute(_conn_args(target="m1/B", detail="ports"))
+        self.assertEqual(result["error"], "runtime_error")
+        self.assertEqual(result["details"]["warnings"], ["Variant warning"])
+
     def test_default_summary_returns_one_hop_neighbors(self):
         eng = FakeConnectionsEngine()
         with patch.object(connections, 'safe_connect_to_session', return_value=(eng, None)):

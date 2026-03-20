@@ -1,7 +1,12 @@
 """Set-param action — set a block parameter with dry-run preview and rollback."""
 
+from simulink_cli import matlab_transport
 from simulink_cli.errors import make_error
-from simulink_cli.validation import validate_text_field, validate_value_field
+from simulink_cli.validation import (
+    validate_matlab_name_field,
+    validate_text_field,
+    validate_value_field,
+)
 from simulink_cli.session import safe_connect_to_session
 
 DESCRIPTION = "Set a block parameter with dry-run preview and rollback support."
@@ -53,17 +58,24 @@ ERRORS = [
 
 def validate(args):
     """Validate set_param arguments. Returns error dict or None."""
-    for field_name in ("target", "param", "session"):
-        err = validate_text_field(field_name, args.get(field_name))
+    for field_name in ("target", "param"):
+        err = validate_matlab_name_field(field_name, args.get(field_name))
         if err is not None:
             return err
+    err = validate_text_field("session", args.get("session"))
+    if err is not None:
+        return err
     err = validate_value_field("value", args.get("value"))
     if err is not None:
         return err
 
     for required_field in ("target", "param", "value"):
         val = args.get(required_field)
-        if val is None or (isinstance(val, str) and not val):
+        if val is None or (
+            required_field != "value"
+            and isinstance(val, str)
+            and not val
+        ):
             return make_error(
                 "invalid_input",
                 f"Field '{required_field}' is required.",
@@ -86,7 +98,7 @@ def execute(args):
 
     # 0. Validate target block exists
     try:
-        eng.get_param(target, "Handle")
+        matlab_transport.get_param(eng, target, "Handle")
     except Exception:
         return make_error(
             "block_not_found",
@@ -97,7 +109,7 @@ def execute(args):
 
     # 1. Validate parameter exists and read current value
     try:
-        current_value = str(eng.get_param(target, param))
+        current_value = str(matlab_transport.get_param(eng, target, param)["value"])
     except Exception:
         return make_error(
             "param_not_found",
@@ -121,6 +133,7 @@ def execute(args):
         return {
             "action": "set_param",
             "dry_run": True,
+            "write_state": "not_attempted",
             "target": target,
             "param": param,
             "current_value": current_value,
@@ -129,8 +142,11 @@ def execute(args):
         }
 
     # 3. Execute: write + read-back verification
+    write_state = "not_attempted"
     try:
-        eng.set_param(target, param, str(value))
+        write_state = "attempted"
+        matlab_transport.set_param(eng, target, param, str(value))
+        observed = str(matlab_transport.get_param(eng, target, param)["value"])
     except Exception as exc:
         return make_error(
             "set_param_failed",
@@ -139,23 +155,36 @@ def execute(args):
                 "target": target,
                 "param": param,
                 "value": str(value),
+                "write_state": write_state,
+                "rollback": rollback,
                 "cause": str(exc),
             },
             suggested_fix="Check that the value is valid for this parameter type.",
         )
 
-    try:
-        verified_value = str(eng.get_param(target, param))
-    except Exception:
-        verified_value = None
+    if observed != str(value):
+        return make_error(
+            "set_param_failed",
+            f"Failed to set parameter '{param}' on '{target}'.",
+            details={
+                "target": target,
+                "param": param,
+                "value": str(value),
+                "write_state": "verification_failed",
+                "rollback": rollback,
+                "observed": observed,
+            },
+            suggested_fix="Check that the value is valid for this parameter type.",
+        )
 
     return {
         "action": "set_param",
         "dry_run": False,
+        "write_state": "verified",
         "target": target,
         "param": param,
         "previous_value": current_value,
         "new_value": str(value),
-        "verified": verified_value == str(value),
+        "verified": True,
         "rollback": rollback,
     }

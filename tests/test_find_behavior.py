@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from simulink_cli.actions import find
-from tests.fakes import FakeFindEngine
+from tests.fakes import FakeFindEngine, OutputSensitiveEngine
 
 
 def _find_args(model=None, subsystem=None, name=None, block_type=None,
@@ -15,6 +15,10 @@ def _find_args(model=None, subsystem=None, name=None, block_type=None,
 
 
 class FindBehaviorTests(unittest.TestCase):
+    class _UnstringablePath:
+        def __str__(self):
+            raise RuntimeError("boom")
+
     def test_no_open_model_bdroot_failure_returns_model_not_found(self):
         class FailingBdrootEngine:
             def find_system(self, *args, **kwargs):
@@ -49,6 +53,24 @@ class FindBehaviorTests(unittest.TestCase):
         self.assertFalse(result["truncated"])
         self.assertEqual(len(result["results"]), 2)
 
+    def test_find_multiple_models_warning_preserves_details_warnings(self):
+        class WarningThenModelRequiredEngine(FakeFindEngine):
+            def __init__(self):
+                super().__init__(models=["m1", "m2"])
+                self.warning_log = []
+
+            def find_system(self, *args, **kwargs):
+                if args == ("Type", "block_diagram"):
+                    self.warning_log.append("Variant warning")
+                    return ["m1", "m2"]
+                raise RuntimeError("unexpected")
+
+        eng = WarningThenModelRequiredEngine()
+        with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
+            result = find.execute(_find_args(name="Gain"))
+        self.assertEqual(result["error"], "model_required")
+        self.assertEqual(result["details"]["warnings"], ["Variant warning"])
+
     def test_find_by_block_type_returns_matching_blocks(self):
         eng = FakeFindEngine(
             models=["my_model"],
@@ -59,6 +81,110 @@ class FindBehaviorTests(unittest.TestCase):
             result = find.execute(_find_args(model="my_model", block_type="Gain"))
         self.assertNotIn("error", result)
         self.assertEqual(result["total_results"], 2)
+
+    def test_find_includes_warnings_from_find_system(self):
+        eng = OutputSensitiveEngine()
+        with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
+            result = find.execute(_find_args(model="m", name="Gain"))
+        self.assertIn("warnings", result)
+        self.assertEqual(result["warnings"], ["Variant warning"])
+
+    def test_find_helper_warning_success_surfaces_top_level_warnings(self):
+        class HelperWarningSuccessEngine(FakeFindEngine):
+            def __init__(self):
+                super().__init__(
+                    models=["m"],
+                    find_results={"m": ["m/Gain"]},
+                    valid_handles={"m", "m/Gain"},
+                )
+                self.warning_log = []
+
+            def find_system(self, *args, **kwargs):
+                if args == ("Type", "block_diagram"):
+                    self.warning_log.append("Variant warning")
+                    return ["m"]
+                return super().find_system(*args, **kwargs)
+
+        eng = HelperWarningSuccessEngine()
+        with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
+            result = find.execute(_find_args(model="m", name="Gain"))
+        self.assertEqual(result["warnings"], ["Variant warning"])
+
+    def test_find_block_type_fallback_preserves_warning(self):
+        class WarningThenMissingBlockTypeEngine(FakeFindEngine):
+            def __init__(self):
+                super().__init__(
+                    models=["m"],
+                    find_results={"m": ["m/Gain"]},
+                    valid_handles={"m", "m/Gain"},
+                )
+                self.warning_log = []
+
+            def get_param(self, path, param):
+                if param == "BlockType":
+                    self.warning_log.append("Variant warning")
+                    raise RuntimeError("boom")
+                return super().get_param(path, param)
+
+        eng = WarningThenMissingBlockTypeEngine()
+        with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
+            result = find.execute(_find_args(model="m", name="Gain"))
+        self.assertEqual(result["warnings"], ["Variant warning"])
+        self.assertEqual(result["results"][0]["type"], "")
+
+    def test_find_failure_after_warning_preserves_details_warnings(self):
+        class WarningThenResultEncodingFailureEngine(FakeFindEngine):
+            def __init__(self):
+                super().__init__(models=["m"], valid_handles={"m"})
+                self.warning_log = []
+
+            def find_system(self, *args, **kwargs):
+                if args == ("Type", "block_diagram"):
+                    return ["m"]
+                self.warning_log.append("Variant warning")
+                return [FindBehaviorTests._UnstringablePath()]
+
+        eng = WarningThenResultEncodingFailureEngine()
+        with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
+            result = find.execute(_find_args(model="m", name="Gain"))
+        self.assertEqual(result["error"], "runtime_error")
+        self.assertEqual(result["details"]["warnings"], ["Variant warning"])
+
+    def test_find_helper_warning_then_failure_preserves_details_warnings(self):
+        class HelperWarningThenResultEncodingFailureEngine(FakeFindEngine):
+            def __init__(self):
+                super().__init__(models=["m"], valid_handles={"m"})
+                self.warning_log = []
+
+            def find_system(self, *args, **kwargs):
+                if args == ("Type", "block_diagram"):
+                    self.warning_log.append("Variant warning")
+                    return ["m"]
+                return [FindBehaviorTests._UnstringablePath()]
+
+        eng = HelperWarningThenResultEncodingFailureEngine()
+        with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
+            result = find.execute(_find_args(model="m", name="Gain"))
+        self.assertEqual(result["error"], "runtime_error")
+        self.assertEqual(result["details"]["warnings"], ["Variant warning"])
+
+    def test_find_helper_exception_after_warning_preserves_details_warnings(self):
+        class WarningThenUnstringableModelsEngine(FakeFindEngine):
+            def __init__(self):
+                super().__init__(models=["m"])
+                self.warning_log = []
+
+            def find_system(self, *args, **kwargs):
+                if args == ("Type", "block_diagram"):
+                    self.warning_log.append("Variant warning")
+                    return [FindBehaviorTests._UnstringablePath()]
+                raise RuntimeError("unexpected")
+
+        eng = WarningThenUnstringableModelsEngine()
+        with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
+            result = find.execute(_find_args(name="Gain"))
+        self.assertEqual(result["error"], "runtime_error")
+        self.assertEqual(result["details"]["warnings"], ["Variant warning"])
 
     def test_find_requires_name_or_block_type(self):
         result = find.validate(_find_args(model="my_model"))

@@ -242,6 +242,13 @@ class FakeInspectEngine:
         return list(dialog_params.keys())
 
 
+class KeywordNargoutInspectEngine(FakeInspectEngine):
+    """Inspect fake whose get_param only works when nargout is passed by keyword."""
+
+    def get_param(self, block_path, param_name, *, nargout):
+        return super().get_param(block_path, param_name)
+
+
 class FakeInspectOutputEngine:
     """Minimal fake engine for inspect output-controls tests.
 
@@ -355,3 +362,44 @@ class FakeCrossSkillEngine:
     def set_param(self, path, param, value):
         key = f"{path}::{param}"
         self._params[key] = value
+
+
+class OutputSensitiveEngine:
+    def __init__(self):
+        self.params = {"m/Gain::Gain": "1.5"}
+        self.calls = []
+        self.warning_log = []
+
+    def get_param(self, target, param, nargout=1):
+        self.calls.append(("get_param", target, param, nargout))
+        if param == "Handle":
+            return 1.0
+        return self.params[f"{target}::{param}"]
+
+    def set_param(self, target, param, value, nargout=1):
+        self.calls.append(("set_param", target, param, value, nargout))
+        if nargout != 0:
+            self.params[f"{target}::{param}"] = value
+            raise RuntimeError("Too many output arguments")
+        self.params[f"{target}::{param}"] = value
+
+    def find_system(self, *args, nargout=1):
+        self.calls.append(("find_system", args, nargout))
+        if args != ("Type", "block_diagram"):
+            self.warning_log.append("Variant warning")
+        return ["m", "m/Gain"]
+
+
+class WriteThenFailEngine(OutputSensitiveEngine):
+    def set_param(self, target, param, value, nargout=1):
+        self.calls.append(("set_param", target, param, value, nargout))
+        self.params[f"{target}::{param}"] = value
+        raise RuntimeError("Persistent write failure")
+
+
+class VerificationMismatchEngine(OutputSensitiveEngine):
+    def get_param(self, target, param, nargout=1):
+        value = super().get_param(target, param, nargout=nargout)
+        if param == "Gain" and value == "2.0":
+            return "1.5"
+        return value

@@ -1,5 +1,6 @@
 """Scan action — read model or subsystem topology."""
 
+from simulink_cli import matlab_transport
 from simulink_cli.errors import make_error
 from simulink_cli.json_io import as_list
 from simulink_cli.validation import validate_text_field
@@ -120,12 +121,14 @@ def execute(args):
     if err is not None:
         return err
 
+    error_warnings = []
     try:
         resolved = resolve_scan_root_path(
             eng, args.get("model"), args.get("subsystem")
         )
         if "error" in resolved:
             return resolved
+        error_warnings.extend(resolved.get("warnings", []))
 
         target_model = resolved["model"]
         scan_root = resolved["scan_root"]
@@ -134,31 +137,38 @@ def execute(args):
         use_recursive = recursive or hierarchy
         max_blocks = args.get("max_blocks")
         fields = args.get("fields")
+        output_warnings = []
+        output_warnings.extend(resolved.get("warnings", []))
 
         search_options = ["FollowLinks", "on", "LookUnderMasks", "all"]
 
         if use_recursive:
-            blocks = as_list(
-                eng.find_system(scan_root, *search_options, "Type", "block")
+            search_result = matlab_transport.find_system(
+                eng, scan_root, *search_options, "Type", "block"
             )
         else:
-            blocks = as_list(
-                eng.find_system(
-                    scan_root,
-                    *search_options,
-                    "SearchDepth",
-                    1,
-                    "Type",
-                    "block",
-                )
+            search_result = matlab_transport.find_system(
+                eng,
+                scan_root,
+                *search_options,
+                "SearchDepth",
+                1,
+                "Type",
+                "block",
             )
+        error_warnings.extend(search_result["warnings"])
+        output_warnings.extend(search_result["warnings"])
+        blocks = as_list(search_result["value"])
 
         block_list = []
         for blk in blocks:
             if blk == scan_root:
                 continue
+            block_type_result = matlab_transport.get_param(eng, blk, "BlockType")
+            error_warnings.extend(block_type_result["warnings"])
+            output_warnings.extend(block_type_result["warnings"])
             block_list.append(
-                {"name": blk, "type": eng.get_param(blk, "BlockType")}
+                {"name": blk, "type": block_type_result["value"]}
             )
 
         block_list = sorted(
@@ -193,11 +203,18 @@ def execute(args):
             ]
 
         output["blocks"] = block_list
+        if output_warnings:
+            output["warnings"] = output_warnings
 
         return output
     except Exception as exc:
+        details = {"cause": str(exc)}
+        all_warnings = list(error_warnings)
+        all_warnings.extend(getattr(exc, "matlab_warnings", []))
+        if all_warnings:
+            details["warnings"] = all_warnings
         return make_error(
             "runtime_error",
             "Failed to scan model structure.",
-            details={"cause": str(exc)},
+            details=details,
         )

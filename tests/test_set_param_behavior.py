@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from simulink_cli.actions import set_param
-from tests.fakes import FakeSetParamEngine
+from tests.fakes import FakeSetParamEngine, WriteThenFailEngine, VerificationMismatchEngine
 
 
 def _set_param_args(target="my_model/Gain1", param="Gain", value="2.0",
@@ -83,6 +83,44 @@ class SetParamBehaviorTests(unittest.TestCase):
         with patch.object(set_param, 'safe_connect_to_session', return_value=(eng, None)):
             result = set_param.execute(_set_param_args(value="invalid", dry_run=False))
         self.assertEqual(result["error"], "set_param_failed")
+
+    def test_execute_failure_after_attempt_includes_rollback_and_write_state(self):
+        eng = WriteThenFailEngine()
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            result = set_param.execute(_set_param_args(target="m/Gain", param="Gain", value="2.0", dry_run=False))
+        self.assertEqual(result["error"], "set_param_failed")
+        self.assertEqual(result["details"]["write_state"], "attempted")
+        self.assertIn("rollback", result["details"])
+        self.assertEqual(result["details"]["rollback"]["target"], "m/Gain")
+
+    def test_execute_verification_failure_returns_error_not_verified_false(self):
+        eng = VerificationMismatchEngine()
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            result = set_param.execute(_set_param_args(target="m/Gain", param="Gain", value="2.0", dry_run=False))
+        self.assertEqual(result["error"], "set_param_failed")
+        self.assertEqual(result["details"]["write_state"], "verification_failed")
+
+    def test_execute_rollback_with_empty_previous_value_is_replayable(self):
+        eng = self._make_engine(param="Description", value="")
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            result = set_param.execute(
+                _set_param_args(param="Description", value="Line 1\nLine 2", dry_run=False)
+            )
+        self.assertNotIn("error", result)
+        self.assertEqual(result["rollback"]["value"], "")
+
+        rollback = result["rollback"]
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            rollback_result = set_param.execute(
+                _set_param_args(
+                    target=rollback["target"],
+                    param=rollback["param"],
+                    value=rollback["value"],
+                    dry_run=rollback["dry_run"],
+                )
+            )
+        self.assertNotIn("error", rollback_result)
+        self.assertEqual(rollback_result["new_value"], "")
 
     def test_result_includes_target_and_param(self):
         eng = self._make_engine()
