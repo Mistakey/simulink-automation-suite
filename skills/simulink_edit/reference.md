@@ -126,6 +126,72 @@ Execute-mode failures must preserve enough information for recovery:
 | `invalid_json` | Malformed JSON payload | Fix JSON syntax | set_param succeeds |
 | `unknown_parameter` | Unrecognized field in JSON | Check `schema` for valid fields | set_param succeeds |
 | `json_conflict` | Mixed --json and flags | Use one mode exclusively | set_param succeeds |
+| `model_already_loaded` | Model name already in memory | Use a different name or close existing model | model_new succeeds |
+| `model_not_found` | Model not loaded or file not found | Open or create the model first | model_open/model_save succeeds |
+| `model_save_failed` | Save operation failed | Check file permissions and disk space | model_save succeeds |
+
+## Model Lifecycle Actions
+
+### model_new — Create a New Model
+
+```bash
+python -m simulink_cli --json '{"action":"model_new","name":"my_model"}'
+```
+
+Output:
+```json
+{
+  "action": "model_new",
+  "name": "my_model",
+  "verified": true,
+  "rollback": {
+    "action": "model_close",
+    "model": "my_model",
+    "available": false,
+    "note": "model_close not yet implemented; use MATLAB close_system('my_model', 0) manually to undo"
+  }
+}
+```
+
+Error when model already loaded:
+```json
+{
+  "error": "model_already_loaded",
+  "message": "Model 'my_model' is already loaded.",
+  "details": {"name": "my_model"},
+  "suggested_fix": "Use a different name or close the existing model first."
+}
+```
+
+### model_open — Open an Existing Model
+
+```bash
+python -m simulink_cli --json '{"action":"model_open","path":"C:/models/my_model.slx"}'
+```
+
+Output:
+```json
+{
+  "action": "model_open",
+  "path": "C:/models/my_model.slx"
+}
+```
+
+`model_open` is idempotent — opening an already-open model brings it to the foreground without error.
+
+### model_save — Save a Loaded Model
+
+```bash
+python -m simulink_cli --json '{"action":"model_save","model":"my_model"}'
+```
+
+Output:
+```json
+{
+  "action": "model_save",
+  "model": "my_model"
+}
+```
 
 ## Value Type Notes
 

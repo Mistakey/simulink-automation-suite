@@ -1,6 +1,6 @@
 ---
 name: simulink-edit
-description: Use when modifying Simulink block parameters via set_param with dry-run preview and rollback support in write workflows.
+description: Use when modifying Simulink block parameters via set_param with dry-run preview and rollback support, or managing model lifecycle (create, open, save) in write workflows.
 ---
 
 Use this skill for Simulink model parameter modification.
@@ -33,7 +33,10 @@ This skill is one capability inside plugin `simulink-automation-suite`.
 ## Action Selection
 
 1. Parameter modification -> `set_param`
-2. Capability discovery -> `schema`
+2. Create a new model -> `model_new`
+3. Open an existing model -> `model_open`
+4. Save a loaded model -> `model_save`
+5. Capability discovery -> `schema`
 
 ## Execution Templates
 
@@ -46,6 +49,20 @@ This skill is one capability inside plugin `simulink-automation-suite`.
   - `python -m simulink_cli --json '{"action":"set_param","target":"<block>","param":"<name>","value":"<new_value>"}'`
 - JSON mode (execute):
   - `python -m simulink_cli --json '<paste apply_payload from preview response verbatim>'`
+
+### Model Lifecycle
+
+- Create a new model:
+  - `python -m simulink_cli --json '{"action":"model_new","name":"my_model"}'`
+- Open an existing model:
+  - `python -m simulink_cli --json '{"action":"model_open","path":"C:/models/my_model.slx"}'`
+- Save a loaded model:
+  - `python -m simulink_cli --json '{"action":"model_save","model":"my_model"}'`
+
+`model_new` returns a rollback payload with `available: false` (model_close not yet implemented).
+`model_open` is idempotent — opening an already-open model is not an error.
+
+### Value Notes
 
 The `value` field is always a string. MATLAB `set_param` handles type conversion internally. Pass numeric values as `"2.0"`, not `2.0`. Literal percent strings such as `"%.3f"` are valid when the target parameter expects them. JSON mode is the canonical contract surface for complex strings and newlines.
 
@@ -64,6 +81,9 @@ Error-driven next actions:
 - `precondition_failed` -> rerun dry-run to refresh `expected_current_value`, then replay the new `apply_payload`.
 - `set_param_failed` -> inspect target/value constraints before retrying; if write may have happened, prefer rollback or inspect first.
 - `verification_failed` -> inspect the target again or use the preserved `rollback` payload to restore the prior value.
+- `model_already_loaded` -> use a different name or close the existing model first.
+- `model_not_found` -> check the model name or file path; open or create the model first.
+- `model_save_failed` -> check file permissions and disk space.
 - `invalid_json` / `json_conflict` / `unknown_parameter` / `invalid_input` -> correct request payload and retry.
 
 For full matrix and examples, read `reference.md`.

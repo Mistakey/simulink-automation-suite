@@ -22,6 +22,25 @@
 - Schema: `--json '{"action":"schema"}'` → actions includes set_param with fields
 - Schema includes error codes: `param_not_found`, `precondition_failed`, `set_param_failed`, `verification_failed` in error_codes list
 
+## model_new Scenarios
+
+- Create new model: `--json '{"action":"model_new","name":"my_model"}'` → action=model_new, name, verified=true, rollback with available=false
+- Create model that already exists: `--json '{"action":"model_new","name":"existing_model"}'` → `model_already_loaded`
+- Missing name: `--json '{"action":"model_new"}'` → parser error (name required)
+
+## model_open Scenarios
+
+- Open model from file path: `--json '{"action":"model_open","path":"C:/models/my_model.slx"}'` → action=model_open, path
+- Open already-open model: `--json '{"action":"model_open","path":"C:/models/my_model.slx"}'` → succeeds (idempotent)
+- Open non-existent file: `--json '{"action":"model_open","path":"C:/missing.slx"}'` → `model_not_found`
+- Missing path: `--json '{"action":"model_open"}'` → parser error (path required)
+
+## model_save Scenarios
+
+- Save loaded model: `--json '{"action":"model_save","model":"my_model"}'` → action=model_save, model
+- Save non-loaded model: `--json '{"action":"model_save","model":"not_loaded"}'` → `model_not_found`
+- Missing model: `--json '{"action":"model_save"}'` → parser error (model required)
+
 ## Cross-Skill Scenarios
 
 - Full workflow: scan → find → inspect → set_param (dry_run) → replay apply_payload → inspect (verify)
