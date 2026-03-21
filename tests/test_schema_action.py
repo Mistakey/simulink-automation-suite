@@ -14,7 +14,7 @@ class SchemaActionTests(unittest.TestCase):
 
     def test_schema_returns_version(self):
         self.assertIn("version", self.schema)
-        self.assertEqual(self.schema["version"], "2.0")
+        self.assertEqual(self.schema["version"], "2.1")
 
     def test_schema_returns_actions(self):
         self.assertIn("actions", self.schema)
@@ -35,7 +35,7 @@ class SchemaActionTests(unittest.TestCase):
         ):
             self.assertIn(code, self.schema["error_codes"])
 
-    # -- All 9 actions present (8 + schema) ------------------------------------
+    # -- All 12 actions present (11 + schema) -----------------------------------
 
     def test_schema_action_present(self):
         self.assertIn("schema", self.schema["actions"])
@@ -159,6 +159,49 @@ class SchemaActionTests(unittest.TestCase):
 
     def test_verification_failed_error_code_present(self):
         self.assertIn("verification_failed", self.schema["error_codes"])
+
+    # -- model_new ---------------------------------------------------------------
+
+    def test_model_new_action_present(self):
+        self.assertIn("model_new", self.schema["actions"])
+
+    def test_model_new_has_description_and_fields(self):
+        action = self.schema["actions"]["model_new"]
+        self.assertIn("description", action)
+        self.assertIn("fields", action)
+
+    def test_model_new_name_is_required(self):
+        fields = self.schema["actions"]["model_new"]["fields"]
+        self.assertIn("name", fields)
+        self.assertTrue(fields["name"]["required"])
+
+    # -- model_open --------------------------------------------------------------
+
+    def test_model_open_action_present(self):
+        self.assertIn("model_open", self.schema["actions"])
+
+    def test_model_open_path_is_required(self):
+        fields = self.schema["actions"]["model_open"]["fields"]
+        self.assertIn("path", fields)
+        self.assertTrue(fields["path"]["required"])
+
+    # -- model_save --------------------------------------------------------------
+
+    def test_model_save_action_present(self):
+        self.assertIn("model_save", self.schema["actions"])
+
+    def test_model_save_model_is_required(self):
+        fields = self.schema["actions"]["model_save"]["fields"]
+        self.assertIn("model", fields)
+        self.assertTrue(fields["model"]["required"])
+
+    # -- new error codes ---------------------------------------------------------
+
+    def test_model_already_loaded_error_code_present(self):
+        self.assertIn("model_already_loaded", self.schema["error_codes"])
+
+    def test_model_save_failed_error_code_present(self):
+        self.assertIn("model_save_failed", self.schema["error_codes"])
 
 
 if __name__ == "__main__":
