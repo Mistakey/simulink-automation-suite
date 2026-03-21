@@ -6,10 +6,10 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![MATLAB](https://img.shields.io/badge/MATLAB-Engine-orange)
 
-Simulink Automation Suite is a Claude Code plugin for Simulink automation workflows (read-only analysis and parameter modification) through MATLAB Engine for Python.
+Simulink Automation Suite is a Claude Code plugin for Simulink automation workflows (read-only analysis, parameter modification, and model lifecycle management) through MATLAB Engine for Python.
 
 - Canonical plugin name: `simulink-automation-suite`
-- Shipped skills: `simulink-scan` (read-only analysis), `simulink-edit` (parameter modification)
+- Shipped skills: `simulink-scan` (read-only analysis), `simulink-edit` (parameter modification and model lifecycle)
 - Runtime Python module path: `simulink_cli` (unified CLI entrypoint)
 
 ---
@@ -120,6 +120,9 @@ For end-to-end Claude Code prompts and screenshots (single bilingual page), see:
 | `highlight` | Highlight a block in Simulink (UI-only, no model mutation) | `python -m simulink_cli highlight --target "my_model/Gain"` |
 | `find` | Search blocks by name pattern and/or block type | `python -m simulink_cli find --model "my_model" --name "PID"` |
 | `set_param` | Set a block parameter with dry-run preview and rollback | `python -m simulink_cli set_param --target "my_model/Gain1" --param "Gain" --value "2.0"` |
+| `model_new` | Create a new Simulink model | `python -m simulink_cli --json '{"action":"model_new","name":"my_model"}'` |
+| `model_open` | Open a Simulink model from file | `python -m simulink_cli --json '{"action":"model_open","path":"C:/models/my_model.slx"}'` |
+| `model_save` | Save a loaded Simulink model | `python -m simulink_cli --json '{"action":"model_save","model":"my_model"}'` |
 | `session` | Manage or select the active MATLAB shared session | `python -m simulink_cli session list` |
 
 ---
@@ -151,6 +154,9 @@ python -m simulink_cli --json "{\"action\":\"inspect\",\"model\":\"my_model\",\"
 python -m simulink_cli --json '{"action":"connections","target":"my_model/Gain","direction":"both","depth":1,"detail":"summary","max_edges":50,"fields":["target","upstream_blocks","downstream_blocks"]}'
 python -m simulink_cli --json '{"action":"find","model":"my_model","name":"PID","max_results":50,"fields":["path","type"]}'
 python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0"}'
+python -m simulink_cli --json '{"action":"model_new","name":"my_model"}'
+python -m simulink_cli --json '{"action":"model_open","path":"C:/models/my_model.slx"}'
+python -m simulink_cli --json '{"action":"model_save","model":"my_model"}'
 ```
 
 ---
@@ -248,6 +254,8 @@ Common error codes:
 - `precondition_failed`
 - `set_param_failed`
 - `verification_failed`
+- `model_already_loaded`
+- `model_save_failed`
 - `inactive_parameter`
 - `runtime_error`
 
@@ -276,6 +284,9 @@ simulink_cli/           # Unified CLI package (single entrypoint)
     ├── highlight.py
     ├── list_opened.py
     ├── set_param.py
+    ├── model_new.py
+    ├── model_open.py
+    ├── model_save.py
     └── session_cmd.py
 skills/                 # Plugin skill definitions (docs only, no Python code)
 ├── simulink_scan/      # Read-only analysis skill
@@ -302,7 +313,7 @@ claude plugin validate .
 
 ## Roadmap
 
-- **Current (v2.0.x):** read-only analysis plus guarded parameter modification (`set_param` with dry-run, `apply_payload`, rollback, precondition checks, and verification) via unified `simulink_cli` package serving both `simulink-scan` and `simulink-edit` skills.
+- **Current (v2.1.x):** read-only analysis, guarded parameter modification, and model lifecycle management (`model_new`, `model_open`, `model_save`) via unified `simulink_cli` package serving both `simulink-scan` and `simulink-edit` skills.
 - **Next:** strengthen agent workflow orchestration and reliability while preserving deterministic contracts and recovery paths.
 - **Future:** add new skills for build/repair scenarios without renaming the plugin (`simulink-automation-suite` remains the stable identity).
 

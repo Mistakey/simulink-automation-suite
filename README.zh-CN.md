@@ -6,10 +6,10 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![MATLAB](https://img.shields.io/badge/MATLAB-Engine-orange)
 
-Simulink Automation Suite 是一个基于 MATLAB Engine for Python 的 Claude Code 插件，用于 Simulink 自动化分析与参数修改流程。
+Simulink Automation Suite 是一个基于 MATLAB Engine for Python 的 Claude Code 插件，用于 Simulink 自动化分析、参数修改与模型生命周期管理流程。
 
 - 插件标准名称：`simulink-automation-suite`
-- 已发布技能：`simulink-scan`（只读分析）、`simulink-edit`（参数修改）
+- 已发布技能：`simulink-scan`（只读分析）、`simulink-edit`（参数修改与模型生命周期管理）
 - 运行时 Python 模块路径：`simulink_cli`（统一 CLI 入口）
 
 ---
@@ -120,6 +120,9 @@ matlab.engine.shareEngine
 | `highlight` | 在 Simulink 中高亮目标模块（仅 UI 定位，不修改模型） | `python -m simulink_cli highlight --target "my_model/Gain"` |
 | `find` | 按名称模式和/或模块类型搜索模块 | `python -m simulink_cli find --model "my_model" --name "PID"` |
 | `set_param` | 设置模块参数（支持预览与回滚） | `python -m simulink_cli set_param --target "my_model/Gain1" --param "Gain" --value "2.0"` |
+| `model_new` | 创建新 Simulink 模型 | `python -m simulink_cli --json '{"action":"model_new","name":"my_model"}'` |
+| `model_open` | 从文件打开 Simulink 模型 | `python -m simulink_cli --json '{"action":"model_open","path":"C:/models/my_model.slx"}'` |
+| `model_save` | 保存已加载的 Simulink 模型 | `python -m simulink_cli --json '{"action":"model_save","model":"my_model"}'` |
 | `session` | 管理或选择当前 MATLAB 共享会话 | `python -m simulink_cli session list` |
 
 ---
@@ -151,6 +154,9 @@ python -m simulink_cli --json "{\"action\":\"inspect\",\"model\":\"my_model\",\"
 python -m simulink_cli --json '{"action":"connections","target":"my_model/Gain","direction":"both","depth":1,"detail":"summary","max_edges":50,"fields":["target","upstream_blocks","downstream_blocks"]}'
 python -m simulink_cli --json '{"action":"find","model":"my_model","name":"PID","max_results":50,"fields":["path","type"]}'
 python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","param":"Gain","value":"2.0"}'
+python -m simulink_cli --json '{"action":"model_new","name":"my_model"}'
+python -m simulink_cli --json '{"action":"model_open","path":"C:/models/my_model.slx"}'
+python -m simulink_cli --json '{"action":"model_save","model":"my_model"}'
 ```
 
 ---
@@ -248,6 +254,8 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 - `precondition_failed`
 - `set_param_failed`
 - `verification_failed`
+- `model_already_loaded`
+- `model_save_failed`
 - `inactive_parameter`
 - `runtime_error`
 
@@ -276,6 +284,9 @@ simulink_cli/           # 统一 CLI 包（单一入口）
     ├── highlight.py
     ├── list_opened.py
     ├── set_param.py
+    ├── model_new.py
+    ├── model_open.py
+    ├── model_save.py
     └── session_cmd.py
 skills/                 # 插件技能定义（仅文档，无 Python 代码）
 ├── simulink_scan/      # 只读分析技能
@@ -302,7 +313,7 @@ claude plugin validate .
 
 ## 路线图
 
-- **当前阶段（v2.0.x）：** 在只读分析基础上新增 guarded 参数修改能力（`set_param`，支持 dry-run 预览、`apply_payload`、回滚、前置条件检查与写后验证），通过统一的 `simulink_cli` 包同时服务 `simulink-scan` 和 `simulink-edit` 技能。
+- **当前阶段（v2.1.x）：** 只读分析、guarded 参数修改，以及模型生命周期管理（`model_new`、`model_open`、`model_save`），通过统一的 `simulink_cli` 包同时服务 `simulink-scan` 和 `simulink-edit` 技能。
 - **下一阶段：** 在保持可预测契约与恢复链路的前提下，增强 Agent 工作流编排与可靠性。
 - **后续阶段：** 通过新增技能扩展到 build/repair 场景，且保持插件标识 `simulink-automation-suite` 不变。
 
