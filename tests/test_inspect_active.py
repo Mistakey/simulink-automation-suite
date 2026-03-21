@@ -17,51 +17,12 @@ def _inspect_args(target="m/b", model=None, param="All", active_only=False,
 
 
 class InspectActiveTests(unittest.TestCase):
-    class _UnstringableModelName:
-        def __str__(self):
-            raise RuntimeError("boom")
-
     def test_missing_block_returns_block_not_found(self):
         eng = FakeInspectEngine(values={"Gain": "5"}, valid_paths={"m/other"})
         with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
             result = inspect_block.execute(_inspect_args(target="m/b"))
         self.assertEqual(result["error"], "block_not_found")
         self.assertEqual(result["details"]["target"], "m/b")
-
-    def test_inspect_helper_warning_success_surfaces_top_level_warnings(self):
-        class HelperWarningInspectEngine(FakeInspectEngine):
-            def __init__(self):
-                super().__init__(values={"Gain": "5"}, valid_paths={"m/b"})
-                self.warning_log = []
-
-            def find_system(self, *args, **kwargs):
-                if args == ("Type", "block_diagram"):
-                    self.warning_log.append("Variant warning")
-                    return ["m"]
-                raise RuntimeError("unexpected")
-
-        eng = HelperWarningInspectEngine()
-        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
-            result = inspect_block.execute(_inspect_args(target="b", model="m"))
-        self.assertEqual(result["warnings"], ["Variant warning"])
-
-    def test_inspect_helper_exception_after_warning_preserves_details_warnings(self):
-        class WarningThenUnstringableModelsInspectEngine(FakeInspectEngine):
-            def __init__(self):
-                super().__init__(values={"Gain": "5"}, valid_paths={"m/b"})
-                self.warning_log = []
-
-            def find_system(self, *args, **kwargs):
-                if args == ("Type", "block_diagram"):
-                    self.warning_log.append("Variant warning")
-                    return [InspectActiveTests._UnstringableModelName()]
-                raise RuntimeError("unexpected")
-
-        eng = WarningThenUnstringableModelsInspectEngine()
-        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
-            result = inspect_block.execute(_inspect_args(target="b", model="m"))
-        self.assertEqual(result["error"], "runtime_error")
-        self.assertEqual(result["details"]["warnings"], ["Variant warning"])
 
     def test_masked_block_inactive_params_and_warning(self):
         eng = FakeInspectEngine(

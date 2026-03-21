@@ -1,7 +1,7 @@
 import unittest
 
 from simulink_cli.errors import make_error
-from simulink_cli.core import build_schema_payload, map_value_error
+from simulink_cli.core import build_schema_payload, map_runtime_error, map_value_error
 
 
 class ErrorContractTests(unittest.TestCase):
@@ -26,35 +26,7 @@ class ErrorContractTests(unittest.TestCase):
             "Run session list and pass --session.",
         )
 
-    def test_error_envelope_has_required_keys(self):
-        result = make_error("test_code", "Test message")
-        self.assertIn("error", result)
-        self.assertIn("message", result)
-        self.assertIn("details", result)
-
-    def test_error_envelope_with_suggested_fix(self):
-        result = make_error("test_code", "Test message", suggested_fix="Do this")
-        self.assertIn("suggested_fix", result)
-        self.assertEqual(result["suggested_fix"], "Do this")
-
-    def test_param_not_found_in_error_codes(self):
-        error_codes = build_schema_payload()["error_codes"]
-        self.assertIn("param_not_found", error_codes)
-
-    def test_set_param_failed_in_error_codes(self):
-        error_codes = build_schema_payload()["error_codes"]
-        self.assertIn("set_param_failed", error_codes)
-
-    def test_precondition_failed_in_error_codes(self):
-        error_codes = build_schema_payload()["error_codes"]
-        self.assertIn("precondition_failed", error_codes)
-
-    def test_verification_failed_in_error_codes(self):
-        error_codes = build_schema_payload()["error_codes"]
-        self.assertIn("verification_failed", error_codes)
-
     def test_action_error_codes_present_in_schema(self):
-        # Action-level error codes are aggregated by build_schema_payload.
         error_codes = build_schema_payload()["error_codes"]
         for code in [
             "engine_unavailable",
@@ -63,15 +35,30 @@ class ErrorContractTests(unittest.TestCase):
             "session_not_found",
             "block_not_found",
             "runtime_error",
+            "param_not_found",
+            "set_param_failed",
+            "precondition_failed",
+            "verification_failed",
         ]:
-            self.assertIn(code, error_codes, f"Missing reused error code: {code}")
+            self.assertIn(code, error_codes, f"Missing error code: {code}")
 
     def test_framework_error_codes_produced_by_map_value_error(self):
-        # Framework codes (invalid_input, invalid_json, etc.) come from map_value_error,
-        # not from the schema error_codes list which only aggregates action ERRORS.
         for code in ("invalid_input", "invalid_json", "json_conflict", "unknown_parameter"):
             result = map_value_error(ValueError(f"{code}: test"))
             self.assertEqual(result["error"], code, f"Framework code '{code}' not mapped correctly")
+
+    def test_known_runtime_errors_map_to_stable_codes(self):
+        for code in ("session_required", "session_not_found", "no_session", "engine_unavailable"):
+            result = map_runtime_error(RuntimeError(code))
+            self.assertEqual(result["error"], code)
+            self.assertIn("message", result)
+            self.assertIn("suggested_fix", result)
+
+    def test_unknown_runtime_error_maps_to_runtime_error(self):
+        result = map_runtime_error(RuntimeError("engine crashed"))
+        self.assertEqual(result["error"], "runtime_error")
+        self.assertEqual(result["message"], "engine crashed")
+        self.assertEqual(result["details"]["cause"], "engine crashed")
 
 
 if __name__ == "__main__":
