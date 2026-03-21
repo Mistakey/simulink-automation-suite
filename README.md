@@ -9,7 +9,7 @@
 Simulink Automation Suite is a Claude Code plugin for Simulink automation workflows (read-only analysis, parameter modification, and model lifecycle management) through MATLAB Engine for Python.
 
 - Canonical plugin name: `simulink-automation-suite`
-- Shipped skills: `simulink-scan` (read-only analysis), `simulink-edit` (parameter modification and model lifecycle)
+- Shipped skill: `simulink-automation` (unified read-only analysis + parameter editing + model lifecycle)
 - Runtime Python module path: `simulink_cli` (unified CLI entrypoint)
 
 ---
@@ -43,13 +43,12 @@ This plugin provides a third path: direct, structured, runtime model analysis fo
 
 ## How It Works
 
-1. Claude Code invokes the `simulink-scan` skill for Simulink analysis tasks.
+1. Claude Code invokes the `simulink-automation` skill for Simulink tasks.
 2. The skill resolves MATLAB session context (`session list/use/current/clear`) with exact-name matching, using either an explicit `--session` or a previously selected active session.
-3. It executes one of the core actions: `schema`, `list_opened`, `scan`, `connections`, `inspect`, `find`, or `highlight`.
+3. It executes one of the available actions: `schema`, `list_opened`, `scan`, `connections`, `inspect`, `find`, `highlight`, `set_param`, `model_new`, `model_open`, `model_save`, or `session`.
 4. Results are returned as a single machine-readable JSON payload on `stdout`; warnings never spill raw text into stdout, and `stderr` is reserved for maintainer-facing diagnostics.
 5. Failures use stable error codes for reliable agent recovery.
-6. For parameter modification, Claude Code invokes the `simulink-edit` skill.
-7. The edit skill uses `set_param` with dry-run preview (default), machine-executable `apply_payload`, rollback payloads, guarded execute via `expected_current_value`, and read-back verification.
+6. Write operations (`set_param`) use dry-run preview (default), machine-executable `apply_payload`, rollback payloads, guarded execute via `expected_current_value`, and read-back verification.
 
 ---
 
@@ -89,7 +88,7 @@ Troubleshooting:
 ### 3. Invoke the namespaced skill
 
 ```text
-/simulink-automation-suite:simulink-scan Scan gmp_pmsm_sensored_sil_mdl recursively and focus on controller subsystems.
+/simulink-automation-suite:simulink-automation Scan gmp_pmsm_sensored_sil_mdl recursively and focus on controller subsystems.
 ```
 
 ### 4. Verify plugin registration (optional)
@@ -161,7 +160,7 @@ python -m simulink_cli --json '{"action":"model_save","model":"my_model"}'
 
 ---
 
-## Safety Model (simulink-edit)
+## Safety Model (Write Operations)
 
 - `dry_run` defaults to `true` and returns both `rollback` and machine-executable `apply_payload`
 - `apply_payload` carries `expected_current_value`, so execute can reject stale previews instead of mutating blindly
@@ -289,10 +288,7 @@ simulink_cli/           # Unified CLI package (single entrypoint)
     ├── model_save.py
     └── session_cmd.py
 skills/                 # Plugin skill definitions (docs only, no Python code)
-├── simulink_scan/      # Read-only analysis skill
-│   ├── SKILL.md
-│   └── reference.md
-└── simulink_edit/      # Parameter modification skill
+└── simulink_automation/  # Unified analysis + editing skill
     ├── SKILL.md
     └── reference.md
 tests/                  # Test suite
@@ -311,7 +307,7 @@ claude plugin validate .
 
 ## Roadmap
 
-- **Current (v2.1.x):** read-only analysis, guarded parameter modification, and model lifecycle management (`model_new`, `model_open`, `model_save`) via unified `simulink_cli` package serving both `simulink-scan` and `simulink-edit` skills.
+- **Current (v2.1.x):** read-only analysis, guarded parameter modification, and model lifecycle management (`model_new`, `model_open`, `model_save`) via unified `simulink_cli` package and `simulink-automation` skill.
 - **Next:** strengthen agent workflow orchestration and reliability while preserving deterministic contracts and recovery paths.
 - **Future:** add new skills for build/repair scenarios without renaming the plugin (`simulink-automation-suite` remains the stable identity).
 

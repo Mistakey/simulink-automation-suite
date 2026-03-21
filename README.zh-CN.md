@@ -9,7 +9,7 @@
 Simulink Automation Suite 是一个基于 MATLAB Engine for Python 的 Claude Code 插件，用于 Simulink 自动化分析、参数修改与模型生命周期管理流程。
 
 - 插件标准名称：`simulink-automation-suite`
-- 已发布技能：`simulink-scan`（只读分析）、`simulink-edit`（参数修改与模型生命周期管理）
+- 已发布技能：`simulink-automation`（统一只读分析 + 参数修改 + 模型生命周期管理）
 - 运行时 Python 模块路径：`simulink_cli`（统一 CLI 入口）
 
 ---
@@ -43,13 +43,12 @@ Simulink Automation Suite 的核心定位，是让 Simulink 分析能力在 Clau
 
 ## 工作方式
 
-1. Claude Code 在 Simulink 分析场景下调用 `simulink-scan` 技能。
+1. Claude Code 调用 `simulink-automation` 技能处理 Simulink 任务。
 2. 技能先解析 MATLAB 会话上下文（`session list/use/current/clear`），并使用精确会话名匹配；当存在多个会话时，可通过显式 `--session` 或预先选择的 active session 解析目标会话。
-3. 然后执行核心动作之一：`schema`、`list_opened`、`scan`、`connections`、`inspect`、`find`、`highlight`。
+3. 然后执行可用动作之一：`schema`、`list_opened`、`scan`、`connections`、`inspect`、`find`、`highlight`、`set_param`、`model_new`、`model_open`、`model_save`、`session`。
 4. 结果通过 `stdout` 输出为单一机器可读 JSON 负载；原始警告文本不会直接污染 stdout。
 5. 异常通过稳定错误码返回，便于 Agent 做恢复重试。
-6. 对于参数修改场景，Claude Code 会调用 `simulink-edit` 技能。
-7. 编辑技能通过 `set_param` 提供预览模式（默认开启 dry-run）、机器可回放的 `apply_payload`、基于 `expected_current_value` 的 guarded execute、回滚负载与写后读回验证。
+6. 写操作（`set_param`）通过预览模式（默认开启 dry-run）、机器可回放的 `apply_payload`、基于 `expected_current_value` 的 guarded execute、回滚负载与写后读回验证保障安全。
 
 ---
 
@@ -89,7 +88,7 @@ matlab.engine.shareEngine
 ### 3. 通过命名空间调用技能
 
 ```text
-/simulink-automation-suite:simulink-scan Scan gmp_pmsm_sensored_sil_mdl recursively and focus on controller subsystems.
+/simulink-automation-suite:simulink-automation Scan gmp_pmsm_sensored_sil_mdl recursively and focus on controller subsystems.
 ```
 
 ### 4. 校验插件注册（可选）
@@ -161,7 +160,7 @@ python -m simulink_cli --json '{"action":"model_save","model":"my_model"}'
 
 ---
 
-## 安全模型（simulink-edit）
+## 安全模型（写操作）
 
 - `dry_run` 默认为 `true`，并返回 `rollback` 与机器可回放的 `apply_payload`
 - `apply_payload` 会携带 `expected_current_value`，用于在 execute 时拒绝过期预览
@@ -289,10 +288,7 @@ simulink_cli/           # 统一 CLI 包（单一入口）
     ├── model_save.py
     └── session_cmd.py
 skills/                 # 插件技能定义（仅文档，无 Python 代码）
-├── simulink_scan/      # 只读分析技能
-│   ├── SKILL.md
-│   └── reference.md
-└── simulink_edit/      # 参数修改技能
+└── simulink_automation/  # 统一分析 + 编辑技能
     ├── SKILL.md
     └── reference.md
 tests/                  # 测试套件
@@ -311,7 +307,7 @@ claude plugin validate .
 
 ## 路线图
 
-- **当前阶段（v2.1.x）：** 只读分析、guarded 参数修改，以及模型生命周期管理（`model_new`、`model_open`、`model_save`），通过统一的 `simulink_cli` 包同时服务 `simulink-scan` 和 `simulink-edit` 技能。
+- **当前阶段（v2.1.x）：** 只读分析、guarded 参数修改，以及模型生命周期管理（`model_new`、`model_open`、`model_save`），通过统一的 `simulink_cli` 包和 `simulink-automation` 技能。
 - **下一阶段：** 在保持可预测契约与恢复链路的前提下，增强 Agent 工作流编排与可靠性。
 - **后续阶段：** 通过新增技能扩展到 build/repair 场景，且保持插件标识 `simulink-automation-suite` 不变。
 

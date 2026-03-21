@@ -3,37 +3,92 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SKILL_PATH = REPO_ROOT / "skills" / "simulink_scan" / "SKILL.md"
-REFERENCE_PATH = REPO_ROOT / "skills" / "simulink_scan" / "reference.md"
+SKILL_DIR = REPO_ROOT / "skills" / "simulink_automation"
+SKILL_PATH = SKILL_DIR / "SKILL.md"
+REFERENCE_PATH = SKILL_DIR / "reference.md"
 README_PATH = REPO_ROOT / "README.md"
 README_ZH_PATH = REPO_ROOT / "README.zh-CN.md"
 CLAUDE_PATH = REPO_ROOT / ".claude" / "CLAUDE.md"
 
 
 class DocsContractTests(unittest.TestCase):
-    def test_skill_has_agent_first_sections(self):
+    # -- Skill structure -------------------------------------------------------
+
+    def test_skill_has_playbook_sections(self):
         text = SKILL_PATH.read_text(encoding="utf-8")
         required_sections = [
-            "## Preflight",
-            "## Action Selection",
-            "## Execution Templates",
+            "## Prerequisites",
+            "## Discovery",
+            "## Workflow Strategy",
+            "## Write Safety Model",
             "## Recovery Routing",
+            "## Output Discipline",
         ]
         for section in required_sections:
             self.assertIn(section, text)
 
-    def test_reference_has_recovery_matrix_for_key_errors(self):
-        text = REFERENCE_PATH.read_text(encoding="utf-8")
-        self.assertIn("## Recovery Matrix", text)
+    def test_skill_has_frontmatter(self):
+        text = SKILL_PATH.read_text(encoding="utf-8")
+        self.assertTrue(text.startswith("---"))
+        self.assertIn("name: simulink-automation", text)
+
+    def test_skill_references_schema_for_discovery(self):
+        text = SKILL_PATH.read_text(encoding="utf-8")
+        self.assertIn("schema", text)
+        self.assertIn("authoritative reference", text.lower())
+
+    def test_skill_documents_write_safety_model(self):
+        text = SKILL_PATH.read_text(encoding="utf-8")
+        self.assertIn("dry_run", text)
+        self.assertIn("apply_payload", text)
+        self.assertIn("rollback", text)
+        self.assertIn("precondition_failed", text)
+        self.assertIn("verification_failed", text)
+
+    def test_skill_recovery_routing_covers_key_errors(self):
+        text = SKILL_PATH.read_text(encoding="utf-8")
         required_codes = [
+            "engine_unavailable",
+            "no_session",
             "session_required",
             "session_not_found",
             "model_required",
-            "inactive_parameter",
+            "block_not_found",
+            "param_not_found",
+            "precondition_failed",
+            "set_param_failed",
+            "verification_failed",
+            "model_already_loaded",
             "invalid_json",
         ]
         for code in required_codes:
-            self.assertIn(f"`{code}`", text)
+            self.assertIn(code, text, f"Recovery routing missing: {code}")
+
+    # -- Reference (response shapes) -------------------------------------------
+
+    def test_reference_exists(self):
+        self.assertTrue(REFERENCE_PATH.exists())
+
+    def test_reference_documents_set_param_response_shapes(self):
+        text = REFERENCE_PATH.read_text(encoding="utf-8")
+        self.assertIn("apply_payload", text)
+        self.assertIn("expected_current_value", text)
+        self.assertIn("precondition_failed", text)
+        self.assertIn("write_state", text)
+        self.assertIn("verified", text)
+
+    def test_reference_documents_failure_semantics(self):
+        text = REFERENCE_PATH.read_text(encoding="utf-8")
+        self.assertIn("Failure Semantics", text)
+        self.assertIn("safe_to_retry", text)
+        self.assertIn("recommended_recovery", text)
+
+    def test_reference_documents_value_type_notes(self):
+        text = REFERENCE_PATH.read_text(encoding="utf-8")
+        self.assertIn("%.3f", text)
+        self.assertIn("Value Type Notes", text)
+
+    # -- README ----------------------------------------------------------------
 
     def test_readme_mentions_schema_and_output_controls(self):
         text = README_PATH.read_text(encoding="utf-8")
@@ -55,7 +110,6 @@ class DocsContractTests(unittest.TestCase):
         text = README_PATH.read_text(encoding="utf-8")
         self.assertIn("canonical contract surface for complex strings and newlines", text)
         self.assertIn("--json", text)
-        self.assertIn("inspect", text)
 
     def test_readme_documents_clean_stdout_contract(self):
         text = README_PATH.read_text(encoding="utf-8")
@@ -79,40 +133,9 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("verification_failed", text)
         self.assertIn("expected_current_value", text)
 
-    def test_skill_and_reference_include_engine_unavailable_route(self):
-        skill_text = SKILL_PATH.read_text(encoding="utf-8")
-        reference_text = REFERENCE_PATH.read_text(encoding="utf-8")
-        self.assertIn("engine_unavailable", skill_text)
-        self.assertIn("engine_unavailable", reference_text)
-
-    def test_skill_documents_highlight_as_readonly_visual_action(self):
-        text = SKILL_PATH.read_text(encoding="utf-8")
-        self.assertIn("Visual location in Simulink -> `highlight`", text)
-        self.assertIn("`hilite_system`", text)
-
-    def test_reference_includes_highlight_action_examples(self):
-        text = REFERENCE_PATH.read_text(encoding="utf-8")
-        self.assertIn("## Highlight Action", text)
-        self.assertIn("simulink_cli highlight", text)
-
-    def test_skill_and_reference_document_connections_action(self):
-        skill_text = SKILL_PATH.read_text(encoding="utf-8")
-        reference_text = REFERENCE_PATH.read_text(encoding="utf-8")
-        self.assertIn("connections", skill_text)
-        self.assertIn("## Connections Action", reference_text)
-        self.assertIn("simulink_cli connections", reference_text)
-        self.assertIn("--max-edges", reference_text)
-        self.assertIn("--fields", reference_text)
-
     def test_readme_mentions_connections_action(self):
         text = README_PATH.read_text(encoding="utf-8")
         self.assertIn("`connections`", text)
-
-    def test_skill_and_reference_document_find_action(self):
-        skill_text = SKILL_PATH.read_text(encoding="utf-8")
-        reference_text = REFERENCE_PATH.read_text(encoding="utf-8")
-        self.assertIn("find", skill_text.lower())
-        self.assertIn("Find", reference_text)
 
     def test_readme_mentions_find_action(self):
         text = README_PATH.read_text(encoding="utf-8")
@@ -132,6 +155,8 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("precondition_failed", text)
         self.assertIn("verification_failed", text)
         self.assertIn("expected_current_value", text)
+
+    # -- CLAUDE.md -------------------------------------------------------------
 
     def test_claude_md_separates_unit_tests_from_live_matlab_verification(self):
         text = CLAUDE_PATH.read_text(encoding="utf-8")

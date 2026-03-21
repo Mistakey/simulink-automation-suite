@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Identity
 
 - Plugin: `simulink-automation-suite` (fixed name, never rename)
-- Shipped skills: `simulink-scan` (read-only Simulink analysis) and `simulink-edit` (parameter modification)
+- Shipped skill: `simulink-automation` (unified read-only analysis + parameter editing)
 - Entrypoint: `python -m simulink_cli`
 - Version: synced in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`
 - Auto release workflow: `.github/workflows/release.yml`
@@ -36,8 +36,8 @@ python -m simulink_cli --json '{"action":"schema"}'
 
 ## Core Rules
 
-1. **Read-only**: `simulink-scan` never mutates models. `highlight` is visual-only.
-2. **Write safety**: `simulink-edit` uses `dry_run=true` by default, rollback in every response, read-back verification.
+1. **Read-only actions**: `scan`, `inspect`, `find`, `connections`, `highlight` never mutate models.
+2. **Write safety**: `set_param` uses `dry_run=true` by default, rollback in every response, read-back verification.
 3. **Docs-as-Contract**: code + tests + docs updated together. `test_docs_contract.py` enforces.
 4. **Agent-first CLI**: see `simulink_cli/CLAUDE.md` for design philosophy (JSON-first, error envelope, input hardening).
 5. **Session matching**: exact-name only, no fuzzy.

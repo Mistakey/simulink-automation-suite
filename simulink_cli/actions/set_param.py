@@ -113,7 +113,7 @@ def execute(args):
             "block_not_found",
             f"Block '{target}' not found in the model.",
             details={"target": target},
-            suggested_fix="Run simulink-scan find or scan to locate the correct block path.",
+            suggested_fix="Run find or scan to locate the correct block path.",
         )
 
     # 1. Validate parameter exists and read current value
@@ -124,7 +124,7 @@ def execute(args):
             "param_not_found",
             f"Parameter '{param}' not found on block '{target}'.",
             details={"target": target, "param": param},
-            suggested_fix="Run simulink-scan inspect to list available parameters.",
+            suggested_fix="Run inspect --param All to list available parameters.",
         )
 
     rollback = {

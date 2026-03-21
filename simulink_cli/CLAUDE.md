@@ -45,9 +45,8 @@ Anti-pattern: silently coercing or ignoring malformed input. Fail fast with stab
 
 ## 5. Structured Agent Skills (SKILL.md)
 
-- Ship `SKILL.md` with YAML frontmatter for each capability.
-- Encode invariants not obvious from `--help`: preflight steps, action selection tree, execution templates, recovery routing (error code → next action).
-- Keep `SKILL.md` and `reference.md` aligned with runtime behavior.
+- Ship `SKILL.md` as a workflow playbook — encode invariants not obvious from schema: preflight, workflow strategy, safety model, recovery routing.
+- `schema` output is the authoritative reference for command syntax. SKILL.md should not duplicate field lists or execution templates.
 
 ## 6. Multi-Surface Consistency
 
