@@ -80,6 +80,32 @@ class EditDocsContractTests(unittest.TestCase):
         self.assertIn("precondition_failed", text)
         self.assertIn("rollback", text)
 
+    # -- model lifecycle doc checks ------------------------------------------
+
+    def test_skill_md_contains_model_new(self):
+        text = (EDIT_SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("model_new", text)
+
+    def test_skill_md_contains_model_open(self):
+        text = (EDIT_SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("model_open", text)
+
+    def test_skill_md_contains_model_save(self):
+        text = (EDIT_SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("model_save", text)
+
+    def test_reference_md_contains_model_already_loaded(self):
+        text = (EDIT_SKILL_DIR / "reference.md").read_text(encoding="utf-8")
+        self.assertIn("model_already_loaded", text)
+
+    def test_reference_md_contains_model_save_failed(self):
+        text = (EDIT_SKILL_DIR / "reference.md").read_text(encoding="utf-8")
+        self.assertIn("model_save_failed", text)
+
+    def test_test_scenarios_contains_model_new(self):
+        text = (EDIT_SKILL_DIR / "test-scenarios.md").read_text(encoding="utf-8")
+        self.assertIn("model_new", text)
+
 
 if __name__ == "__main__":
     unittest.main()
