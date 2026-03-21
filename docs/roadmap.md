@@ -1,6 +1,6 @@
 # Roadmap
 
-Status: Draft (established via dual-AI architecture review, 2026-03-21)
+Status: Active (established 2026-03-21, refined with Phase 1 sub-phase design 2026-03-21)
 
 ## Product Goal
 
@@ -12,37 +12,50 @@ Out of scope: Stateflow, Code Generation, Model Reference, Bus Objects, and othe
 
 A normal person building a Simulink model uses these basic operations:
 
-| # | Capability | MATLAB Function | Status |
-|---|-----------|----------------|--------|
-| 1 | Create new model | `new_system` | TODO |
-| 2 | Open model | `open_system` | TODO |
-| 3 | Save model | `save_system` | TODO |
-| 4 | Close model | `close_system` | TODO |
-| 5 | Update/compile model | `update_diagram` | TODO |
-| 6 | Add block | `add_block` | TODO |
-| 7 | Delete block | `delete_block` | TODO |
-| 8 | Connect blocks (point-to-point) | `add_line` | TODO |
-| 9 | Disconnect blocks (point-to-point) | `delete_line` | TODO |
-| 10 | Set parameter | `set_param` | Done (v2.0) |
-| 11 | Read parameter | `get_param` via inspect | Done (v1.0) |
-| 12 | Find blocks | `find_system` via find | Done (v1.3) |
-| 13 | Analyze structure | scan / connections | Done (v1.0) |
-| 14 | Run simulation | `sim` | TODO |
+| # | Capability | MATLAB Function | CLI Action | Status |
+|---|-----------|----------------|------------|--------|
+| 1 | Create new model | `new_system` | `model_new` | TODO (v2.1.0) |
+| 2 | Open model | `open_system` | `model_open` | TODO (v2.1.0) |
+| 3 | Save model | `save_system` | `model_save` | TODO (v2.1.0) |
+| 4 | Close model | `close_system` | `model_close` | TODO (Phase 2) |
+| 5 | Update/compile model | `update_diagram` | `model_update` | TODO (Phase 2) |
+| 6 | Add block | `add_block` | `block_add` | TODO (v2.2.0) |
+| 7 | Delete block | `delete_block` | `block_delete` | TODO (Phase 3) |
+| 8 | Connect blocks (point-to-point) | `add_line` | `line_add` | TODO (v2.3.0) |
+| 9 | Disconnect blocks (point-to-point) | `delete_line` | `line_delete` | TODO (Phase 2) |
+| 10 | Set parameter | `set_param` | `set_param` | Done (v2.0) |
+| 11 | Read parameter | `get_param` via inspect | `inspect` | Done (v1.0) |
+| 12 | Find blocks | `find_system` via find | `find` | Done (v1.3) |
+| 13 | Analyze structure | scan / connections | `scan`, `connections` | Done (v1.0) |
+| 14 | Run simulation | `sim` | `simulate` | TODO (Phase 2) |
 
-## Action Family Design
+## Action Design
 
-New operations are grouped into compact action families (precedent: `session list/use/current/clear` in one module). This keeps the action registry tight instead of adding one top-level action per MATLAB function.
+New operations use **independent flat action names** with noun-prefix grouping. Each action is a separate entry in the `_ACTIONS` registry with its own self-contained schema — no sub-operation field.
 
-| Action | Sub-operations | New Module |
-|--------|---------------|------------|
-| `model` | `new`, `open`, `save`, `close`, `update` | `simulink_cli/actions/model_cmd.py` |
-| `block` | `add`, `delete` | `simulink_cli/actions/block_cmd.py` |
-| `line` | `add`, `delete` (point-to-point; branched signals deferred) | `simulink_cli/actions/line_cmd.py` |
-| `simulate` | (single operation) | `simulink_cli/actions/simulate.py` |
+This was chosen over the action-family pattern (grouping sub-operations under one action) because:
+- AI agents make fewer errors with flat, unambiguous action names
+- Each action has a simple, independent schema (no conditional required fields)
+- Maps 1:1 to MCP tools if MCP is adopted later
+
+The existing `session` action uses a hybrid pattern (single action with internal `session_action` enum). New actions diverge too much in required fields to reuse that pattern.
+
+| Action | Module | Safety Tier |
+|--------|--------|-------------|
+| `model_new` | `model_cmd.py` | Checked Mutation |
+| `model_open` | `model_cmd.py` | Operational |
+| `model_save` | `model_cmd.py` | Operational |
+| `model_close` | `model_cmd.py` | Operational (Phase 2) |
+| `model_update` | `model_cmd.py` | Operational (Phase 2) |
+| `block_add` | `block_cmd.py` | Checked Mutation |
+| `block_delete` | `block_cmd.py` | Full Guarded (Phase 3) |
+| `line_add` | `line_cmd.py` | Checked Mutation |
+| `line_delete` | `line_cmd.py` | Checked Mutation (Phase 2) |
+| `simulate` | `simulate.py` | Operational (Phase 2) |
 
 Existing actions unchanged: `scan`, `connections`, `inspect`, `find`, `highlight`, `list_opened`, `set_param`, `session`.
 
-Total after completion: 12 actions (8 existing + 4 new).
+Total after completion: 18 actions (8 existing + 10 new).
 
 ## Safety Model Tiers
 
@@ -52,7 +65,7 @@ Not every operation needs the full `set_param`-style ceremony. Three tiers:
 
 dry_run default true → apply_payload → precondition check → execute → read-back verify → rollback payload.
 
-Applies to: `set_param`, `block delete`.
+Applies to: `set_param`, `block_delete`.
 
 These operations can destroy existing state. Preview and guarded execute are justified.
 
@@ -60,7 +73,7 @@ These operations can destroy existing state. Preview and guarded execute are jus
 
 Precondition check → execute → verify → rollback payload. No dry_run preview ceremony.
 
-Applies to: `block add`, `line add`, `line delete`, `model new`.
+Applies to: `block_add`, `line_add`, `line_delete`, `model_new`.
 
 These operations create or remove structure. Precondition and rollback matter, but "previewing an add" adds little value.
 
@@ -68,7 +81,7 @@ These operations create or remove structure. Precondition and rollback matter, b
 
 Execute → error handling → necessary constraints. No dry_run or rollback.
 
-Applies to: `model open`, `model save`, `model close`, `model update`, `simulate`.
+Applies to: `model_open`, `model_save`, `model_close`, `model_update`, `simulate`.
 
 Constraints still apply: `close` must check dirty state before discarding, `save` must handle overwrite semantics. But these are not mutation-preview operations.
 
@@ -117,32 +130,80 @@ Phases are ordered by "AI can complete an end-to-end workflow", not by single-op
 
 Goal: AI can create a new model, add blocks, connect them, set parameters, and save.
 
-- [ ] `model` action: `new` sub-operation
-- [ ] `model` action: `open` sub-operation
-- [ ] `model` action: `save` sub-operation
-- [ ] `block` action: `add` sub-operation
-- [ ] `line` action: `add` sub-operation
-- [ ] Transport wrappers: `new_system`, `open_system`, `save_system`, `add_block`, `add_line`
-- [ ] Fake engines for new action families
-- [ ] Tests: contract, behavior, workflow (create → add block → connect → set_param → save)
-- [ ] Live MATLAB smoke test script (covers set_param + new ops)
-- [ ] SKILL.md and docs update for new actions
-- [ ] Token efficiency benchmark: CLI compact mode vs thin MCP wrapper (evaluation only)
-- [ ] Schema version bump (major.minor per release rules)
-- [ ] Release: version bump, manifest sync, validation
+Phase 1 is split into 3 independently releasable sub-phases. Each sub-phase gets its own minor version, manifest sync, docs update, and validation cycle.
+
+Design reference: `docs/superpowers/specs/2026-03-21-phase1-sub-phases-design.md`
+
+#### v2.1.0 — Model Lifecycle Management
+
+Goal: AI can create, open, and save Simulink models.
+
+- [ ] `model_new` action (Checked Mutation: precondition + execute + verify + rollback)
+- [ ] `model_open` action (Operational: execute + error handling)
+- [ ] `model_save` action (Operational: execute + error handling; native overwrite semantics)
+- [ ] New module: `simulink_cli/actions/model_cmd.py`
+- [ ] Register in `simulink_cli/core.py` (`_ACTIONS`, FIELDS, schema) and `actions/__init__.py`
+- [ ] Transport wrappers: `new_system()`, `open_system()`, `save_system()`
+- [ ] Fake engine extensions for model lifecycle
+- [ ] `test_model_cmd_behavior.py` — behavior tests with mocked MATLAB
+- [ ] Schema contract updated
+- [ ] Error codes: reuse existing + `model_already_loaded`, `model_save_failed` as needed
+- [ ] SKILL.md, reference.md, test-scenarios.md updated
+- [ ] README.md, README.zh-CN.md updated
+- [ ] Docs contract tests updated
+- [ ] Version bump: plugin.json, marketplace.json → 2.1.0; schema version → 2.1
+- [ ] Full validation: tests + manifest check + `claude plugin validate .`
+
+#### v2.2.0 — Block Placement
+
+Goal: AI can add blocks to a model.
+
+- [ ] `block_add` action (Checked Mutation: precondition + execute + verify + deferred rollback)
+- [ ] New module: `simulink_cli/actions/block_cmd.py`
+- [ ] Register in `simulink_cli/core.py` and `actions/__init__.py`
+- [ ] Transport wrapper: `add_block()`
+- [ ] Fake engine extension for block operations
+- [ ] `test_block_cmd_behavior.py` — behavior tests
+- [ ] Schema contract updated
+- [ ] Error codes: `source_not_found`, `block_already_exists` as needed
+- [ ] SKILL.md, reference.md, test-scenarios.md updated
+- [ ] README.md, README.zh-CN.md updated
+- [ ] Docs contract tests updated
+- [ ] Version bump → 2.2.0; schema version → 2.2
+- [ ] Full validation
+
+#### v2.3.0 — Signal Routing + End-to-End Workflow
+
+Goal: AI can connect block ports, completing the first full modeling workflow.
+
+- [ ] `line_add` action (Checked Mutation: precondition + execute + verify + deferred rollback)
+- [ ] New module: `simulink_cli/actions/line_cmd.py`
+- [ ] Register in `simulink_cli/core.py` and `actions/__init__.py`
+- [ ] Transport wrapper: `add_line()`
+- [ ] Fake engine extension for line operations
+- [ ] `test_line_cmd_behavior.py` — behavior tests
+- [ ] **End-to-end workflow test:** `model_new` → `block_add` (x2+) → `line_add` → `set_param` → `model_save`
+- [ ] Live MATLAB smoke test script (covers full creation workflow)
+- [ ] Schema contract updated
+- [ ] Error codes: `port_not_found`, `line_already_exists` as needed
+- [ ] SKILL.md, reference.md, test-scenarios.md updated
+- [ ] README.md, README.zh-CN.md updated
+- [ ] Docs contract tests updated
+- [ ] Version bump → 2.3.0; schema version → 2.3
+- [ ] Full validation
 
 ### Phase 2 — Iterate and Verify
 
 Goal: AI can modify an existing model, remove connections, run simulations, and verify results.
 
-- [ ] `line` action: `delete` sub-operation
-- [ ] `simulate` action
-- [ ] `model` action: `close` sub-operation (with dirty-state check)
-- [ ] `model` action: `update` sub-operation
-- [ ] Transport wrappers: `delete_line`, `sim`, `close_system`, `update_diagram`
-- [ ] Tests: iterate workflow (open → modify → simulate → verify → save → close)
+- [ ] `line_delete` action (Checked Mutation)
+- [ ] `simulate` action (Operational)
+- [ ] `model_close` action (Operational, with dirty-state check)
+- [ ] `model_update` action (Operational)
+- [ ] Transport wrappers: `delete_line()`, `sim()`, `close_system()`, `update_diagram()`
+- [ ] Tests: iterate workflow (model_open → set_param → simulate → inspect → model_save → model_close)
 - [ ] Live smoke coverage for simulation flow
-- [ ] If Phase 1 benchmark favors MCP: implement thin MCP adapter layer
+- [ ] Activate deferred rollback for `line_add` (now that `line_delete` exists)
 - [ ] SKILL.md and docs update
 - [ ] Release
 
@@ -150,10 +211,11 @@ Goal: AI can modify an existing model, remove connections, run simulations, and 
 
 Goal: AI can safely remove blocks with state capture for rollback.
 
-- [ ] `block` action: `delete` sub-operation (full guarded: capture params + connections at dry_run)
-- [ ] Transport wrapper: `delete_block`
+- [ ] `block_delete` action (Full Guarded: dry_run + capture params/connections + execute + verify + rollback)
+- [ ] Transport wrapper: `delete_block()`
 - [ ] Rollback design: decide full restore vs limited restore (library default + manual re-config)
 - [ ] Tests: delete → rollback → verify restored state
+- [ ] Activate deferred rollback for `block_add` (now that `block_delete` exists)
 - [ ] Live smoke coverage for destructive edit flow
 - [ ] SKILL.md and docs update
 - [ ] Release
@@ -165,11 +227,14 @@ These are not planned but may become relevant based on actual usage:
 - [ ] `replace_block` (swap block type preserving connections)
 - [ ] Branched signal line support (non-point-to-point connections)
 - [ ] Batch / multi-operation workflows (transaction-like semantics)
+- [ ] Token efficiency benchmark: CLI compact mode vs thin MCP wrapper (evaluation only, owner-driven timing)
 - [ ] MCP as primary exposure layer (if benchmark justifies and demand exists)
 
 ## MCP Evaluation Strategy
 
-MCP is not pre-committed but no longer dismissed. Evaluation happens during Phase 1:
+MCP is not pre-committed but no longer dismissed. Evaluation timing is owner-driven — not bound to any specific phase milestone.
+
+When evaluation happens:
 
 1. Pick a representative task (e.g., "create model, add 3 blocks, connect them, set params, save")
 2. Measure: tool-call count, request/response size, context window consumption
