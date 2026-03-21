@@ -133,6 +133,18 @@ The release workflow runs in this order:
 5. `scripts/build_release_notes.py`
 6. `gh release create` or `gh release edit`
 
+## Change Synchronization
+
+Before releasing, verify all affected artifacts are updated:
+
+**CLI actions/arguments** → update `simulink_cli/core.py` + `simulink_cli/actions/*.py` + tests + `README.md`, `README.zh-CN.md`, `SKILL.md`, `reference.md`
+
+**Error codes** → reuse existing codes; update `simulink_cli/core.py` + docs + `test_error_contract`, `test_runtime_error_mapping`, `test_docs_contract`
+
+**Output budgets** → keep `scan`→`max_blocks,fields`, `inspect`→`max_params,fields`, `connections`→`max_edges,fields`, `find`→`max_results,fields` semantics stable; update output-control tests
+
+**Release metadata** → version-sync per Version Sync Rules above
+
 ## Agent Checklist
 
 Before finishing release-related work:

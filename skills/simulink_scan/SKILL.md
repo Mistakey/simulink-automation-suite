@@ -97,4 +97,3 @@ For full matrix and examples, read `reference.md`.
 ## Related Docs
 
 - Deep reference: `reference.md`
-- Validation scenarios: `test-scenarios.md`

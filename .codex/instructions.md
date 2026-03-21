@@ -1,13 +1,21 @@
 # Codex Instructions
 
 All project rules and architecture are documented in `.claude/CLAUDE.md`.
-Detailed on-demand rules are in `.claude/rules/`.
 
 Read `.claude/CLAUDE.md` first. When the task involves:
-- CLI contract changes or adding actions → also read `.claude/rules/agent-first-cli.md`
-- Releasing or version bumps → also read `.claude/skills/release/SKILL.md`, `.github/workflows/release.yml`, `scripts/check_release_metadata.py`, and `scripts/build_release_notes.py`
+- CLI contract changes or adding actions → also read `simulink_cli/CLAUDE.md`
+- Releasing or version bumps → also read `.claude/skills/release/SKILL.md`
 
-Subagent delegation is allowed in this repository for well-scoped work that materially advances the task, especially:
-- code review before completion
-- parallel investigation of independent codebase questions
-- isolated implementation subtasks with clear file ownership
+## Quick Commands
+
+```bash
+# Run all tests
+python -m unittest discover -s tests -p "test_*.py" -v
+
+# Run single test
+python -m unittest tests.test_schema_action -v
+
+# Local invocation
+python -m simulink_cli schema
+python -m simulink_cli --json '{"action":"schema"}'
+```

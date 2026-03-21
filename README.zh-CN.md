@@ -291,12 +291,10 @@ simulink_cli/           # 统一 CLI 包（单一入口）
 skills/                 # 插件技能定义（仅文档，无 Python 代码）
 ├── simulink_scan/      # 只读分析技能
 │   ├── SKILL.md
-│   ├── reference.md
-│   └── test-scenarios.md
+│   └── reference.md
 └── simulink_edit/      # 参数修改技能
     ├── SKILL.md
-    ├── reference.md
-    └── test-scenarios.md
+    └── reference.md
 tests/                  # 测试套件
 ```
 

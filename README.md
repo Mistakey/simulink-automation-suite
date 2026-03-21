@@ -291,12 +291,10 @@ simulink_cli/           # Unified CLI package (single entrypoint)
 skills/                 # Plugin skill definitions (docs only, no Python code)
 ├── simulink_scan/      # Read-only analysis skill
 │   ├── SKILL.md
-│   ├── reference.md
-│   └── test-scenarios.md
+│   └── reference.md
 └── simulink_edit/      # Parameter modification skill
     ├── SKILL.md
-    ├── reference.md
-    └── test-scenarios.md
+    └── reference.md
 tests/                  # Test suite
 ```
 

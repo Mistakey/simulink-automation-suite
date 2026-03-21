@@ -7,7 +7,6 @@ SKILL_PATH = REPO_ROOT / "skills" / "simulink_scan" / "SKILL.md"
 REFERENCE_PATH = REPO_ROOT / "skills" / "simulink_scan" / "reference.md"
 README_PATH = REPO_ROOT / "README.md"
 README_ZH_PATH = REPO_ROOT / "README.zh-CN.md"
-SCENARIOS_PATH = REPO_ROOT / "skills" / "simulink_scan" / "test-scenarios.md"
 CLAUDE_PATH = REPO_ROOT / ".claude" / "CLAUDE.md"
 
 
@@ -109,19 +108,6 @@ class DocsContractTests(unittest.TestCase):
         text = README_PATH.read_text(encoding="utf-8")
         self.assertIn("`connections`", text)
 
-    def test_scenarios_include_recovery_chain_examples(self):
-        text = SCENARIOS_PATH.read_text(encoding="utf-8")
-        required_tokens = [
-            "session_required",
-            "model_required",
-            "subsystem_not_found",
-            "inactive_parameter",
-            "highlight",
-            "connections",
-        ]
-        for token in required_tokens:
-            self.assertIn(token, text)
-
     def test_skill_and_reference_document_find_action(self):
         skill_text = SKILL_PATH.read_text(encoding="utf-8")
         reference_text = REFERENCE_PATH.read_text(encoding="utf-8")
@@ -146,10 +132,6 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("precondition_failed", text)
         self.assertIn("verification_failed", text)
         self.assertIn("expected_current_value", text)
-
-    def test_scenarios_include_find_examples(self):
-        text = SCENARIOS_PATH.read_text(encoding="utf-8")
-        self.assertIn("find", text)
 
     def test_claude_md_separates_unit_tests_from_live_matlab_verification(self):
         text = CLAUDE_PATH.read_text(encoding="utf-8")

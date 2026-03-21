@@ -1,7 +1,3 @@
----
-globs: ["simulink_cli/**/*.py", "skills/**/*.py", "tests/test_input*.py", "tests/test_json*.py", "tests/test_schema*.py"]
----
-
 # Agent-First CLI Design Rules
 
 > Based on [Rewrite Your CLI for AI Agents](https://justin.poehnelt.com/posts/rewrite-your-cli-for-ai-agents/) and former AGENTS.md §4.
@@ -51,7 +47,7 @@ Anti-pattern: silently coercing or ignoring malformed input. Fail fast with stab
 
 - Ship `SKILL.md` with YAML frontmatter for each capability.
 - Encode invariants not obvious from `--help`: preflight steps, action selection tree, execution templates, recovery routing (error code → next action).
-- Keep `SKILL.md`, `reference.md`, `test-scenarios.md` aligned with runtime behavior.
+- Keep `SKILL.md` and `reference.md` aligned with runtime behavior.
 
 ## 6. Multi-Surface Consistency
 
@@ -75,10 +71,3 @@ Stable envelope (never change shape):
 - Reuse existing error codes. `suggested_fix` is concrete and agent-actionable.
 - Exit code 1 for errors, 0 for success.
 - Recovery routing in `SKILL.md` maps each error code to a specific next action.
-
-## 9. Release-Impacting CLI Changes
-
-- `simulink_cli/core.py` is both the runtime schema source and a release metadata input. When CLI contract changes require a new release version, update schema version with the plugin major.minor rule.
-- Example: plugin `2.3.4` requires schema `"2.3"`.
-- `scripts/check_release_metadata.py` enforces this major.minor contract during release validation.
-- If you add or change CLI fields/actions in a way that changes shipped behavior, invoke the `release` skill before concluding the work so manifests, schema, docs, and release notes stay aligned.

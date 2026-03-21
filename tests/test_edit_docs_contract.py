@@ -13,9 +13,6 @@ class EditDocsContractTests(unittest.TestCase):
     def test_reference_md_exists(self):
         self.assertTrue((EDIT_SKILL_DIR / "reference.md").exists())
 
-    def test_test_scenarios_md_exists(self):
-        self.assertTrue((EDIT_SKILL_DIR / "test-scenarios.md").exists())
-
     def test_skill_md_contains_set_param(self):
         text = (EDIT_SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("set_param", text)
@@ -71,15 +68,6 @@ class EditDocsContractTests(unittest.TestCase):
         self.assertTrue(text.startswith("---"))
         self.assertIn("name: simulink-edit", text)
 
-    def test_test_scenarios_contains_set_param(self):
-        text = (EDIT_SKILL_DIR / "test-scenarios.md").read_text(encoding="utf-8")
-        self.assertIn("set_param", text)
-        self.assertIn("verification_failed", text)
-        self.assertIn("newline", text)
-        self.assertIn("apply_payload", text)
-        self.assertIn("precondition_failed", text)
-        self.assertIn("rollback", text)
-
     # -- model lifecycle doc checks ------------------------------------------
 
     def test_skill_md_contains_model_new(self):
@@ -101,10 +89,6 @@ class EditDocsContractTests(unittest.TestCase):
     def test_reference_md_contains_model_save_failed(self):
         text = (EDIT_SKILL_DIR / "reference.md").read_text(encoding="utf-8")
         self.assertIn("model_save_failed", text)
-
-    def test_test_scenarios_contains_model_new(self):
-        text = (EDIT_SKILL_DIR / "test-scenarios.md").read_text(encoding="utf-8")
-        self.assertIn("model_new", text)
 
 
 if __name__ == "__main__":

@@ -112,4 +112,3 @@ simulink-edit  replay rollback       → restore prior value if needed
 ## Related Docs
 
 - Deep reference: `reference.md`
-- Validation scenarios: `test-scenarios.md`

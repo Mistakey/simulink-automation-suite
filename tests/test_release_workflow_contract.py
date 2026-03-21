@@ -6,7 +6,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "release.yml"
 CLAUDE_PATH = REPO_ROOT / ".claude" / "CLAUDE.md"
 RELEASE_SKILL_PATH = REPO_ROOT / ".claude" / "skills" / "release" / "SKILL.md"
-AGENT_FIRST_RULE_PATH = REPO_ROOT / ".claude" / "rules" / "agent-first-cli.md"
+CLI_CLAUDE_PATH = REPO_ROOT / "simulink_cli" / "CLAUDE.md"
 CHECKLIST_PATH = REPO_ROOT / "docs" / "release" / "2026-03-07-github-marketplace-release-checklist.md"
 CODEX_INSTRUCTIONS_PATH = REPO_ROOT / ".codex" / "instructions.md"
 RELEASE_TEMPLATE_PATH = REPO_ROOT / "docs" / "release" / "bilingual-template.md"
@@ -36,7 +36,7 @@ class ReleaseWorkflowContractTests(unittest.TestCase):
     def test_release_docs_explain_tag_driven_automation(self):
         claude_text = CLAUDE_PATH.read_text(encoding="utf-8")
         release_skill_text = RELEASE_SKILL_PATH.read_text(encoding="utf-8")
-        agent_first_text = AGENT_FIRST_RULE_PATH.read_text(encoding="utf-8")
+        cli_claude_text = CLI_CLAUDE_PATH.read_text(encoding="utf-8")
         checklist_text = CHECKLIST_PATH.read_text(encoding="utf-8")
         codex_text = CODEX_INSTRUCTIONS_PATH.read_text(encoding="utf-8")
 
@@ -50,14 +50,13 @@ class ReleaseWorkflowContractTests(unittest.TestCase):
         self.assertIn("build_release_notes.py", release_skill_text)
         self.assertIn("docs/release", release_skill_text)
         self.assertIn("fallback", release_skill_text.lower())
-        self.assertIn("schema", agent_first_text.lower())
-        self.assertIn("major.minor", agent_first_text)
+        self.assertIn("schema", cli_claude_text.lower())
+        self.assertIn("error contract", cli_claude_text.lower())
         self.assertIn("workflow_dispatch", checklist_text)
         self.assertIn("auto release", checklist_text.lower())
         self.assertIn("docs/release", checklist_text)
-        self.assertIn("Subagent delegation is allowed", codex_text)
-        self.assertIn(".github/workflows/release.yml", codex_text)
-        self.assertIn("scripts/check_release_metadata.py", codex_text)
+        self.assertIn("simulink_cli/CLAUDE.md", codex_text)
+        self.assertIn(".claude/skills/release/SKILL.md", codex_text)
 
     def test_curated_release_doc_guidance_supports_bilingual_notes(self):
         release_skill_text = RELEASE_SKILL_PATH.read_text(encoding="utf-8")
