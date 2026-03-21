@@ -420,3 +420,52 @@ class VerificationMismatchEngine(OutputSensitiveEngine):
         if param == "Gain" and value == "2.0":
             return "1.5"
         return value
+
+
+class FakeModelEngine:
+    """Fake engine for model lifecycle action tests.
+
+    Tracks loaded models in memory. Supports new_system, open_system,
+    save_system, and get_param (Handle-only for existence checks).
+    """
+
+    def __init__(self, loaded_models=None, filesystem=None):
+        self._loaded = set(loaded_models or [])
+        self._filesystem = set(filesystem or [])
+        self._saved = set()
+
+    def new_system(self, name, nargout=1):
+        if name in self._loaded:
+            raise RuntimeError(f"Model '{name}' is already loaded")
+        self._loaded.add(name)
+        return name
+
+    def open_system(self, path, nargout=0):
+        if path not in self._filesystem and path not in self._loaded:
+            raise RuntimeError(f"File '{path}' not found")
+        model_name = path.rsplit("/", 1)[-1].replace(".slx", "")
+        self._loaded.add(model_name)
+
+    def save_system(self, model, nargout=0):
+        if model not in self._loaded:
+            raise RuntimeError(f"Model '{model}' is not loaded")
+        self._saved.add(model)
+
+    def get_param(self, target, param, nargout=1):
+        if param == "Handle":
+            model_root = target.split("/")[0]
+            if model_root not in self._loaded:
+                raise RuntimeError(f"Invalid Simulink object name: {target}")
+            return 1.0
+        raise RuntimeError(f"Parameter '{param}' not found")
+
+    def close_system(self, model, nargout=0):
+        self._loaded.discard(model)
+
+    @property
+    def loaded_models(self):
+        return set(self._loaded)
+
+    @property
+    def saved_models(self):
+        return set(self._saved)
