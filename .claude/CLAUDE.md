@@ -81,7 +81,7 @@ python -m simulink_cli --json '{"action":"schema"}'
 4. **Stable error envelope**: `{error, message, details, suggested_fix?}` — shape is fixed.
 5. **`--json` first-class**: mutually exclusive with flag mode; type-checked via per-action `FIELDS` dicts aggregated by `core.py`.
 6. **Session matching**: exact-name only, no fuzzy.
-7. **Release entrypoint**: use `.claude/rules/release.md` for detailed release policy, version-sync rules, notes sourcing, and validation steps.
+7. **Release**: use `release` skill for version-sync, release notes, and validation flow.
 8. **Agent-first CLI**: predictable, defensive, machine-readable design.
 
 ## Change Synchronization
@@ -92,7 +92,7 @@ python -m simulink_cli --json '{"action":"schema"}'
 
 **Output budgets** → keep `scan`→`max_blocks,fields`, `inspect`→`max_params,fields`, `connections`→`max_edges,fields`, `find`→`max_results,fields` semantics stable; update output-control tests
 
-**Release metadata** → follow `.claude/rules/release.md`; detailed release flow, version-sync steps, and release notes rules belong there, not in this file
+**Release metadata** → use `release` skill for detailed release flow, version-sync, and release notes rules
 
 ## Test Map
 
@@ -122,7 +122,6 @@ python -m simulink_cli --json '{"action":"schema"}'
 Detailed rules in `.claude/rules/` auto-load when editing matching files:
 
 - **`agent-first-cli.md`** — Agent-first CLI design: JSON-first, schema introspection, context window discipline, input hardening, safety rails. Read this when modifying CLI contract or adding actions.
-- **`release.md`** — Version bump discipline + marketplace release checklist. Read this when releasing or committing distributable changes.
 
 ## Engineering Notes
 

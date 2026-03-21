@@ -81,4 +81,4 @@ Stable envelope (never change shape):
 - `simulink_cli/core.py` is both the runtime schema source and a release metadata input. When CLI contract changes require a new release version, update schema version with the plugin major.minor rule.
 - Example: plugin `2.3.4` requires schema `"2.3"`.
 - `scripts/check_release_metadata.py` enforces this major.minor contract during release validation.
-- If you add or change CLI fields/actions in a way that changes shipped behavior, review `.claude/rules/release.md` before concluding the work so manifests, schema, docs, and release notes stay aligned.
+- If you add or change CLI fields/actions in a way that changes shipped behavior, invoke the `release` skill before concluding the work so manifests, schema, docs, and release notes stay aligned.
