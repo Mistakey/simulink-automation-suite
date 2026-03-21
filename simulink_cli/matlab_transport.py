@@ -116,3 +116,18 @@ def hilite_system(engine, target):
 
 def bdroot(engine):
     return call(engine, "bdroot")
+
+
+def new_system(engine, name):
+    """Create a new Simulink model. Returns result with model name."""
+    return call(engine, "new_system", name)
+
+
+def open_system(engine, path):
+    """Open a Simulink model from file path or MATLAB path."""
+    return call_no_output(engine, "open_system", path)
+
+
+def save_system(engine, model):
+    """Save a loaded Simulink model to disk."""
+    return call_no_output(engine, "save_system", model)
