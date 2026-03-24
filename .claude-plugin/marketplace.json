@@ -22,6 +22,7 @@
         "claude-code",
         "agent-first",
         "scan",
+        "analysis",
         "edit"
       ],
       "category": "workflow",
