@@ -1,3 +1,5 @@
+import json
+import re
 import unittest
 from pathlib import Path
 
@@ -9,6 +11,7 @@ REFERENCE_PATH = SKILL_DIR / "reference.md"
 README_PATH = REPO_ROOT / "README.md"
 README_ZH_PATH = REPO_ROOT / "README.zh-CN.md"
 CLAUDE_PATH = REPO_ROOT / ".claude" / "CLAUDE.md"
+PLUGIN_MANIFEST_PATH = REPO_ROOT / ".claude-plugin" / "plugin.json"
 
 
 class DocsContractTests(unittest.TestCase):
@@ -163,6 +166,64 @@ class DocsContractTests(unittest.TestCase):
         self.assertIn("live MATLAB smoke verification", text)
         self.assertIn("unit tests", text)
         self.assertIn("not sufficient", text)
+
+
+    # -- Handoff contract -------------------------------------------------
+
+    def _get_handoff_text(self):
+        text = SKILL_PATH.read_text(encoding="utf-8")
+        handoff_start = text.index("## Responsibility & Handoff")
+        next_h2 = text.find("\n## ", handoff_start + 1)
+        return text[handoff_start:next_h2] if next_h2 != -1 else text[handoff_start:]
+
+    def test_skill_has_handoff_section(self):
+        text = SKILL_PATH.read_text(encoding="utf-8")
+        self.assertIn("## Responsibility & Handoff", text)
+
+    def test_handoff_declares_direct_handling_bucket(self):
+        self.assertIn("Direct", self._get_handoff_text())
+
+    def test_handoff_direct_bucket_covers_required_actions(self):
+        handoff_text = self._get_handoff_text()
+        for action in ["session", "list_opened", "schema", "highlight"]:
+            self.assertIn(action, handoff_text, f"Direct bucket missing: {action}")
+        self.assertIn("inspect", handoff_text)
+
+    def test_handoff_declares_delegation_bucket(self):
+        self.assertIn("Delegate", self._get_handoff_text())
+
+    def test_handoff_delegation_bucket_covers_required_actions(self):
+        handoff_text = self._get_handoff_text()
+        for action in ["scan", "find", "connections"]:
+            self.assertIn(action, handoff_text, f"Delegation bucket missing: {action}")
+        self.assertIn("multi-step", handoff_text.lower())
+
+    def test_handoff_declares_composite_request_rule(self):
+        self.assertIn("composite", self._get_handoff_text().lower())
+
+    # -- README agent coverage (manifest-driven) --------------------------
+
+    def _get_published_agent_names(self):
+        """Read agent names from manifest-declared agent files' frontmatter."""
+        manifest = json.loads(PLUGIN_MANIFEST_PATH.read_text(encoding="utf-8"))
+        names = []
+        for entry in manifest.get("agents", []):
+            path = REPO_ROOT / entry.lstrip("./")
+            text = path.read_text(encoding="utf-8")
+            match = re.search(r"^name:\s*(.+)$", text, re.MULTILINE)
+            if match:
+                names.append(match.group(1).strip())
+        return names
+
+    def test_readme_mentions_each_published_agent(self):
+        text = README_PATH.read_text(encoding="utf-8")
+        for name in self._get_published_agent_names():
+            self.assertIn(name, text, f"README.md missing agent: {name}")
+
+    def test_readme_zh_mentions_each_published_agent(self):
+        text = README_ZH_PATH.read_text(encoding="utf-8")
+        for name in self._get_published_agent_names():
+            self.assertIn(name, text, f"README.zh-CN.md missing agent: {name}")
 
 
 if __name__ == "__main__":
