@@ -1,7 +1,7 @@
 # Live Device Testing Skill Design
 
 **Date**: 2026-03-24
-**Status**: Approved
+**Status**: Draft
 **Scope**: New project-level skill for end-to-end live MATLAB/Simulink testing
 
 ## Problem Statement
@@ -68,9 +68,14 @@ REQUIRED:
   - Execute all tests through CLI commands
 
 ALLOWED:
-  - Read SKILL.md (documentation accuracy is a test target)
+  - Read skills/simulink_automation/SKILL.md (shipped skill — Phase 5 doc-accuracy target)
+  - Read skills/simulink_automation/reference.md (shipped reference doc)
   - Read docs/reports/ (compare with previous reports)
   - Read git log (determine incremental scope)
+
+NOTE: Reading the shipped skill files is a deliberate, scoped exception to the
+"no source code" rule. The purpose is to verify that the documentation actually
+guides users to correct results — testing the published interface, not internals.
 ```
 
 ### Test Modes
@@ -95,7 +100,9 @@ Analyze changes:
 2. AI-judged additions:
    - Commit messages referencing specific actions → re-test those
    - SKILL.md changed → re-test Phase 5 (documentation accuracy)
-   - Schema definition changed → re-test Phase 1 + Phase 4
+   - Schema output differs from previous run → re-test Phase 1 + Phase 4
+     (AI compares current `schema` output with the schema snapshot in the report;
+      this avoids needing to read source code to detect schema changes)
    - Optional: spot-check some PASS items for regression
 
 3. Large-scale changes (refactor, new actions):
@@ -105,6 +112,8 @@ Analyze changes:
 ## Testing Phases
 
 All phases are structurally fixed; test cases within each phase are dynamically generated from schema.
+
+**Note**: The per-phase action lists below are illustrative for v2.2.0. The SKILL.md implementation must dynamically assign actions discovered via `schema` to phases based on their characteristics (meta, read-only, write, model-lifecycle).
 
 ### Phase 0: Environment Check (always runs)
 
@@ -118,15 +127,17 @@ Verify MATLAB reachability and Simulink availability. If unreachable, mark all i
 
 ### Phase 2: Read-Only Layer
 
-- `model_open` — open existing model
 - `scan` — shallow and recursive topology
 - `find` — search by name and type
 - `connections` — upstream/downstream tracing
 - `inspect` — single parameter and full list
-- `highlight` — UI highlight
+- `highlight` — UI highlight (limited to verifying success response envelope;
+  visual verification requires human confirmation — this is a known scope limitation,
+  not an environment block)
 
-### Phase 3: Write Layer
+### Phase 3: Model Lifecycle & Write Layer
 
+- `model_open` — open existing model (mutates loaded model set, but non-destructive)
 - `model_new` — create new model
 - `set_param` — dry_run → apply → verify → rollback (full safety chain)
 - `model_save` — save model
@@ -147,6 +158,20 @@ Verify MATLAB reachability and Simulink availability. If unreachable, mark all i
 - Compile results, write/update report, generate suggestions
 
 **Incremental mode**: AI skips unaffected phases, but Phase 0 always runs.
+
+### Test Cleanup
+
+After testing completes, AI should clean up test artifacts:
+- Close models opened during testing (via MATLAB `close_system` if CLI supports it, or note as manual step)
+- Delete temporary `.slx` files created by `model_new` during tests
+- If `model_close` is not available as a CLI action, document this as a known limitation and instruct the user to close models manually or restart the MATLAB session
+
+### Timeout Handling
+
+If a CLI command does not return within 60 seconds, treat it as a potential environment issue:
+- Mark the test item as BLOCKED with reason "Command timed out after 60s"
+- Suggest the user check MATLAB responsiveness
+- Continue with remaining tests that don't depend on the timed-out action
 
 ## Test Case Generation Rules
 
@@ -202,6 +227,16 @@ When environment issue is encountered:
 
 Location: `docs/reports/LIVE-TEST-REPORT.md`
 
+**Status indicators**: Report uses text labels (`PASS`, `FAIL`, `BLOCKED`, `SKIP`) as canonical status. Emoji are optional visual shorthand with this fixed mapping:
+
+| Emoji | Meaning |
+|-------|---------|
+| ✅ | All items PASS |
+| ⚠️ | Partial (some FAIL) |
+| ❌ | Major failure |
+| 🔒 | BLOCKED by environment |
+| ⏭️ | SKIP |
+
 ```markdown
 # Live Test Report
 
@@ -241,19 +276,19 @@ Phase Coverage:
 ### Phase 2: Read-Only
 | # | Test | Status | Commit | Notes |
 |---|------|--------|--------|-------|
-| 4 | scan shallow topology | ✅ PASS | abc1234 | |
-| 5 | scan recursive max_depth | ❌ FAIL | abc1234 | See FAIL-001 |
+| 3 | scan shallow topology | ✅ PASS | abc1234 | |
+| 4 | connections depth limit | ❌ FAIL | abc1234 | See FAIL-001 |
 
 (... other phases ...)
 
 ## Failure Details
 
-### FAIL-001: scan recursive ignores max_depth
+### FAIL-001: connections depth not respected
 - **Phase**: 2 Read-Only
-- **Action**: scan
-- **Steps**: `scan model=test recursive=true max_depth=2`
-- **Expected**: Only blocks within 2 levels
-- **Actual**: Returned all levels
+- **Action**: connections
+- **Steps**: `connections model=test block=Gain1 direction=downstream depth=1`
+- **Expected**: Only direct downstream connections (1 hop)
+- **Actual**: Returned full transitive closure
 - **Commit**: abc1234
 
 ## Blocked Details
@@ -278,6 +313,10 @@ Phase Coverage:
 | Date | Mode | Commit | Result | Notes |
 |------|------|--------|--------|-------|
 | 2026-03-24 | full | abc1234 | 24✅ 2❌ 1🔒 1⏭️ | Initial |
+
+## Schema Snapshot
+(AI stores the `schema` action output here for incremental comparison.
+ If the schema changes between runs, AI knows to re-test Phase 1 + Phase 4.)
 ```
 
 ### Report Update Rules
@@ -335,7 +374,7 @@ Check docs/reports/LIVE-TEST-REPORT.md exists?
 | Document | Update | Content |
 |----------|--------|---------|
 | `.claude/CLAUDE.md` | Yes | Add `/live-test` to Commands section |
-| `/release` skill | Yes | Add report archive step |
+| `/release` skill | Yes | Add report archive step (insert between step 3 "Validate locally" and step 4 "Commit release changes" in Release Flow) |
 | `README.md` | No | Internal dev tool, not user-facing |
 | `agents/` | No | Unrelated to analyzer agent |
 | Shipped `SKILL.md` | No | Testing tool is not plugin functionality |
@@ -345,7 +384,7 @@ Check docs/reports/LIVE-TEST-REPORT.md exists?
 | File | Action | Purpose |
 |------|--------|---------|
 | `.claude/skills/live-testing/SKILL.md` | Create | Skill definition with full playbook |
-| `docs/reports/LIVE-TEST-REPORT.md` | Generated | Living test report (created by skill execution) |
-| `docs/reports/archive/` | Generated | Release snapshots (created by release workflow) |
+| `docs/reports/LIVE-TEST-REPORT.md` | Generated | Living test report (created by skill on first execution) |
+| `docs/reports/archive/` | Generated | Release snapshots (created by release workflow; skill creates dir if absent) |
 | `.claude/CLAUDE.md` | Modify | Add `/live-test` command reference |
 | `.claude/skills/release/SKILL.md` | Modify | Add report archive step |
