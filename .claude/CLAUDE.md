@@ -32,6 +32,11 @@ claude plugin validate .
 # Local invocation
 python -m simulink_cli schema
 python -m simulink_cli --json '{"action":"schema"}'
+
+# Live device testing (requires real MATLAB/Simulink)
+# /live-test          — AI judges full vs incremental
+# /live-test full     — force full test
+# /live-test results  — show latest report
 ```
 
 ## Core Rules
@@ -47,6 +52,7 @@ python -m simulink_cli --json '{"action":"schema"}'
 
 - **`simulink_cli/CLAUDE.md`** — Agent-first CLI design philosophy. Auto-loads when editing `simulink_cli/` files.
 - **`/release` skill** — Version-sync, change synchronization checklist, release notes, validation flow.
+- **`/live-test` skill** — End-to-end testing on real MATLAB/Simulink. Schema-driven, incremental, produces reports to `docs/reports/`.
 
 ## Engineering Notes
 
