@@ -3,7 +3,7 @@
 ## Phase 0: Environment Check (always runs)
 
 ```bash
-python -m simulink_cli --json '{"action":"session","sub_action":"list"}'
+python -m simulink_cli --json '{"action":"session","session_action":"list"}'
 ```
 
 - If command fails or returns connection error → ALL items BLOCKED
