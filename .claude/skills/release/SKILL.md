@@ -35,8 +35,16 @@ claude plugin validate .
 python scripts/build_release_notes.py --tag vX.Y.Z --ref HEAD
 ```
 
-4. Commit release changes
-5. Create and push annotated tag:
+4. Archive live test report (if available):
+   - If `docs/reports/LIVE-TEST-REPORT.md` exists:
+     - Check report's `Test Commit` vs current HEAD
+     - If close match: copy to `docs/reports/archive/live-test-vX.Y.Z.md`
+     - If large gap: warn "Live test report may be stale" — user decides
+     - Reference archived report in release notes Validation section
+   - If no report exists: warn "No live test report. Consider running /live-test first." — do not block release
+
+5. Commit release changes
+6. Create and push annotated tag:
 
 ```bash
 git tag -a vX.Y.Z -m "Release vX.Y.Z"
@@ -44,7 +52,7 @@ git push origin <branch>
 git push origin vX.Y.Z
 ```
 
-6. `.github/workflows/release.yml` creates the GitHub Release automatically
+7. `.github/workflows/release.yml` creates the GitHub Release automatically
 
 ## Version Sync Rules
 
@@ -155,3 +163,4 @@ Before finishing release-related work:
 - [ ] Release notes source is understood (curated vs fallback)
 - [ ] Local validation passed
 - [ ] No stale docs describing manual-only release flow
+- [ ] Live test report reviewed (if available) — no unresolved FAIL items
