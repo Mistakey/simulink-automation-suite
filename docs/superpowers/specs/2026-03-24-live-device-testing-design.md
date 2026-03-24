@@ -1,7 +1,7 @@
 # Live Device Testing Skill Design
 
 **Date**: 2026-03-24
-**Status**: Draft
+**Status**: Review-passed
 **Scope**: New project-level skill for end-to-end live MATLAB/Simulink testing
 
 ## Problem Statement
