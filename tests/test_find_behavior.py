@@ -64,12 +64,33 @@ class FindBehaviorTests(unittest.TestCase):
         self.assertNotIn("error", result)
         self.assertEqual(result["total_results"], 2)
 
-    def test_find_includes_warnings_from_find_system(self):
+    def test_find_filters_variant_warnings_from_output(self):
         eng = OutputSensitiveEngine()
         with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
             result = find.execute(_find_args(model="m", name="Gain"))
+        self.assertNotIn("warnings", result)
+
+    def test_find_passes_through_non_variant_warnings(self):
+        class LinkWarningEngine(FakeFindEngine):
+            def __init__(self):
+                super().__init__(
+                    models=["m"],
+                    find_results={"m": ["m/Gain"]},
+                    valid_handles={"m", "m/Gain"},
+                )
+                self.warning_log = []
+
+            def find_system(self, *args, **kwargs):
+                if args == ("Type", "block_diagram"):
+                    return list(self.models)
+                self.warning_log.append("Link resolution warning")
+                return super().find_system(*args, **kwargs)
+
+        eng = LinkWarningEngine()
+        with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
+            result = find.execute(_find_args(model="m", name="Gain"))
         self.assertIn("warnings", result)
-        self.assertEqual(result["warnings"], ["Variant warning"])
+        self.assertEqual(result["warnings"], ["Link resolution warning"])
 
     def test_find_block_type_fallback_preserves_warning(self):
         class WarningThenMissingBlockTypeEngine(FakeFindEngine):
@@ -90,7 +111,7 @@ class FindBehaviorTests(unittest.TestCase):
         eng = WarningThenMissingBlockTypeEngine()
         with patch.object(find, 'safe_connect_to_session', return_value=(eng, None)):
             result = find.execute(_find_args(model="m", name="Gain"))
-        self.assertEqual(result["warnings"], ["Variant warning"])
+        self.assertNotIn("warnings", result)
         self.assertEqual(result["results"][0]["type"], "")
 
     def test_find_failure_after_warning_preserves_details_warnings(self):

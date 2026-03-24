@@ -202,8 +202,9 @@ def execute(args):
             "total_results": total_results,
             "truncated": truncated,
         }
-        if output_warnings:
-            output["warnings"] = output_warnings
+        actionable_warnings = [w for w in output_warnings if "ariant" not in w]
+        if actionable_warnings:
+            output["warnings"] = actionable_warnings
         return output
     except Exception as exc:
         details = {"cause": str(exc)}
