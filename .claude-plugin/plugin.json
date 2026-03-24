@@ -1,7 +1,7 @@
 {
   "name": "simulink-automation-suite",
   "description": "Simulink automation suite plugin for Claude Code with model analysis agent and parameter editing skill.",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "author": {
     "name": "kelch"
   },
