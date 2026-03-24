@@ -6,10 +6,11 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![MATLAB](https://img.shields.io/badge/MATLAB-Engine-orange)
 
-Simulink Automation Suite 是一个基于 MATLAB Engine for Python 的 Claude Code 插件，用于 Simulink 自动化分析、参数修改与模型生命周期管理流程。
+Simulink Automation Suite 是一个基于 MATLAB Engine for Python 的 Claude Code 插件，用于 Simulink 自动化工作流。
 
 - 插件标准名称：`simulink-automation-suite`
-- 已发布技能：`simulink-automation`（统一只读分析 + 参数修改 + 模型生命周期管理）
+- **只读分析** — `simulink-analyzer` agent 自主探索模型拓扑、追踪连接、审计参数，并返回结构化分析结果，不会污染对话上下文。
+- **写入自动化** — `simulink-automation` 技能引导安全的参数修改，提供 dry-run 预览、前置条件守卫和回滚支持。
 - 运行时 Python 模块路径：`simulink_cli`（统一 CLI 入口）
 
 ---
@@ -43,7 +44,7 @@ Simulink Automation Suite 的核心定位，是让 Simulink 分析能力在 Clau
 
 ## 工作方式
 
-1. Claude Code 调用 `simulink-automation` 技能处理 Simulink 任务。
+1. Claude Code 调用 `simulink-automation` 技能处理写入/元查询任务，或 dispatch `simulink-analyzer` agent 进行只读分析。
 2. 技能先解析 MATLAB 会话上下文（`session list/use/current/clear`），并使用精确会话名匹配；当存在多个会话时，可通过显式 `--session` 或预先选择的 active session 解析目标会话。
 3. 然后执行可用动作之一：`schema`、`list_opened`、`scan`、`connections`、`inspect`、`find`、`highlight`、`set_param`、`model_new`、`model_open`、`model_save`、`session`。
 4. 结果通过 `stdout` 输出为单一机器可读 JSON 负载；原始警告文本不会直接污染 stdout。
@@ -287,8 +288,10 @@ simulink_cli/           # 统一 CLI 包（单一入口）
     ├── model_open.py
     ├── model_save.py
     └── session_cmd.py
+agents/                 # 已发布的 Agent 定义
+└── simulink-analyzer.md  # 只读分析 Agent（拓扑、搜索、连接、参数审计）
 skills/                 # 插件技能定义（仅文档，无 Python 代码）
-└── simulink_automation/  # 统一分析 + 编辑技能
+└── simulink_automation/  # 写入自动化 + 元查询技能
     ├── SKILL.md
     └── reference.md
 tests/                  # 测试套件
@@ -307,7 +310,7 @@ claude plugin validate .
 
 ## 路线图
 
-- **当前阶段（v2.1.x）：** 只读分析、guarded 参数修改，以及模型生命周期管理（`model_new`、`model_open`、`model_save`），通过统一的 `simulink_cli` 包和 `simulink-automation` 技能。
+- **当前阶段（v2.2.x）：** 通过 `simulink-analyzer` agent 进行只读分析，通过 `simulink-automation` 技能进行 guarded 参数修改和模型生命周期管理，均通过统一的 `simulink_cli` 包。
 - **下一阶段：** 在保持可预测契约与恢复链路的前提下，增强 Agent 工作流编排与可靠性。
 - **后续阶段：** 通过新增技能扩展到 build/repair 场景，且保持插件标识 `simulink-automation-suite` 不变。
 

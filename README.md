@@ -6,10 +6,11 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![MATLAB](https://img.shields.io/badge/MATLAB-Engine-orange)
 
-Simulink Automation Suite is a Claude Code plugin for Simulink automation workflows (read-only analysis, parameter modification, and model lifecycle management) through MATLAB Engine for Python.
+Simulink Automation Suite is a Claude Code plugin for Simulink automation workflows through MATLAB Engine for Python.
 
 - Canonical plugin name: `simulink-automation-suite`
-- Shipped skill: `simulink-automation` (unified read-only analysis + parameter editing + model lifecycle)
+- **Read Analysis** — the `simulink-analyzer` agent autonomously explores model topology, traces connections, audits parameters, and returns structured findings without polluting conversation context.
+- **Write Automation** — the `simulink-automation` skill guides safe parameter modification with dry-run preview, precondition guards, and rollback support.
 - Runtime Python module path: `simulink_cli` (unified CLI entrypoint)
 
 ---
@@ -43,7 +44,7 @@ This plugin provides a third path: direct, structured, runtime model analysis fo
 
 ## How It Works
 
-1. Claude Code invokes the `simulink-automation` skill for Simulink tasks.
+1. Claude Code invokes the `simulink-automation` skill for write/meta tasks, or dispatches the `simulink-analyzer` agent for read analysis.
 2. The skill resolves MATLAB session context (`session list/use/current/clear`) with exact-name matching, using either an explicit `--session` or a previously selected active session.
 3. It executes one of the available actions: `schema`, `list_opened`, `scan`, `connections`, `inspect`, `find`, `highlight`, `set_param`, `model_new`, `model_open`, `model_save`, or `session`.
 4. Results are returned as a single machine-readable JSON payload on `stdout`; warnings never spill raw text into stdout, and `stderr` is reserved for maintainer-facing diagnostics.
@@ -287,8 +288,10 @@ simulink_cli/           # Unified CLI package (single entrypoint)
     ├── model_open.py
     ├── model_save.py
     └── session_cmd.py
+agents/                 # Published agent definitions
+└── simulink-analyzer.md  # Read-analysis agent (topology, search, connections, inspection)
 skills/                 # Plugin skill definitions (docs only, no Python code)
-└── simulink_automation/  # Unified analysis + editing skill
+└── simulink_automation/  # Write automation + meta-query skill
     ├── SKILL.md
     └── reference.md
 tests/                  # Test suite
@@ -307,7 +310,7 @@ claude plugin validate .
 
 ## Roadmap
 
-- **Current (v2.1.x):** read-only analysis, guarded parameter modification, and model lifecycle management (`model_new`, `model_open`, `model_save`) via unified `simulink_cli` package and `simulink-automation` skill.
+- **Current (v2.2.x):** read-only analysis via `simulink-analyzer` agent, guarded parameter modification and model lifecycle management via `simulink-automation` skill, all through the unified `simulink_cli` package.
 - **Next:** strengthen agent workflow orchestration and reliability while preserving deterministic contracts and recovery paths.
 - **Future:** add new skills for build/repair scenarios without renaming the plugin (`simulink-automation-suite` remains the stable identity).
 
