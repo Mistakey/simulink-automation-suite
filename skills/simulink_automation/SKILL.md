@@ -26,13 +26,53 @@ Schema output is the authoritative reference for command syntax. Do not rely on 
 ## Workflow Strategy
 
 1. **Discover** — `list_opened` to see available models; `session list` if multiple MATLAB sessions exist.
-2. **Understand** — `scan` (shallow first, recursive only when needed), `find` to locate blocks, `inspect` to read parameters.
-3. **Navigate** — `connections` for upstream/downstream analysis, `highlight` for visual location.
+2. **Quick lookup** — `inspect` with a specific target and specific param for single-value checks; `highlight` for visual location.
+3. **Deep analysis** — delegate to `simulink-analyzer` agent (see Responsibility & Handoff).
 4. **Modify** — `set_param` with dry-run preview before any write. See Write Safety Model below.
 5. **Verify** — `inspect` the target after write to confirm the change took effect.
 
-Default to shallow scans. Escalate to recursive/hierarchy only when explicitly requested.
-Always read and understand the model before modifying. One parameter per `set_param` invocation.
+One parameter per `set_param` invocation. Always read and understand the model before modifying.
+
+## Responsibility & Handoff
+
+This skill and the `simulink-analyzer` agent have non-overlapping responsibilities.
+
+### Direct Handling (this skill)
+
+The following actions are handled directly without dispatching the agent:
+
+| Action | Reason |
+|--------|--------|
+| `session` (list/current/use/clear) | Meta-query; main agent needs session context for dispatch decisions |
+| `list_opened` | Meta-query; main agent needs model list for dispatch decisions |
+| `schema` | Self-discovery; main agent may need the action catalog |
+| `highlight` | UI side-effect; no analysis output to isolate |
+| `inspect` (specific target + specific param) | Single-value response; main agent needs the value in context |
+| `set_param` | Write operation; requires user interaction for safety |
+| `model_new` / `model_open` / `model_save` | Write/lifecycle operations |
+
+### Delegate to simulink-analyzer agent
+
+The following actions are delegated to the analyzer agent for context isolation:
+
+| Action | Reason |
+|--------|--------|
+| `scan` (any configuration) | Topology output; potentially large |
+| `find` (any criteria) | Search results; potentially large |
+| `connections` (any configuration) | Connection graph; potentially large |
+| `inspect` (no specific param or param=All) | Full parameter list; potentially large |
+| Multi-step read analysis workflows | Workflow-level context isolation |
+
+Before dispatching, resolve session and model via direct `session current` or `list_opened`, then provide them explicitly to the agent.
+
+### Composite Requests
+
+When a user request involves both analysis and modification (e.g., "check the PID parameters, then set Kp to 2.0"):
+
+1. Dispatch the `simulink-analyzer` agent for the analysis portion first.
+2. Use the analysis results to execute the write workflow directly via this skill.
+
+Always analyze before writing. Never combine analysis delegation and write execution in a single step.
 
 ## Write Safety Model
 
