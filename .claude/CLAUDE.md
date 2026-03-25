@@ -56,9 +56,10 @@ python -m simulink_cli --json '{"action":"schema"}'
 
 ## Git Workflow
 
-- **Never commit directly to main** for feature work. Create a feature branch (or worktree) first.
+- **All development work goes through feature branches** — feat, fix, refactor, docs overhaul, etc. Create a branch (or worktree) first, squash merge to main when complete.
+- Direct commits to main only for trivial meta changes (CLAUDE.md edits, typo fixes, release tags).
 - Commit freely on the feature branch (TDD granularity is fine).
-- Squash merge to main when complete — one commit per logical unit (feat, docs, release).
+- Squash merge to main — one commit per logical unit (feat, docs, release).
 - Tag and release on main only.
 
 ## Engineering Notes
