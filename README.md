@@ -46,7 +46,7 @@ This plugin provides a third path: direct, structured, runtime model analysis fo
 
 1. Claude Code invokes the `simulink-automation` skill for write/meta tasks, or dispatches the `simulink-analyzer` agent for read analysis.
 2. The skill resolves MATLAB session context (`session list/use/current/clear`) with exact-name matching, using either an explicit `--session` or a previously selected active session.
-3. It executes one of the available actions: `schema`, `list_opened`, `scan`, `connections`, `inspect`, `find`, `highlight`, `set_param`, `model_new`, `model_open`, `model_save`, or `session`.
+3. It executes one of the available actions: `schema`, `list_opened`, `scan`, `connections`, `inspect`, `find`, `highlight`, `set_param`, `model_new`, `model_open`, `model_save`, `block_add`, or `session`.
 4. Results are returned as a single machine-readable JSON payload on `stdout`; warnings never spill raw text into stdout, and `stderr` is reserved for maintainer-facing diagnostics.
 5. Failures use stable error codes for reliable agent recovery.
 6. Write operations (`set_param`) use dry-run preview (default), machine-executable `apply_payload`, rollback payloads, guarded execute via `expected_current_value`, and read-back verification.
@@ -123,6 +123,7 @@ For end-to-end Claude Code prompts and screenshots (single bilingual page), see:
 | `model_new` | Create a new Simulink model | `python -m simulink_cli --json '{"action":"model_new","name":"my_model"}'` |
 | `model_open` | Open a Simulink model from file | `python -m simulink_cli --json '{"action":"model_open","path":"C:/models/my_model.slx"}'` |
 | `model_save` | Save a loaded Simulink model | `python -m simulink_cli --json '{"action":"model_save","model":"my_model"}'` |
+| `block_add` | Add a library block to a loaded model | `python -m simulink_cli --json '{"action":"block_add","source":"simulink/Math Operations/Gain","destination":"my_model/Gain1"}'` |
 | `session` | Manage or select the active MATLAB shared session | `python -m simulink_cli session list` |
 
 ---
@@ -157,6 +158,7 @@ python -m simulink_cli --json '{"action":"set_param","target":"my_model/Gain1","
 python -m simulink_cli --json '{"action":"model_new","name":"my_model"}'
 python -m simulink_cli --json '{"action":"model_open","path":"C:/models/my_model.slx"}'
 python -m simulink_cli --json '{"action":"model_save","model":"my_model"}'
+python -m simulink_cli --json '{"action":"block_add","source":"simulink/Math Operations/Gain","destination":"my_model/Gain1"}'
 ```
 
 ---
@@ -256,6 +258,8 @@ Common error codes:
 - `verification_failed`
 - `model_already_loaded`
 - `model_save_failed`
+- `source_not_found`
+- `block_already_exists`
 - `inactive_parameter`
 - `runtime_error`
 
@@ -287,6 +291,7 @@ simulink_cli/           # Unified CLI package (single entrypoint)
     ├── model_new.py
     ├── model_open.py
     ├── model_save.py
+    ├── block_cmd.py
     └── session_cmd.py
 agents/                 # Published agent definitions
 └── simulink-analyzer.md  # Read-analysis agent (topology, search, connections, inspection)
