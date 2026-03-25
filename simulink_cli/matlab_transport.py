@@ -131,3 +131,8 @@ def open_system(engine, path):
 def save_system(engine, model):
     """Save a loaded Simulink model to disk."""
     return call_no_output(engine, "save_system", model)
+
+
+def add_block(engine, source, dest):
+    """Add a library block to a loaded model."""
+    return call_no_output(engine, "add_block", source, dest)
