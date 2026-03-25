@@ -469,3 +469,35 @@ class FakeModelEngine:
     @property
     def saved_models(self):
         return set(self._saved)
+
+
+class FakeBlockEngine:
+    """Fake engine for block_add action tests.
+
+    Tracks loaded models, existing blocks, and known library sources.
+    Supports get_param (Handle) and add_block.
+    """
+
+    def __init__(self, loaded_models=None, blocks=None, library_sources=None):
+        self._loaded = set(loaded_models or [])
+        self._blocks = set(blocks or [])
+        self._library_sources = set(library_sources or [])
+
+    def get_param(self, target, param, nargout=1):
+        if param == "Handle":
+            if target in self._library_sources:
+                return 1.0
+            if target in self._loaded:
+                return 1.0
+            if target in self._blocks:
+                return 1.0
+            raise RuntimeError(f"Invalid Simulink object name: {target}")
+        raise RuntimeError(f"Parameter '{param}' not found")
+
+    def add_block(self, source, dest, nargout=0):
+        model_root = dest.split("/")[0]
+        if model_root not in self._loaded:
+            raise RuntimeError(f"Model '{model_root}' is not loaded")
+        if dest in self._blocks:
+            raise RuntimeError(f"Block '{dest}' already exists")
+        self._blocks.add(dest)
