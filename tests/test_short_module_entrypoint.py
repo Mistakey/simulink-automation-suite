@@ -26,7 +26,7 @@ class ModuleEntrypointTests(unittest.TestCase):
         self.assertIn("schema", payload["actions"])
         self.assertIn("scan", payload["actions"])
         self.assertIn("set_param", payload["actions"])
-        self.assertEqual(payload["version"], "2.3")
+        self.assertEqual(payload["version"], "2.4")
 
 
 if __name__ == "__main__":

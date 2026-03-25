@@ -65,6 +65,9 @@ class DocsContractTests(unittest.TestCase):
             "invalid_json",
             "source_not_found",
             "block_already_exists",
+            "model_dirty",
+            "line_already_exists",
+            "update_failed",
         ]
         for code in required_codes:
             self.assertIn(code, text, f"Recovery routing missing: {code}")
@@ -199,6 +202,11 @@ class DocsContractTests(unittest.TestCase):
         for action in ["scan", "find", "connections"]:
             self.assertIn(action, handoff_text, f"Delegation bucket missing: {action}")
         self.assertIn("multi-step", handoff_text.lower())
+
+    def test_handoff_direct_bucket_covers_v2_4_actions(self):
+        handoff_text = self._get_handoff_text()
+        for action in ["model_close", "model_update", "line_add"]:
+            self.assertIn(action, handoff_text, f"Direct bucket missing: {action}")
 
     def test_handoff_declares_composite_request_rule(self):
         self.assertIn("composite", self._get_handoff_text().lower())

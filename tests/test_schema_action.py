@@ -10,14 +10,14 @@ class SchemaActionTests(unittest.TestCase):
         self.schema = build_schema_payload()
 
     def test_schema_returns_version(self):
-        self.assertEqual(self.schema["version"], "2.3")
+        self.assertEqual(self.schema["version"], "2.4")
 
     def test_all_actions_present_with_description_and_fields(self):
         expected = {
             "schema", "scan", "connections", "inspect", "find",
             "highlight", "list_opened", "set_param", "session",
-            "model_new", "model_open", "model_save",
-            "block_add",
+            "model_new", "model_open", "model_save", "model_close", "model_update",
+            "block_add", "line_add",
         }
         self.assertEqual(set(self.schema["actions"].keys()), expected)
         for name, action in self.schema["actions"].items():

@@ -28,8 +28,10 @@ Schema output is the authoritative reference for command syntax. Do not rely on 
 1. **Discover** — `list_opened` to see available models; `session list` if multiple MATLAB sessions exist.
 2. **Quick lookup** — `inspect` with a specific target and specific param for single-value checks; `highlight` for visual location.
 3. **Deep analysis** — delegate to `simulink-analyzer` agent (see Responsibility & Handoff).
-4. **Modify** — `set_param` with dry-run preview before any write; `block_add` for placing new blocks. See Write Safety Model below.
-5. **Verify** — `inspect` the target after write to confirm the change took effect.
+4. **Modify** — `set_param` with dry-run preview before any write; `block_add` for placing new blocks; `line_add` for connecting ports. See Write Safety Model below.
+5. **Update** — `model_update` to compile/update diagram after structural changes.
+6. **Verify** — `inspect` the target after write to confirm the change took effect.
+7. **Finalize** — `model_save` then `model_close` when done.
 
 One parameter per `set_param` invocation. Always read and understand the model before modifying.
 
@@ -50,7 +52,9 @@ The following actions are handled directly without dispatching the agent:
 | `inspect` (specific target + specific param) | Single-value response; main agent needs the value in context |
 | `set_param` | Write operation; requires user interaction for safety |
 | `model_new` / `model_open` / `model_save` | Write/lifecycle operations |
+| `model_close` / `model_update` | Lifecycle operations; direct execution |
 | `block_add` | Write operation; structural mutation |
+| `line_add` | Write operation; signal routing |
 
 ### Delegate to simulink-analyzer agent
 
@@ -112,6 +116,9 @@ Error-driven next actions (consult `schema` for the full error code list):
 | `model_save_failed` | Check file permissions and disk space |
 | `source_not_found` | Verify library source path; use `find` to browse available library blocks |
 | `block_already_exists` | Use a different destination name or inspect existing block |
+| `model_dirty` | `model_save` first, or retry with `force: true` to discard changes |
+| `line_already_exists` | Check existing connections with `connections`; use a different port |
+| `update_failed` | Check model for errors (unconnected ports, type mismatches); fix with `set_param` or `line_add`, retry |
 | `state_write_failed` / `state_clear_failed` | Check plugin state-file permissions or pass explicit `--session` |
 | `invalid_json` / `json_conflict` / `unknown_parameter` / `invalid_input` | Correct request payload per `schema`, retry |
 | `find` returns empty | Broaden name pattern, try different block_type, widen scope |

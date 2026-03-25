@@ -17,11 +17,11 @@ A normal person building a Simulink model uses these basic operations:
 | 1 | Create new model | `new_system` | `model_new` | Done (v2.1.0) |
 | 2 | Open model | `open_system` | `model_open` | Done (v2.1.0) |
 | 3 | Save model | `save_system` | `model_save` | Done (v2.1.0) |
-| 4 | Close model | `close_system` | `model_close` | TODO (v2.4.0) |
-| 5 | Update/compile model | `update_diagram` | `model_update` | TODO (v2.4.0) |
+| 4 | Close model | `close_system` | `model_close` | Done (v2.4.0) |
+| 5 | Update/compile model | `update_diagram` | `model_update` | Done (v2.4.0) |
 | 6 | Add block | `add_block` | `block_add` | Done (v2.3.0) |
 | 7 | Delete block | `delete_block` | `block_delete` | TODO (v2.6.0) |
-| 8 | Connect blocks (point-to-point) | `add_line` | `line_add` | TODO (v2.4.0) |
+| 8 | Connect blocks (point-to-point) | `add_line` | `line_add` | Done (v2.4.0) |
 | 9 | Disconnect blocks (point-to-point) | `delete_line` | `line_delete` | TODO (v2.5.0) |
 | 10 | Set parameter | `set_param` | `set_param` | Done (v2.0) |
 | 11 | Read parameter | `get_param` via inspect | `inspect` | Done (v1.0) |
@@ -45,11 +45,11 @@ The existing `session` action uses a hybrid pattern (single action with internal
 | `model_new` | `model_cmd.py` | Checked Mutation — Done (v2.1.0) |
 | `model_open` | `model_cmd.py` | Operational — Done (v2.1.0) |
 | `model_save` | `model_cmd.py` | Operational — Done (v2.1.0) |
-| `model_close` | `model_cmd.py` | Operational (v2.4.0) |
-| `model_update` | `model_cmd.py` | Operational (v2.4.0) |
+| `model_close` | `model_close.py` | Operational — Done (v2.4.0) |
+| `model_update` | `model_update.py` | Operational — Done (v2.4.0) |
 | `block_add` | `block_cmd.py` | Checked Mutation — Done (v2.3.0) |
 | `block_delete` | `block_cmd.py` | Full Guarded (v2.6.0) |
-| `line_add` | `line_cmd.py` | Checked Mutation (v2.4.0) |
+| `line_add` | `line_add.py` | Checked Mutation — Done (v2.4.0) |
 | `line_delete` | `line_cmd.py` | Checked Mutation (v2.5.0) |
 | `simulate` | `simulate.py` | Operational (v2.5.0) |
 
@@ -193,30 +193,30 @@ Goal: AI can connect block ports, verify model structure, and close models — c
 This version consolidates `line_add` with `model_close` and `model_update`. Previously these Operational-tier actions were deferred to Phase 2, but they are natural pairs to existing Phase 1 operations (`model_open`/`model_close`, build/`model_update`) and are needed for a meaningful end-to-end workflow.
 
 **Signal routing (Checked Mutation):**
-- [ ] `line_add` action (precondition + execute + verify + deferred rollback)
-- [ ] New module: `simulink_cli/actions/line_cmd.py`
-- [ ] Register in `simulink_cli/core.py` and `actions/__init__.py`
-- [ ] Transport wrapper: `add_line()`
-- [ ] Fake engine extension for line operations
-- [ ] `test_line_cmd_behavior.py` — behavior tests
-- [ ] Error codes: `port_not_found`, `line_already_exists` as needed
+- [x] `line_add` action (precondition + execute + verify + deferred rollback)
+- [x] New module: `simulink_cli/actions/line_add.py`
+- [x] Register in `simulink_cli/core.py` and `actions/__init__.py`
+- [x] Transport wrapper: `add_line()`
+- [x] Fake engine extension for line operations
+- [x] `test_line_add_behavior.py` — behavior tests
+- [x] Error codes: `port_not_found`, `line_already_exists` as needed
 
 **Model lifecycle completion (Operational):**
-- [ ] `model_close` action (execute + dirty-state check + error handling)
-- [ ] `model_update` action (execute + error handling)
-- [ ] Transport wrappers: `close_system()`, `update_diagram()`
-- [ ] Fake engine extensions for close/update
-- [ ] Behavior tests for model_close and model_update
+- [x] `model_close` action (execute + dirty-state check + error handling)
+- [x] `model_update` action (execute + error handling)
+- [x] Transport wrappers: `close_system()`, `update_diagram()`
+- [x] Fake engine extensions for close/update
+- [x] Behavior tests for model_close and model_update
 
 **Integration & validation:**
-- [ ] **End-to-end workflow test:** `model_new` → `block_add` (x2+) → `line_add` → `set_param` → `model_update` → `model_save` → `model_close`
+- [x] **End-to-end workflow test:** `model_new` → `block_add` (x2+) → `line_add` → `set_param` → `model_update` → `model_save` → `model_close`
 - [ ] Live MATLAB smoke test script (covers full creation workflow)
-- [ ] Schema contract updated
-- [ ] SKILL.md, reference.md, test-scenarios.md updated
-- [ ] README.md, README.zh-CN.md updated
-- [ ] Docs contract tests updated
-- [ ] Version bump → 2.4.0; schema version → 2.4
-- [ ] Full validation
+- [x] Schema contract updated
+- [x] SKILL.md, reference.md updated
+- [x] README.md, README.zh-CN.md updated
+- [x] Docs contract tests updated
+- [x] Version bump → 2.4.0; schema version → 2.4
+- [x] Full validation
 
 ### Phase 2 — v2.5.0 — Iterate and Verify
 

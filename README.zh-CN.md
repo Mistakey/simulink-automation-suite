@@ -46,7 +46,7 @@ Simulink Automation Suite 的核心定位，是让 Simulink 分析能力在 Clau
 
 1. Claude Code 调用 `simulink-automation` 技能处理写入/元查询任务，或 dispatch `simulink-analyzer` agent 进行只读分析。
 2. 技能先解析 MATLAB 会话上下文（`session list/use/current/clear`），并使用精确会话名匹配；当存在多个会话时，可通过显式 `--session` 或预先选择的 active session 解析目标会话。
-3. 然后执行可用动作之一：`schema`、`list_opened`、`scan`、`connections`、`inspect`、`find`、`highlight`、`set_param`、`model_new`、`model_open`、`model_save`、`block_add`、`session`。
+3. 然后执行可用动作之一：`schema`、`list_opened`、`scan`、`connections`、`inspect`、`find`、`highlight`、`set_param`、`model_new`、`model_open`、`model_save`、`model_close`、`model_update`、`block_add`、`line_add`、`session`。
 4. 结果通过 `stdout` 输出为单一机器可读 JSON 负载；原始警告文本不会直接污染 stdout。
 5. 异常通过稳定错误码返回，便于 Agent 做恢复重试。
 6. 写操作（`set_param`）通过预览模式（默认开启 dry-run）、机器可回放的 `apply_payload`、基于 `expected_current_value` 的 guarded execute、回滚负载与写后读回验证保障安全。
@@ -124,6 +124,9 @@ matlab.engine.shareEngine
 | `model_open` | 从文件打开 Simulink 模型 | `python -m simulink_cli --json '{"action":"model_open","path":"C:/models/my_model.slx"}'` |
 | `model_save` | 保存已加载的 Simulink 模型 | `python -m simulink_cli --json '{"action":"model_save","model":"my_model"}'` |
 | `block_add` | 向已加载模型添加库模块 | `python -m simulink_cli --json '{"action":"block_add","source":"simulink/Math Operations/Gain","destination":"my_model/Gain1"}'` |
+| `line_add` | 连接两个模块端口（信号线） | `python -m simulink_cli --json '{"action":"line_add","model":"my_model","src_block":"Sine","src_port":1,"dst_block":"Gain","dst_port":1}'` |
+| `model_close` | 关闭已加载模型（脏状态守卫） | `python -m simulink_cli --json '{"action":"model_close","model":"my_model"}'` |
+| `model_update` | 编译/更新模型图 | `python -m simulink_cli --json '{"action":"model_update","model":"my_model"}'` |
 | `session` | 管理或选择当前 MATLAB 共享会话 | `python -m simulink_cli session list` |
 
 ---
@@ -159,6 +162,9 @@ python -m simulink_cli --json '{"action":"model_new","name":"my_model"}'
 python -m simulink_cli --json '{"action":"model_open","path":"C:/models/my_model.slx"}'
 python -m simulink_cli --json '{"action":"model_save","model":"my_model"}'
 python -m simulink_cli --json '{"action":"block_add","source":"simulink/Math Operations/Gain","destination":"my_model/Gain1"}'
+python -m simulink_cli --json '{"action":"line_add","model":"my_model","src_block":"Sine","src_port":1,"dst_block":"Gain","dst_port":1}'
+python -m simulink_cli --json '{"action":"model_update","model":"my_model"}'
+python -m simulink_cli --json '{"action":"model_close","model":"my_model"}'
 ```
 
 ---
@@ -260,6 +266,10 @@ python -m simulink_cli --json '{"action":"block_add","source":"simulink/Math Ope
 - `model_save_failed`
 - `source_not_found`
 - `block_already_exists`
+- `model_dirty`
+- `port_not_found`
+- `line_already_exists`
+- `update_failed`
 - `inactive_parameter`
 - `runtime_error`
 
@@ -291,7 +301,10 @@ simulink_cli/           # 统一 CLI 包（单一入口）
     ├── model_new.py
     ├── model_open.py
     ├── model_save.py
+    ├── model_close.py
+    ├── model_update.py
     ├── block_cmd.py
+    ├── line_add.py
     └── session_cmd.py
 agents/                 # 已发布的 Agent 定义
 └── simulink-analyzer.md  # 只读分析 Agent（拓扑、搜索、连接、参数审计）
@@ -315,8 +328,8 @@ claude plugin validate .
 
 ## 路线图
 
-- **当前阶段（v2.2.x）：** 通过 `simulink-analyzer` agent 进行只读分析，通过 `simulink-automation` 技能进行 guarded 参数修改和模型生命周期管理，均通过统一的 `simulink_cli` 包。
-- **下一阶段：** 在保持可预测契约与恢复链路的前提下，增强 Agent 工作流编排与可靠性。
+- **当前阶段（v2.4.x）：** 完整建模工作流 — 创建模型、添加模块、连接信号、配置参数、编译、保存、关闭。通过 `simulink-analyzer` agent 进行只读分析；通过 `simulink-automation` 技能进行 guarded 写操作。
+- **下一阶段：** 仿真支持、信号断连、具有完整回滚能力的模块删除。
 - **后续阶段：** 通过新增技能扩展到 build/repair 场景，且保持插件标识 `simulink-automation-suite` 不变。
 
 ![路线图](docs/assets/readme/roadmap.png)

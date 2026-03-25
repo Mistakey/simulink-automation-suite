@@ -96,10 +96,8 @@ def execute(args):
     rollback = {
         "action": "model_close",
         "model": name,
-        "available": False,
-        "note": "model_close not yet implemented; use MATLAB close_system('"
-        + name
-        + "', 0) manually to undo",
+        "force": True,
+        "available": True,
     }
     if args.get("session") is not None:
         rollback["session"] = args["session"]

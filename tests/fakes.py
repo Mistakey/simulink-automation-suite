@@ -429,10 +429,11 @@ class FakeModelEngine:
     save_system, and get_param (Handle-only for existence checks).
     """
 
-    def __init__(self, loaded_models=None, filesystem=None):
+    def __init__(self, loaded_models=None, filesystem=None, dirty_models=None):
         self._loaded = set(loaded_models or [])
         self._filesystem = set(filesystem or [])
         self._saved = set()
+        self._dirty = set(dirty_models or [])
 
     def new_system(self, name, nargout=1):
         if name in self._loaded:
@@ -452,6 +453,10 @@ class FakeModelEngine:
         self._saved.add(model)
 
     def get_param(self, target, param, nargout=1):
+        if param == "Dirty":
+            if target not in self._loaded:
+                raise RuntimeError(f"Invalid Simulink object name: {target}")
+            return "on" if target in self._dirty else "off"
         if param == "Handle":
             model_root = target.split("/")[0]
             if model_root not in self._loaded:
@@ -459,8 +464,15 @@ class FakeModelEngine:
             return 1.0
         raise RuntimeError(f"Parameter '{param}' not found")
 
-    def close_system(self, model, nargout=0):
+    def close_system(self, model, save_flag=0, nargout=0):
         self._loaded.discard(model)
+
+    def set_param(self, target, param, value, nargout=0):
+        if param == "SimulationCommand" and value == "update":
+            if target not in self._loaded:
+                raise RuntimeError(f"Model '{target}' is not loaded")
+            return
+        raise RuntimeError(f"Unsupported set_param: {param}={value}")
 
     @property
     def loaded_models(self):
@@ -501,3 +513,41 @@ class FakeBlockEngine:
         if dest in self._blocks:
             raise RuntimeError(f"Block '{dest}' already exists")
         self._blocks.add(dest)
+
+
+class FakeLineEngine(FakeBlockEngine):
+    """Fake engine for line_add action tests.
+
+    Extends FakeBlockEngine with line tracking and add_line support.
+    """
+
+    def __init__(self, loaded_models=None, blocks=None, library_sources=None):
+        super().__init__(loaded_models, blocks, library_sources)
+        self._lines = {}  # handle -> (system, src, dst)
+        self._dst_ports = set()  # occupied (system, dst) pairs
+        self._next_handle = 145.0001
+
+    def add_line(self, system, src, dst, nargout=1):
+        if system not in self._loaded:
+            raise RuntimeError(f"Model '{system}' is not loaded")
+        src_block = src.split("/")[0]
+        dst_block = dst.split("/")[0]
+        if f"{system}/{src_block}" not in self._blocks:
+            raise RuntimeError(f"Block '{src_block}' not found in '{system}'")
+        if f"{system}/{dst_block}" not in self._blocks:
+            raise RuntimeError(f"Block '{dst_block}' not found in '{system}'")
+        dst_key = (system, dst)
+        if dst_key in self._dst_ports:
+            raise RuntimeError(f"Destination port '{dst}' is already connected")
+        handle = self._next_handle
+        self._next_handle += 0.0001
+        self._lines[handle] = (system, src, dst)
+        self._dst_ports.add(dst_key)
+        return handle
+
+    def get_param(self, target, param, nargout=1):
+        if isinstance(target, float) and param == "Handle":
+            if target in self._lines:
+                return target
+            raise RuntimeError(f"Invalid line handle: {target}")
+        return super().get_param(target, param, nargout=nargout)

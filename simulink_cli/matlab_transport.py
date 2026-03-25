@@ -136,3 +136,18 @@ def save_system(engine, model):
 def add_block(engine, source, dest):
     """Add a library block to a loaded model."""
     return call_no_output(engine, "add_block", source, dest)
+
+
+def add_line(engine, system, src, dst):
+    """Add a signal line connecting two block ports."""
+    return call(engine, "add_line", system, src, dst)
+
+
+def close_system(engine, model):
+    """Close a Simulink model. Passes 0 to suppress save dialog."""
+    return call_no_output(engine, "close_system", model, 0)
+
+
+def update_diagram(engine, model):
+    """Compile/update a Simulink model diagram."""
+    return call_no_output(engine, "set_param", model, "SimulationCommand", "update")

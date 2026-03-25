@@ -18,6 +18,16 @@ class ModelNewTests(unittest.TestCase):
         self.assertEqual(result["action"], "model_new")
         self.assertTrue(result["verified"])
 
+    def test_rollback_activated_with_model_close(self):
+        eng = FakeModelEngine()
+        with patch.object(model_new, "safe_connect_to_session", return_value=(eng, None)):
+            result = model_new.execute({"name": "test_model", "session": None})
+        rollback = result["rollback"]
+        self.assertTrue(rollback["available"])
+        self.assertEqual(rollback["action"], "model_close")
+        self.assertEqual(rollback["model"], "test_model")
+        self.assertTrue(rollback["force"])
+
     def test_already_loaded_returns_error(self):
         eng = FakeModelEngine(loaded_models=["test_model"])
         with patch.object(model_new, "safe_connect_to_session", return_value=(eng, None)):

@@ -98,6 +98,67 @@ Use the `rollback` payload from any response to restore the prior value. If the 
 
 Rollback is deferred — `block_delete` is not yet implemented. The `note` field provides a manual MATLAB command for undo. If the original request used an explicit `session`, the rollback payload preserves the same `session` field.
 
+## line_add Response Shapes
+
+### Success
+
+```json
+{
+  "action": "line_add",
+  "model": "my_model",
+  "line_handle": 145.0003,
+  "verified": true,
+  "rollback": {
+    "action": "line_delete",
+    "model": "my_model",
+    "line_handle": 145.0003,
+    "available": false,
+    "note": "line_delete not yet implemented (v2.5.0)"
+  }
+}
+```
+
+Rollback is deferred — `line_delete` is not yet implemented. If the original request used an explicit `session`, the rollback payload preserves the same `session` field.
+
+## model_close Response Shapes
+
+### Success
+
+```json
+{
+  "action": "model_close",
+  "model": "my_model",
+  "force": false
+}
+```
+
+### Dirty Model Rejection
+
+If the model has unsaved changes and `force` is not `true`:
+
+```json
+{
+  "error": "model_dirty",
+  "message": "Model 'my_model' has unsaved changes.",
+  "details": {"model": "my_model"},
+  "suggested_fix": "Save first with {\"action\":\"model_save\",\"model\":\"my_model\"} or close with {\"action\":\"model_close\",\"model\":\"my_model\",\"force\":true}"
+}
+```
+
+## model_update Response Shapes
+
+### Success
+
+```json
+{
+  "action": "model_update",
+  "model": "my_model",
+  "warnings": []
+}
+```
+
+The `warnings` field is a list of warning messages from the MATLAB compilation process. Empty list means no warnings.
+
 ## Failure Semantics
 
 - `precondition_failed` — preview is stale; write was **not attempted**.

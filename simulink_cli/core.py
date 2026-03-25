@@ -12,10 +12,13 @@ from simulink_cli.actions import (
     find,
     highlight,
     inspect_block,
+    line_add,
     list_opened,
+    model_close,
     model_new,
     model_open,
     model_save,
+    model_update,
     scan,
     session_cmd,
     set_param,
@@ -34,7 +37,10 @@ _ACTIONS = {
     "model_new": model_new,
     "model_open": model_open,
     "model_save": model_save,
+    "model_close": model_close,
+    "model_update": model_update,
     "block_add": block_cmd,
+    "line_add": line_add,
 }
 
 _FRAMEWORK_ERRORS = {
@@ -56,7 +62,7 @@ def build_schema_payload():
         }
         all_errors.update(mod.ERRORS)
     return {
-        "version": "2.3",
+        "version": "2.4",
         "actions": {"schema": {"description": "Return machine-readable command contract and error-code catalog.", "fields": {}}, **actions},
         "error_codes": sorted(all_errors),
     }
