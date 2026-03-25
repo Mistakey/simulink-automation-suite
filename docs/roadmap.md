@@ -1,6 +1,6 @@
 # Roadmap
 
-Status: Active (established 2026-03-21, refined with Phase 1 sub-phase design 2026-03-21)
+Status: Active (established 2026-03-21, refined with Phase 1 sub-phase design 2026-03-21, updated 2026-03-25)
 
 ## Product Goal
 
@@ -14,14 +14,14 @@ A normal person building a Simulink model uses these basic operations:
 
 | # | Capability | MATLAB Function | CLI Action | Status |
 |---|-----------|----------------|------------|--------|
-| 1 | Create new model | `new_system` | `model_new` | TODO (v2.1.0) |
-| 2 | Open model | `open_system` | `model_open` | TODO (v2.1.0) |
-| 3 | Save model | `save_system` | `model_save` | TODO (v2.1.0) |
+| 1 | Create new model | `new_system` | `model_new` | Done (v2.1.0) |
+| 2 | Open model | `open_system` | `model_open` | Done (v2.1.0) |
+| 3 | Save model | `save_system` | `model_save` | Done (v2.1.0) |
 | 4 | Close model | `close_system` | `model_close` | TODO (Phase 2) |
 | 5 | Update/compile model | `update_diagram` | `model_update` | TODO (Phase 2) |
-| 6 | Add block | `add_block` | `block_add` | TODO (v2.2.0) |
+| 6 | Add block | `add_block` | `block_add` | TODO (v2.3.0) |
 | 7 | Delete block | `delete_block` | `block_delete` | TODO (Phase 3) |
-| 8 | Connect blocks (point-to-point) | `add_line` | `line_add` | TODO (v2.3.0) |
+| 8 | Connect blocks (point-to-point) | `add_line` | `line_add` | TODO (v2.4.0) |
 | 9 | Disconnect blocks (point-to-point) | `delete_line` | `line_delete` | TODO (Phase 2) |
 | 10 | Set parameter | `set_param` | `set_param` | Done (v2.0) |
 | 11 | Read parameter | `get_param` via inspect | `inspect` | Done (v1.0) |
@@ -42,14 +42,14 @@ The existing `session` action uses a hybrid pattern (single action with internal
 
 | Action | Module | Safety Tier |
 |--------|--------|-------------|
-| `model_new` | `model_cmd.py` | Checked Mutation |
-| `model_open` | `model_cmd.py` | Operational |
-| `model_save` | `model_cmd.py` | Operational |
+| `model_new` | `model_cmd.py` | Checked Mutation — Done (v2.1.0) |
+| `model_open` | `model_cmd.py` | Operational — Done (v2.1.0) |
+| `model_save` | `model_cmd.py` | Operational — Done (v2.1.0) |
 | `model_close` | `model_cmd.py` | Operational (Phase 2) |
 | `model_update` | `model_cmd.py` | Operational (Phase 2) |
-| `block_add` | `block_cmd.py` | Checked Mutation |
+| `block_add` | `block_cmd.py` | Checked Mutation (v2.3.0) |
 | `block_delete` | `block_cmd.py` | Full Guarded (Phase 3) |
-| `line_add` | `line_cmd.py` | Checked Mutation |
+| `line_add` | `line_cmd.py` | Checked Mutation (v2.4.0) |
 | `line_delete` | `line_cmd.py` | Checked Mutation (Phase 2) |
 | `simulate` | `simulate.py` | Operational (Phase 2) |
 
@@ -134,27 +134,41 @@ Phase 1 is split into 3 independently releasable sub-phases. Each sub-phase gets
 
 Design reference: `docs/superpowers/specs/2026-03-21-phase1-sub-phases-design.md`
 
-#### v2.1.0 — Model Lifecycle Management
+#### v2.1.0 — Model Lifecycle Management ✅
 
 Goal: AI can create, open, and save Simulink models.
 
-- [ ] `model_new` action (Checked Mutation: precondition + execute + verify + rollback)
-- [ ] `model_open` action (Operational: execute + error handling)
-- [ ] `model_save` action (Operational: execute + error handling; native overwrite semantics)
-- [ ] New module: `simulink_cli/actions/model_cmd.py`
-- [ ] Register in `simulink_cli/core.py` (`_ACTIONS`, FIELDS, schema) and `actions/__init__.py`
-- [ ] Transport wrappers: `new_system()`, `open_system()`, `save_system()`
-- [ ] Fake engine extensions for model lifecycle
-- [ ] `test_model_cmd_behavior.py` — behavior tests with mocked MATLAB
-- [ ] Schema contract updated
-- [ ] Error codes: reuse existing + `model_already_loaded`, `model_save_failed` as needed
-- [ ] SKILL.md, reference.md, test-scenarios.md updated
-- [ ] README.md, README.zh-CN.md updated
-- [ ] Docs contract tests updated
-- [ ] Version bump: plugin.json, marketplace.json → 2.1.0; schema version → 2.1
-- [ ] Full validation: tests + manifest check + `claude plugin validate .`
+- [x] `model_new` action (Checked Mutation: precondition + execute + verify + rollback)
+- [x] `model_open` action (Operational: execute + error handling)
+- [x] `model_save` action (Operational: execute + error handling; native overwrite semantics)
+- [x] New module: `simulink_cli/actions/model_cmd.py`
+- [x] Register in `simulink_cli/core.py` (`_ACTIONS`, FIELDS, schema) and `actions/__init__.py`
+- [x] Transport wrappers: `new_system()`, `open_system()`, `save_system()`
+- [x] Fake engine extensions for model lifecycle
+- [x] `test_model_cmd_behavior.py` — behavior tests with mocked MATLAB
+- [x] Schema contract updated
+- [x] Error codes: reuse existing + `model_already_loaded`, `model_save_failed` as needed
+- [x] SKILL.md, reference.md, test-scenarios.md updated
+- [x] README.md, README.zh-CN.md updated
+- [x] Docs contract tests updated
+- [x] Version bump: plugin.json, marketplace.json → 2.1.0; schema version → 2.1
+- [x] Full validation: tests + manifest check + `claude plugin validate .`
 
-#### v2.2.0 — Block Placement
+#### v2.2.0 — Read Analysis Agent ✅
+
+Goal: Publish `simulink-analyzer` as a first-class plugin agent; refocus skill on write operations.
+
+> Note: Block Placement was originally planned for this slot but deferred to v2.3.0 to prioritize the agent architecture release.
+
+- [x] Published `simulink-analyzer` agent (`simulink_cli/agents/simulink-analyzer.md`)
+- [x] Responsibility & Handoff contract in SKILL.md (routing: direct / delegate / composite)
+- [x] Agent declared in `plugin.json` via explicit file path
+- [x] 18 new contract tests (agent definition, manifest agents, handoff, README coverage)
+- [x] README.md, README.zh-CN.md updated with dual-capability narrative
+- [x] Version bump → 2.2.0; schema version → 2.2
+- [x] Full validation
+
+#### v2.3.0 — Block Placement
 
 Goal: AI can add blocks to a model.
 
@@ -169,10 +183,10 @@ Goal: AI can add blocks to a model.
 - [ ] SKILL.md, reference.md, test-scenarios.md updated
 - [ ] README.md, README.zh-CN.md updated
 - [ ] Docs contract tests updated
-- [ ] Version bump → 2.2.0; schema version → 2.2
+- [ ] Version bump → 2.3.0; schema version → 2.3
 - [ ] Full validation
 
-#### v2.3.0 — Signal Routing + End-to-End Workflow
+#### v2.4.0 — Signal Routing + End-to-End Workflow
 
 Goal: AI can connect block ports, completing the first full modeling workflow.
 
@@ -189,7 +203,7 @@ Goal: AI can connect block ports, completing the first full modeling workflow.
 - [ ] SKILL.md, reference.md, test-scenarios.md updated
 - [ ] README.md, README.zh-CN.md updated
 - [ ] Docs contract tests updated
-- [ ] Version bump → 2.3.0; schema version → 2.3
+- [ ] Version bump → 2.4.0; schema version → 2.4
 - [ ] Full validation
 
 ### Phase 2 — Iterate and Verify
