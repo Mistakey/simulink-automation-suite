@@ -54,6 +54,13 @@ python -m simulink_cli --json '{"action":"schema"}'
 - **`/release` skill** — Version-sync, change synchronization checklist, release notes, validation flow.
 - **`/live-test` skill** — End-to-end testing on real MATLAB/Simulink. Schema-driven, incremental, produces reports to `docs/reports/`.
 
+## Git Workflow
+
+- **Never commit directly to main** for feature work. Create a feature branch (or worktree) first.
+- Commit freely on the feature branch (TDD granularity is fine).
+- Squash merge to main when complete — one commit per logical unit (feat, docs, release).
+- Tag and release on main only.
+
 ## Engineering Notes
 
 - `.sl_pilot_state.json` is local runtime state (gitignored)
