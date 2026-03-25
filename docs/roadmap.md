@@ -20,7 +20,7 @@ A normal person building a Simulink model uses these basic operations:
 | 4 | Close model | `close_system` | `model_close` | Done (v2.4.0) |
 | 5 | Update/compile model | `update_diagram` | `model_update` | Done (v2.4.0) |
 | 6 | Add block | `add_block` | `block_add` | Done (v2.3.0) |
-| 7 | Delete block | `delete_block` | `block_delete` | TODO (v2.6.0) |
+| 7 | Delete block | `delete_block` | `block_delete` | TODO (v2.5.0) |
 | 8 | Connect blocks (point-to-point) | `add_line` | `line_add` | Done (v2.4.0) |
 | 9 | Disconnect blocks (point-to-point) | `delete_line` | `line_delete` | TODO (v2.5.0) |
 | 10 | Set parameter | `set_param` | `set_param` | Done (v2.0) |
@@ -48,7 +48,7 @@ The existing `session` action uses a hybrid pattern (single action with internal
 | `model_close` | `model_close.py` | Operational — Done (v2.4.0) |
 | `model_update` | `model_update.py` | Operational — Done (v2.4.0) |
 | `block_add` | `block_cmd.py` | Checked Mutation — Done (v2.3.0) |
-| `block_delete` | `block_cmd.py` | Full Guarded (v2.6.0) |
+| `block_delete` | `block_cmd.py` | Full Guarded (v2.5.0) |
 | `line_add` | `line_add.py` | Checked Mutation — Done (v2.4.0) |
 | `line_delete` | `line_cmd.py` | Checked Mutation (v2.5.0) |
 | `simulate` | `simulate.py` | Operational (v2.5.0) |
@@ -218,35 +218,36 @@ This version consolidates `line_add` with `model_close` and `model_update`. Prev
 - [x] Version bump → 2.4.0; schema version → 2.4
 - [x] Full validation
 
-### Phase 2 — v2.5.0 — Iterate and Verify
+### Phase 2 — v2.5.0 — Complete Editing + Simulation
 
-Goal: AI can modify an existing model, remove connections, and run simulations.
+Goal: AI can remove blocks/connections, run simulations, and all deferred rollbacks activate — completing the full 14-action capability baseline.
 
-- [ ] `line_delete` action (Checked Mutation)
-- [ ] `simulate` action (Operational)
-- [ ] Transport wrappers: `delete_line()`, `sim()`
-- [ ] Tests: iterate workflow (model_open → set_param → simulate → inspect → model_save → model_close)
-- [ ] Live smoke coverage for simulation flow
+**Signal disconnection (Checked Mutation):**
+- [ ] `line_delete` action (precondition + execute + verify)
+- [ ] Transport wrapper: `delete_line()`
 - [ ] Activate deferred rollback for `line_add` (now that `line_delete` exists)
-- [ ] SKILL.md and docs update
+
+**Block deletion (Full Guarded):**
+- [ ] `block_delete` action (dry_run + capture params/connections + execute + verify + rollback)
+- [ ] Transport wrapper: `delete_block()`
+- [ ] Rollback design: decide full restore vs limited restore (library default + manual re-config)
+- [ ] Activate deferred rollback for `block_add` (now that `block_delete` exists)
+
+**Simulation (Operational):**
+- [ ] `simulate` action (execute + error handling)
+- [ ] Transport wrapper: `sim()`
+
+**Integration & validation:**
+- [ ] Tests: iterate workflow (model_open → set_param → simulate → inspect → model_save → model_close)
+- [ ] Tests: delete → rollback → verify restored state
+- [ ] Live smoke coverage for simulation + destructive edit flows
+- [ ] Schema contract updated
+- [ ] SKILL.md, reference.md, README.md, README.zh-CN.md updated
+- [ ] Docs contract tests updated
 - [ ] Version bump → 2.5.0; schema version → 2.5
 - [ ] Full validation
 
-### Phase 3 — v2.6.0 — Safe Destructive Topology Edits
-
-Goal: AI can safely remove blocks with state capture for rollback.
-
-- [ ] `block_delete` action (Full Guarded: dry_run + capture params/connections + execute + verify + rollback)
-- [ ] Transport wrapper: `delete_block()`
-- [ ] Rollback design: decide full restore vs limited restore (library default + manual re-config)
-- [ ] Tests: delete → rollback → verify restored state
-- [ ] Activate deferred rollback for `block_add` (now that `block_delete` exists)
-- [ ] Live smoke coverage for destructive edit flow
-- [ ] SKILL.md and docs update
-- [ ] Version bump → 2.6.0; schema version → 2.6
-- [ ] Full validation
-
-### Post-Phase 3 — Driven by Real Usage
+### Post-Phase 2 — Driven by Real Usage
 
 These are not planned but may become relevant based on actual usage:
 
