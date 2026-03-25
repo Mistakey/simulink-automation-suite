@@ -7,6 +7,7 @@ from simulink_cli.json_io import JsonArgumentParser, emit_json
 from simulink_cli.session import SESSION_ERROR_MAP
 from simulink_cli.validation import validate_json_type
 from simulink_cli.actions import (
+    block_cmd,
     connections,
     find,
     highlight,
@@ -33,6 +34,7 @@ _ACTIONS = {
     "model_new": model_new,
     "model_open": model_open,
     "model_save": model_save,
+    "block_add": block_cmd,
 }
 
 _FRAMEWORK_ERRORS = {
@@ -54,7 +56,7 @@ def build_schema_payload():
         }
         all_errors.update(mod.ERRORS)
     return {
-        "version": "2.2",
+        "version": "2.3",
         "actions": {"schema": {"description": "Return machine-readable command contract and error-code catalog.", "fields": {}}, **actions},
         "error_codes": sorted(all_errors),
     }
