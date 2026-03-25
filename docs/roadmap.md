@@ -1,6 +1,6 @@
 # Roadmap
 
-Status: Active (established 2026-03-21, refined with Phase 1 sub-phase design 2026-03-21, updated 2026-03-25)
+Status: Active (established 2026-03-21, refined with Phase 1 sub-phase design 2026-03-21, updated 2026-03-25, restructured 2026-03-25)
 
 ## Product Goal
 
@@ -17,17 +17,17 @@ A normal person building a Simulink model uses these basic operations:
 | 1 | Create new model | `new_system` | `model_new` | Done (v2.1.0) |
 | 2 | Open model | `open_system` | `model_open` | Done (v2.1.0) |
 | 3 | Save model | `save_system` | `model_save` | Done (v2.1.0) |
-| 4 | Close model | `close_system` | `model_close` | TODO (Phase 2) |
-| 5 | Update/compile model | `update_diagram` | `model_update` | TODO (Phase 2) |
-| 6 | Add block | `add_block` | `block_add` | TODO (v2.3.0) |
-| 7 | Delete block | `delete_block` | `block_delete` | TODO (Phase 3) |
+| 4 | Close model | `close_system` | `model_close` | TODO (v2.4.0) |
+| 5 | Update/compile model | `update_diagram` | `model_update` | TODO (v2.4.0) |
+| 6 | Add block | `add_block` | `block_add` | Done (v2.3.0) |
+| 7 | Delete block | `delete_block` | `block_delete` | TODO (v2.6.0) |
 | 8 | Connect blocks (point-to-point) | `add_line` | `line_add` | TODO (v2.4.0) |
-| 9 | Disconnect blocks (point-to-point) | `delete_line` | `line_delete` | TODO (Phase 2) |
+| 9 | Disconnect blocks (point-to-point) | `delete_line` | `line_delete` | TODO (v2.5.0) |
 | 10 | Set parameter | `set_param` | `set_param` | Done (v2.0) |
 | 11 | Read parameter | `get_param` via inspect | `inspect` | Done (v1.0) |
 | 12 | Find blocks | `find_system` via find | `find` | Done (v1.3) |
 | 13 | Analyze structure | scan / connections | `scan`, `connections` | Done (v1.0) |
-| 14 | Run simulation | `sim` | `simulate` | TODO (Phase 2) |
+| 14 | Run simulation | `sim` | `simulate` | TODO (v2.5.0) |
 
 ## Action Design
 
@@ -45,13 +45,13 @@ The existing `session` action uses a hybrid pattern (single action with internal
 | `model_new` | `model_cmd.py` | Checked Mutation — Done (v2.1.0) |
 | `model_open` | `model_cmd.py` | Operational — Done (v2.1.0) |
 | `model_save` | `model_cmd.py` | Operational — Done (v2.1.0) |
-| `model_close` | `model_cmd.py` | Operational (Phase 2) |
-| `model_update` | `model_cmd.py` | Operational (Phase 2) |
-| `block_add` | `block_cmd.py` | Checked Mutation (v2.3.0) |
-| `block_delete` | `block_cmd.py` | Full Guarded (Phase 3) |
+| `model_close` | `model_cmd.py` | Operational (v2.4.0) |
+| `model_update` | `model_cmd.py` | Operational (v2.4.0) |
+| `block_add` | `block_cmd.py` | Checked Mutation — Done (v2.3.0) |
+| `block_delete` | `block_cmd.py` | Full Guarded (v2.6.0) |
 | `line_add` | `line_cmd.py` | Checked Mutation (v2.4.0) |
-| `line_delete` | `line_cmd.py` | Checked Mutation (Phase 2) |
-| `simulate` | `simulate.py` | Operational (Phase 2) |
+| `line_delete` | `line_cmd.py` | Checked Mutation (v2.5.0) |
+| `simulate` | `simulate.py` | Operational (v2.5.0) |
 
 Existing actions unchanged: `scan`, `connections`, `inspect`, `find`, `highlight`, `list_opened`, `set_param`, `session`.
 
@@ -130,7 +130,7 @@ Phases are ordered by "AI can complete an end-to-end workflow", not by single-op
 
 Goal: AI can create a new model, add blocks, connect them, set parameters, and save.
 
-Phase 1 is split into 3 independently releasable sub-phases. Each sub-phase gets its own minor version, manifest sync, docs update, and validation cycle.
+Phase 1 is split into 4 independently releasable sub-phases. Each sub-phase gets its own minor version, manifest sync, docs update, and validation cycle.
 
 Design reference: `docs/superpowers/specs/2026-03-21-phase1-sub-phases-design.md`
 
@@ -168,60 +168,71 @@ Goal: Publish `simulink-analyzer` as a first-class plugin agent; refocus skill o
 - [x] Version bump → 2.2.0; schema version → 2.2
 - [x] Full validation
 
-#### v2.3.0 — Block Placement
+#### v2.3.0 — Block Placement ✅
 
 Goal: AI can add blocks to a model.
 
-- [ ] `block_add` action (Checked Mutation: precondition + execute + verify + deferred rollback)
-- [ ] New module: `simulink_cli/actions/block_cmd.py`
-- [ ] Register in `simulink_cli/core.py` and `actions/__init__.py`
-- [ ] Transport wrapper: `add_block()`
-- [ ] Fake engine extension for block operations
-- [ ] `test_block_cmd_behavior.py` — behavior tests
-- [ ] Schema contract updated
-- [ ] Error codes: `source_not_found`, `block_already_exists` as needed
-- [ ] SKILL.md, reference.md, test-scenarios.md updated
-- [ ] README.md, README.zh-CN.md updated
-- [ ] Docs contract tests updated
-- [ ] Version bump → 2.3.0; schema version → 2.3
-- [ ] Full validation
+- [x] `block_add` action (Checked Mutation: precondition + execute + verify + deferred rollback)
+- [x] New module: `simulink_cli/actions/block_cmd.py`
+- [x] Register in `simulink_cli/core.py` and `actions/__init__.py`
+- [x] Transport wrapper: `add_block()`
+- [x] Fake engine extension for block operations
+- [x] `test_block_cmd_behavior.py` — behavior tests (18 tests)
+- [x] Schema contract updated
+- [x] Error codes: `source_not_found`, `block_already_exists`
+- [x] SKILL.md, reference.md, test-scenarios.md updated
+- [x] README.md, README.zh-CN.md updated
+- [x] Docs contract tests updated
+- [x] Version bump → 2.3.0; schema version → 2.3
+- [x] Full validation
 
-#### v2.4.0 — Signal Routing + End-to-End Workflow
+#### v2.4.0 — Complete Modeling Workflow
 
-Goal: AI can connect block ports, completing the first full modeling workflow.
+Goal: AI can connect block ports, verify model structure, and close models — completing the full create-to-close workflow.
 
-- [ ] `line_add` action (Checked Mutation: precondition + execute + verify + deferred rollback)
+This version consolidates `line_add` with `model_close` and `model_update`. Previously these Operational-tier actions were deferred to Phase 2, but they are natural pairs to existing Phase 1 operations (`model_open`/`model_close`, build/`model_update`) and are needed for a meaningful end-to-end workflow.
+
+**Signal routing (Checked Mutation):**
+- [ ] `line_add` action (precondition + execute + verify + deferred rollback)
 - [ ] New module: `simulink_cli/actions/line_cmd.py`
 - [ ] Register in `simulink_cli/core.py` and `actions/__init__.py`
 - [ ] Transport wrapper: `add_line()`
 - [ ] Fake engine extension for line operations
 - [ ] `test_line_cmd_behavior.py` — behavior tests
-- [ ] **End-to-end workflow test:** `model_new` → `block_add` (x2+) → `line_add` → `set_param` → `model_save`
+- [ ] Error codes: `port_not_found`, `line_already_exists` as needed
+
+**Model lifecycle completion (Operational):**
+- [ ] `model_close` action (execute + dirty-state check + error handling)
+- [ ] `model_update` action (execute + error handling)
+- [ ] Transport wrappers: `close_system()`, `update_diagram()`
+- [ ] Fake engine extensions for close/update
+- [ ] Behavior tests for model_close and model_update
+
+**Integration & validation:**
+- [ ] **End-to-end workflow test:** `model_new` → `block_add` (x2+) → `line_add` → `set_param` → `model_update` → `model_save` → `model_close`
 - [ ] Live MATLAB smoke test script (covers full creation workflow)
 - [ ] Schema contract updated
-- [ ] Error codes: `port_not_found`, `line_already_exists` as needed
 - [ ] SKILL.md, reference.md, test-scenarios.md updated
 - [ ] README.md, README.zh-CN.md updated
 - [ ] Docs contract tests updated
 - [ ] Version bump → 2.4.0; schema version → 2.4
 - [ ] Full validation
 
-### Phase 2 — Iterate and Verify
+### Phase 2 — v2.5.0 — Iterate and Verify
 
-Goal: AI can modify an existing model, remove connections, run simulations, and verify results.
+Goal: AI can modify an existing model, remove connections, and run simulations.
 
 - [ ] `line_delete` action (Checked Mutation)
 - [ ] `simulate` action (Operational)
-- [ ] `model_close` action (Operational, with dirty-state check)
-- [ ] `model_update` action (Operational)
-- [ ] Transport wrappers: `delete_line()`, `sim()`, `close_system()`, `update_diagram()`
+- [ ] Transport wrappers: `delete_line()`, `sim()`
 - [ ] Tests: iterate workflow (model_open → set_param → simulate → inspect → model_save → model_close)
 - [ ] Live smoke coverage for simulation flow
 - [ ] Activate deferred rollback for `line_add` (now that `line_delete` exists)
 - [ ] SKILL.md and docs update
-- [ ] Release
+- [ ] Version bump → 2.5.0; schema version → 2.5
+- [ ] Full validation
 
-### Phase 3 — Safe Destructive Topology Edits
+### Phase 3 — v2.6.0 — Safe Destructive Topology Edits
 
 Goal: AI can safely remove blocks with state capture for rollback.
 
@@ -232,7 +243,8 @@ Goal: AI can safely remove blocks with state capture for rollback.
 - [ ] Activate deferred rollback for `block_add` (now that `block_delete` exists)
 - [ ] Live smoke coverage for destructive edit flow
 - [ ] SKILL.md and docs update
-- [ ] Release
+- [ ] Version bump → 2.6.0; schema version → 2.6
+- [ ] Full validation
 
 ### Post-Phase 3 — Driven by Real Usage
 
