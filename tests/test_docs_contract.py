@@ -63,6 +63,8 @@ class DocsContractTests(unittest.TestCase):
             "verification_failed",
             "model_already_loaded",
             "invalid_json",
+            "source_not_found",
+            "block_already_exists",
         ]
         for code in required_codes:
             self.assertIn(code, text, f"Recovery routing missing: {code}")

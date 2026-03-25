@@ -77,6 +77,27 @@ If current value changed after preview, `apply_payload` replay returns `precondi
 
 Use the `rollback` payload from any response to restore the prior value. If the original write used an explicit `session`, the rollback payload preserves the same `session` field.
 
+## block_add Response Shapes
+
+### Success
+
+```json
+{
+  "action": "block_add",
+  "source": "simulink/Math Operations/Gain",
+  "destination": "my_model/Gain1",
+  "verified": true,
+  "rollback": {
+    "action": "block_delete",
+    "destination": "my_model/Gain1",
+    "available": false,
+    "note": "block_delete not yet implemented (Phase 3)"
+  }
+}
+```
+
+Rollback is deferred — `block_delete` is not yet implemented. The `note` field provides a manual MATLAB command for undo. If the original request used an explicit `session`, the rollback payload preserves the same `session` field.
+
 ## Failure Semantics
 
 - `precondition_failed` — preview is stale; write was **not attempted**.
