@@ -46,7 +46,7 @@ This plugin provides a third path: direct, structured, runtime model analysis fo
 
 1. Claude Code invokes the `simulink-automation` skill for write/meta tasks, or dispatches the `simulink-analyzer` agent for read analysis.
 2. The skill resolves MATLAB session context (`session list/use/current/clear`) with exact-name matching, using either an explicit `--session` or a previously selected active session.
-3. It executes one of the available actions: `schema`, `list_opened`, `scan`, `connections`, `inspect`, `find`, `highlight`, `set_param`, `model_new`, `model_open`, `model_save`, `model_close`, `model_update`, `block_add`, `line_add`, or `session`.
+3. It executes one of the 18 available actions: `schema`, `list_opened`, `scan`, `connections`, `inspect`, `find`, `highlight`, `set_param`, `model_new`, `model_open`, `model_save`, `model_close`, `model_update`, `block_add`, `line_add`, `line_delete`, `block_delete`, `simulate`, or `session`.
 4. Results are returned as a single machine-readable JSON payload on `stdout`; warnings never spill raw text into stdout, and `stderr` is reserved for maintainer-facing diagnostics.
 5. Failures use stable error codes for reliable agent recovery.
 6. Write operations (`set_param`) use dry-run preview (default), machine-executable `apply_payload`, rollback payloads, guarded execute via `expected_current_value`, and read-back verification.
@@ -125,6 +125,9 @@ For end-to-end Claude Code prompts and screenshots (single bilingual page), see:
 | `model_save` | Save a loaded Simulink model | `python -m simulink_cli --json '{"action":"model_save","model":"my_model"}'` |
 | `block_add` | Add a library block to a loaded model | `python -m simulink_cli --json '{"action":"block_add","source":"simulink/Math Operations/Gain","destination":"my_model/Gain1"}'` |
 | `line_add` | Connect two block ports with a signal line | `python -m simulink_cli --json '{"action":"line_add","model":"my_model","src_block":"Sine","src_port":1,"dst_block":"Gain","dst_port":1}'` |
+| `line_delete` | Remove a point-to-point signal connection | `python -m simulink_cli --json '{"action":"line_delete","model":"my_model","src_block":"Sine","src_port":1,"dst_block":"Gain","dst_port":1}'` |
+| `block_delete` | Remove a block (also removes connected lines) | `python -m simulink_cli --json '{"action":"block_delete","destination":"my_model/Gain1"}'` |
+| `simulate` | Run a model simulation | `python -m simulink_cli --json '{"action":"simulate","model":"my_model"}'` |
 | `model_close` | Close a loaded model (dirty-state guard) | `python -m simulink_cli --json '{"action":"model_close","model":"my_model"}'` |
 | `model_update` | Compile/update a model diagram | `python -m simulink_cli --json '{"action":"model_update","model":"my_model"}'` |
 | `session` | Manage or select the active MATLAB shared session | `python -m simulink_cli session list` |
@@ -163,6 +166,9 @@ python -m simulink_cli --json '{"action":"model_open","path":"C:/models/my_model
 python -m simulink_cli --json '{"action":"model_save","model":"my_model"}'
 python -m simulink_cli --json '{"action":"block_add","source":"simulink/Math Operations/Gain","destination":"my_model/Gain1"}'
 python -m simulink_cli --json '{"action":"line_add","model":"my_model","src_block":"Sine","src_port":1,"dst_block":"Gain","dst_port":1}'
+python -m simulink_cli --json '{"action":"line_delete","model":"my_model","src_block":"Sine","src_port":1,"dst_block":"Gain","dst_port":1}'
+python -m simulink_cli --json '{"action":"block_delete","destination":"my_model/Gain1"}'
+python -m simulink_cli --json '{"action":"simulate","model":"my_model"}'
 python -m simulink_cli --json '{"action":"model_update","model":"my_model"}'
 python -m simulink_cli --json '{"action":"model_close","model":"my_model"}'
 ```
@@ -269,7 +275,9 @@ Common error codes:
 - `model_dirty`
 - `port_not_found`
 - `line_already_exists`
+- `line_not_found`
 - `update_failed`
+- `simulation_failed`
 - `inactive_parameter`
 - `runtime_error`
 
@@ -305,6 +313,9 @@ simulink_cli/           # Unified CLI package (single entrypoint)
     ├── model_update.py
     ├── block_cmd.py
     ├── line_add.py
+    ├── block_delete.py
+    ├── line_delete.py
+    ├── simulate_cmd.py
     └── session_cmd.py
 agents/                 # Published agent definitions
 └── simulink-analyzer.md  # Read-analysis agent (topology, search, connections, inspection)
@@ -328,8 +339,4 @@ claude plugin validate .
 
 ## Roadmap
 
-- **Current (v2.4.x):** complete modeling workflow — create, add blocks, connect signals, configure parameters, compile, save, and close models. Read-only analysis via `simulink-analyzer` agent; guarded write operations via `simulink-automation` skill.
-- **Next:** simulation support, signal disconnection, and block deletion with full rollback.
-- **Future:** add new skills for build/repair scenarios without renaming the plugin (`simulink-automation-suite` remains the stable identity).
-
-![Roadmap](docs/assets/readme/roadmap.png)
+The 14-action capability baseline is complete as of v2.5.0: create, add/delete blocks, connect/disconnect signals, configure parameters, run simulations, compile, save, and close models. Future work is driven by real usage — no pre-committed features.

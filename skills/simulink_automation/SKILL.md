@@ -28,10 +28,11 @@ Schema output is the authoritative reference for command syntax. Do not rely on 
 1. **Discover** — `list_opened` to see available models; `session list` if multiple MATLAB sessions exist.
 2. **Quick lookup** — `inspect` with a specific target and specific param for single-value checks; `highlight` for visual location.
 3. **Deep analysis** — delegate to `simulink-analyzer` agent (see Responsibility & Handoff).
-4. **Modify** — `set_param` with dry-run preview before any write; `block_add` for placing new blocks; `line_add` for connecting ports. See Write Safety Model below.
-5. **Update** — `model_update` to compile/update diagram after structural changes.
-6. **Verify** — `inspect` the target after write to confirm the change took effect.
-7. **Finalize** — `model_save` then `model_close` when done.
+4. **Modify** — `set_param` with dry-run preview before any write; `block_add` for placing new blocks; `line_add` for connecting ports; `line_delete` to remove a signal connection; `block_delete` to remove a block (also silently removes connected lines). See Write Safety Model below.
+5. **Simulate** — `simulate` to run the model simulation after the modeling workflow is complete.
+6. **Update** — `model_update` to compile/update diagram after structural changes.
+7. **Verify** — `inspect` the target after write to confirm the change took effect.
+8. **Finalize** — `model_save` then `model_close` when done.
 
 One parameter per `set_param` invocation. Always read and understand the model before modifying.
 
@@ -55,6 +56,9 @@ The following actions are handled directly without dispatching the agent:
 | `model_close` / `model_update` | Lifecycle operations; direct execution |
 | `block_add` | Write operation; structural mutation |
 | `line_add` | Write operation; signal routing |
+| `line_delete` | Write operation; signal disconnection |
+| `block_delete` | Write operation; structural removal (also removes connected lines) |
+| `simulate` | Operational; runs model simulation |
 
 ### Delegate to simulink-analyzer agent
 
@@ -118,6 +122,8 @@ Error-driven next actions (consult `schema` for the full error code list):
 | `block_already_exists` | Use a different destination name or inspect existing block |
 | `model_dirty` | `model_save` first, or retry with `force: true` to discard changes |
 | `line_already_exists` | Check existing connections with `connections`; use a different port |
+| `line_not_found` | Verify src/dst block and port names with `connections`; confirm the line exists before deleting |
+| `simulation_failed` | Check model for errors with `model_update`; fix unconnected ports or type mismatches, then retry |
 | `update_failed` | Check model for errors (unconnected ports, type mismatches); fix with `set_param` or `line_add`, retry |
 | `state_write_failed` / `state_clear_failed` | Check plugin state-file permissions or pass explicit `--session` |
 | `invalid_json` / `json_conflict` / `unknown_parameter` / `invalid_input` | Correct request payload per `schema`, retry |

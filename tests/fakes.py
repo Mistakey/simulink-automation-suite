@@ -474,6 +474,11 @@ class FakeModelEngine:
             return
         raise RuntimeError(f"Unsupported set_param: {param}={value}")
 
+    def sim(self, model, nargout=1):
+        if model not in self._loaded:
+            raise RuntimeError(f"Model '{model}' is not loaded")
+        return model
+
     @property
     def loaded_models(self):
         return set(self._loaded)
@@ -514,6 +519,11 @@ class FakeBlockEngine:
             raise RuntimeError(f"Block '{dest}' already exists")
         self._blocks.add(dest)
 
+    def delete_block(self, block_path, nargout=0):
+        if block_path not in self._blocks:
+            raise RuntimeError(f"Block '{block_path}' not found")
+        self._blocks.discard(block_path)
+
 
 class FakeLineEngine(FakeBlockEngine):
     """Fake engine for line_add action tests.
@@ -544,6 +554,19 @@ class FakeLineEngine(FakeBlockEngine):
         self._lines[handle] = (system, src, dst)
         self._dst_ports.add(dst_key)
         return handle
+
+    def delete_line(self, system, src, dst, nargout=0):
+        if system not in self._loaded:
+            raise RuntimeError(f"Model '{system}' is not loaded")
+        target_handle = None
+        for handle, (s, sr, ds) in self._lines.items():
+            if s == system and sr == src and ds == dst:
+                target_handle = handle
+                break
+        if target_handle is None:
+            raise RuntimeError(f"No line found from '{src}' to '{dst}' in '{system}'")
+        del self._lines[target_handle]
+        self._dst_ports.discard((system, dst))
 
     def get_param(self, target, param, nargout=1):
         if isinstance(target, float) and param == "Handle":

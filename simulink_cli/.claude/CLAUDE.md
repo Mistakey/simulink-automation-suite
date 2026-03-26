@@ -62,9 +62,17 @@ Agents hallucinate. Treat all input as untrusted — same as you would for a web
 - Silently ignore unknown fields — return an error naming the unrecognized field
 - Accept truthy/falsy values as boolean — require actual `true`/`false`
 
-## 5. Write Safety: Defense in Depth
+## 5. Write Safety: Three Tiers
 
-Any action that mutates state must follow a strict safety protocol with four layers:
+Not every mutation needs the same ceremony. Three tiers, from strictest to lightest:
+
+### Full Guarded
+
+dry_run default true → apply_payload → precondition check → execute → read-back verify → rollback payload.
+
+Applies to: `set_param`.
+
+Use for operations that **overwrite existing state** where a single undo operation exists. The four layers:
 
 1. **Dry-run by default**: preview the diff without touching the model. Return both an `apply_payload` (to execute) and a `rollback` payload (to undo).
 2. **Precondition guard**: accept an `expected_current_value`; reject if observed value differs, preventing stale writes.
@@ -76,7 +84,23 @@ Response must always include a `write_state` field:
 - `"verified"` — write succeeded and read-back confirmed
 - Error responses indicate whether rollback is needed
 
-**Rule**: when adding new write actions, follow this same four-layer pattern. Never skip dry-run default or read-back verification.
+### Checked Mutation
+
+Precondition check → execute → verify → rollback payload. No dry_run preview.
+
+Applies to: `block_add`, `block_delete`, `line_add`, `line_delete`, `model_new`.
+
+Use for operations that **create or remove structure**. Precondition and rollback matter, but previewing an add/delete adds little value. Rollback may be `available: false` if atomic undo is not possible (e.g., `block_delete` destroys params and connections).
+
+### Operational
+
+Execute → error handling → necessary constraints. No dry_run or rollback.
+
+Applies to: `model_open`, `model_save`, `model_close`, `model_update`, `simulate`.
+
+Constraints still apply (e.g., `close` checks dirty state, `simulate` validates model loaded), but these are not mutation-preview operations.
+
+**Rule**: when adding new write actions, choose the appropriate tier. Default to Checked Mutation unless the operation overwrites existing values (Full Guarded) or is a non-destructive lifecycle operation (Operational).
 
 ## 6. Error Contract
 

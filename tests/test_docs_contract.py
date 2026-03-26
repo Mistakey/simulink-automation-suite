@@ -67,6 +67,8 @@ class DocsContractTests(unittest.TestCase):
             "block_already_exists",
             "model_dirty",
             "line_already_exists",
+            "line_not_found",
+            "simulation_failed",
             "update_failed",
         ]
         for code in required_codes:
@@ -206,6 +208,11 @@ class DocsContractTests(unittest.TestCase):
     def test_handoff_direct_bucket_covers_v2_4_actions(self):
         handoff_text = self._get_handoff_text()
         for action in ["model_close", "model_update", "line_add"]:
+            self.assertIn(action, handoff_text, f"Direct bucket missing: {action}")
+
+    def test_handoff_direct_bucket_covers_v2_5_actions(self):
+        handoff_text = self._get_handoff_text()
+        for action in ["line_delete", "block_delete", "simulate"]:
             self.assertIn(action, handoff_text, f"Direct bucket missing: {action}")
 
     def test_handoff_declares_composite_request_rule(self):

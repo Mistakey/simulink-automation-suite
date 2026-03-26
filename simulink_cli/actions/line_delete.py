@@ -1,11 +1,11 @@
-"""line_add action — connect two block ports with a signal line."""
+"""line_delete action — remove a signal line between two block ports."""
 
 from simulink_cli import matlab_transport
 from simulink_cli.errors import make_error
 from simulink_cli.validation import validate_matlab_name_field, validate_text_field
 from simulink_cli.session import safe_connect_to_session
 
-DESCRIPTION = "Connect two block ports with a signal line."
+DESCRIPTION = "Delete a signal line between two block ports."
 
 FIELDS = {
     "model": {
@@ -53,15 +53,13 @@ ERRORS = [
     "session_required",
     "model_not_found",
     "block_not_found",
-    "port_not_found",
-    "line_already_exists",
-    "verification_failed",
+    "line_not_found",
     "runtime_error",
 ]
 
 
 def validate(args):
-    """Validate line_add arguments. Returns error dict or None."""
+    """Validate line_delete arguments. Returns error dict or None."""
     err = validate_matlab_name_field("model", args.get("model"))
     if err is not None:
         return err
@@ -114,7 +112,7 @@ def validate(args):
 
 
 def execute(args):
-    """Execute line_add: connect two block ports with a signal line."""
+    """Execute line_delete: remove a signal line between two block ports."""
     eng, err = safe_connect_to_session(args.get("session"))
     if err is not None:
         return err
@@ -144,7 +142,7 @@ def execute(args):
             "block_not_found",
             f"Source block '{src_block}' not found in '{model}'.",
             details={"block": src_block, "role": "source"},
-            suggested_fix="Add the block first or check spelling. Use find to list blocks in the model.",
+            suggested_fix="Check spelling. Use find to list blocks in the model.",
         )
 
     # Precondition 3: destination block exists
@@ -155,49 +153,32 @@ def execute(args):
             "block_not_found",
             f"Destination block '{dst_block}' not found in '{model}'.",
             details={"block": dst_block, "role": "destination"},
-            suggested_fix="Add the block first or check spelling. Use find to list blocks in the model.",
+            suggested_fix="Check spelling. Use find to list blocks in the model.",
         )
 
     # Execute
     src_str = f"{src_block}/{src_port}"
     dst_str = f"{dst_block}/{dst_port}"
     try:
-        result = matlab_transport.add_line(eng, model, src_str, dst_str)
-        line_handle = result["value"]
+        matlab_transport.delete_line(eng, model, src_str, dst_str)
     except Exception as exc:
         msg = str(exc)
-        if "already connected" in msg.lower() or "already exists" in msg.lower():
+        if "not found" in msg.lower() or "no line found" in msg.lower():
             return make_error(
-                "line_already_exists",
-                f"Destination port '{dst_str}' is already connected.",
-                details={"dst_block": dst_block, "dst_port": dst_port},
-                suggested_fix="Delete the existing line first or use a different port.",
-            )
-        if "port" in msg.lower() and ("not found" in msg.lower() or "invalid" in msg.lower()):
-            return make_error(
-                "port_not_found",
-                f"Invalid port specification: {msg}",
-                details={"src": src_str, "dst": dst_str, "cause": msg},
-                suggested_fix="Check port numbers. Use connections or inspect to discover available ports.",
+                "line_not_found",
+                f"No line found from '{src_str}' to '{dst_str}' in '{model}'.",
+                details={"src": src_str, "dst": dst_str},
+                suggested_fix="Use connections to inspect existing lines in the model.",
             )
         return make_error(
             "runtime_error",
-            f"Failed to add line from '{src_str}' to '{dst_str}'.",
+            f"Failed to delete line from '{src_str}' to '{dst_str}'.",
             details={"src": src_str, "dst": dst_str, "cause": msg},
         )
 
-    # Verify
-    try:
-        matlab_transport.get_param(eng, line_handle, "Handle")
-    except Exception:
-        return make_error(
-            "verification_failed",
-            "Line was added but could not be verified.",
-            details={"write_state": "attempted"},
-        )
-
+    # No verification step — no exception means success
     rollback = {
-        "action": "line_delete",
+        "action": "line_add",
         "model": model,
         "src_block": src_block,
         "src_port": src_port,
@@ -209,9 +190,11 @@ def execute(args):
         rollback["session"] = args["session"]
 
     return {
-        "action": "line_add",
+        "action": "line_delete",
         "model": model,
-        "line_handle": line_handle,
-        "verified": True,
+        "src_block": src_block,
+        "src_port": src_port,
+        "dst_block": dst_block,
+        "dst_port": dst_port,
         "rollback": rollback,
     }

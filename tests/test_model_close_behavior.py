@@ -4,30 +4,6 @@ from tests.fakes import FakeModelEngine
 from simulink_cli.actions import model_close
 
 
-class FakeModelEngineCloseTests(unittest.TestCase):
-    def test_close_removes_from_loaded(self):
-        eng = FakeModelEngine(loaded_models=["m"])
-        eng.close_system("m", 0, nargout=0)
-        self.assertNotIn("m", eng.loaded_models)
-
-    def test_dirty_state_default_off(self):
-        eng = FakeModelEngine(loaded_models=["m"])
-        self.assertEqual(eng.get_param("m", "Dirty", nargout=1), "off")
-
-    def test_dirty_state_on(self):
-        eng = FakeModelEngine(loaded_models=["m"], dirty_models=["m"])
-        self.assertEqual(eng.get_param("m", "Dirty", nargout=1), "on")
-
-    def test_set_param_simulation_command_update(self):
-        eng = FakeModelEngine(loaded_models=["m"])
-        eng.set_param("m", "SimulationCommand", "update", nargout=0)
-
-    def test_set_param_update_not_loaded_raises(self):
-        eng = FakeModelEngine()
-        with self.assertRaises(RuntimeError):
-            eng.set_param("missing", "SimulationCommand", "update", nargout=0)
-
-
 class ModelCloseValidationTests(unittest.TestCase):
     def test_missing_model_returns_error(self):
         result = model_close.validate({"model": None, "force": False, "session": None})

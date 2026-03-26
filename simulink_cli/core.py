@@ -8,11 +8,13 @@ from simulink_cli.session import SESSION_ERROR_MAP
 from simulink_cli.validation import validate_json_type
 from simulink_cli.actions import (
     block_cmd,
+    block_delete,
     connections,
     find,
     highlight,
     inspect_block,
     line_add,
+    line_delete,
     list_opened,
     model_close,
     model_new,
@@ -22,6 +24,7 @@ from simulink_cli.actions import (
     scan,
     session_cmd,
     set_param,
+    simulate_cmd,
 )
 
 # -- Action registry ----------------------------------------------------------
@@ -40,7 +43,10 @@ _ACTIONS = {
     "model_close": model_close,
     "model_update": model_update,
     "block_add": block_cmd,
+    "block_delete": block_delete,
     "line_add": line_add,
+    "line_delete": line_delete,
+    "simulate": simulate_cmd,
 }
 
 _FRAMEWORK_ERRORS = {
@@ -62,7 +68,7 @@ def build_schema_payload():
         }
         all_errors.update(mod.ERRORS)
     return {
-        "version": "2.4",
+        "version": "2.5",
         "actions": {"schema": {"description": "Return machine-readable command contract and error-code catalog.", "fields": {}}, **actions},
         "error_codes": sorted(all_errors),
     }

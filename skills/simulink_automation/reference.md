@@ -89,14 +89,12 @@ Use the `rollback` payload from any response to restore the prior value. If the 
   "verified": true,
   "rollback": {
     "action": "block_delete",
-    "destination": "my_model/Gain1",
-    "available": false,
-    "note": "block_delete not yet implemented (Phase 3)"
+    "destination": "my_model/Gain1"
   }
 }
 ```
 
-Rollback is deferred — `block_delete` is not yet implemented. The `note` field provides a manual MATLAB command for undo. If the original request used an explicit `session`, the rollback payload preserves the same `session` field.
+Rollback uses `block_delete`. If the original request used an explicit `session`, the rollback payload preserves the same `session` field.
 
 ## line_add Response Shapes
 
@@ -106,19 +104,114 @@ Rollback is deferred — `block_delete` is not yet implemented. The `note` field
 {
   "action": "line_add",
   "model": "my_model",
-  "line_handle": 145.0003,
+  "src_block": "Sine",
+  "src_port": 1,
+  "dst_block": "Gain",
+  "dst_port": 1,
   "verified": true,
   "rollback": {
     "action": "line_delete",
     "model": "my_model",
-    "line_handle": 145.0003,
-    "available": false,
-    "note": "line_delete not yet implemented (v2.5.0)"
+    "src_block": "Sine",
+    "src_port": 1,
+    "dst_block": "Gain",
+    "dst_port": 1
   }
 }
 ```
 
-Rollback is deferred — `line_delete` is not yet implemented. If the original request used an explicit `session`, the rollback payload preserves the same `session` field.
+Rollback uses `line_delete`. If the original request used an explicit `session`, the rollback payload preserves the same `session` field.
+
+## line_delete Response Shapes
+
+### Success
+
+```json
+{
+  "action": "line_delete",
+  "model": "my_model",
+  "src_block": "Sine",
+  "src_port": 1,
+  "dst_block": "Gain",
+  "dst_port": 1,
+  "rollback": {
+    "action": "line_add",
+    "model": "my_model",
+    "src_block": "Sine",
+    "src_port": 1,
+    "dst_block": "Gain",
+    "dst_port": 1,
+    "available": true
+  }
+}
+```
+
+### Line Not Found
+
+If the specified signal line does not exist between the given ports:
+
+```json
+{
+  "error": "line_not_found",
+  "message": "No line found from 'Sine/1' to 'Gain/1' in model 'my_model'.",
+  "details": {"src": "Sine/1", "dst": "Gain/1", "model": "mymodel"},
+  "suggested_fix": "Use {\"action\":\"connections\"} to verify existing connections before deleting."
+}
+```
+
+## block_delete Response Shapes
+
+### Success
+
+```json
+{
+  "action": "block_delete",
+  "destination": "my_model/Gain1",
+  "verified": true,
+  "rollback": {
+    "available": false,
+    "note": "Block deletion also removes connected lines. Use block_add to re-create with library defaults."
+  }
+}
+```
+
+### Block Not Found
+
+```json
+{
+  "error": "block_not_found",
+  "message": "Block 'my_model/Gain1' not found.",
+  "details": {"destination": "my_model/Gain1"},
+  "suggested_fix": "Use {\"action\":\"find\"} or {\"action\":\"scan\"} to locate valid block paths."
+}
+```
+
+Possible errors: `model_not_found`, `block_not_found`, `verification_failed`, `runtime_error`.
+
+## simulate Response Shapes
+
+### Success
+
+```json
+{
+  "action": "simulate",
+  "model": "my_model",
+  "warnings": []
+}
+```
+
+### Simulation Failed
+
+If MATLAB raises an error during simulation:
+
+```json
+{
+  "error": "simulation_failed",
+  "message": "Simulation of 'my_model' failed: <matlab_error_message>",
+  "details": {"model": "demo", "cause": "<matlab_error_message>"},
+  "suggested_fix": "Run {\"action\":\"model_update\"} to check for model errors, fix them, then retry."
+}
+```
 
 ## model_close Response Shapes
 

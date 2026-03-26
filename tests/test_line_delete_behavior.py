@@ -1,10 +1,12 @@
+"""Tests for line_delete action."""
+
 import unittest
 from unittest.mock import patch
 from tests.fakes import FakeLineEngine
-from simulink_cli.actions import line_add
+from simulink_cli.actions import line_delete
 
 
-class LineAddValidationTests(unittest.TestCase):
+class LineDeleteValidationTests(unittest.TestCase):
     def _default_args(self, **overrides):
         args = {
             "model": "m", "src_block": "A", "src_port": 1,
@@ -14,56 +16,56 @@ class LineAddValidationTests(unittest.TestCase):
         return args
 
     def test_missing_model_returns_error(self):
-        result = line_add.validate(self._default_args(model=None))
+        result = line_delete.validate(self._default_args(model=None))
         self.assertIsNotNone(result)
         self.assertEqual(result["error"], "invalid_input")
 
     def test_missing_src_block_returns_error(self):
-        result = line_add.validate(self._default_args(src_block=None))
+        result = line_delete.validate(self._default_args(src_block=None))
         self.assertIsNotNone(result)
         self.assertEqual(result["error"], "invalid_input")
 
     def test_missing_dst_block_returns_error(self):
-        result = line_add.validate(self._default_args(dst_block=None))
+        result = line_delete.validate(self._default_args(dst_block=None))
         self.assertIsNotNone(result)
         self.assertEqual(result["error"], "invalid_input")
 
     def test_src_block_with_slash_returns_error(self):
-        result = line_add.validate(self._default_args(src_block="A/B"))
+        result = line_delete.validate(self._default_args(src_block="A/B"))
         self.assertIsNotNone(result)
         self.assertEqual(result["error"], "invalid_input")
 
     def test_dst_block_with_slash_returns_error(self):
-        result = line_add.validate(self._default_args(dst_block="A/B"))
+        result = line_delete.validate(self._default_args(dst_block="A/B"))
         self.assertIsNotNone(result)
         self.assertEqual(result["error"], "invalid_input")
 
     def test_missing_src_port_returns_error(self):
-        result = line_add.validate(self._default_args(src_port=None))
+        result = line_delete.validate(self._default_args(src_port=None))
         self.assertIsNotNone(result)
         self.assertEqual(result["error"], "invalid_input")
 
     def test_missing_dst_port_returns_error(self):
-        result = line_add.validate(self._default_args(dst_port=None))
+        result = line_delete.validate(self._default_args(dst_port=None))
         self.assertIsNotNone(result)
         self.assertEqual(result["error"], "invalid_input")
 
     def test_non_positive_src_port_returns_error(self):
-        result = line_add.validate(self._default_args(src_port=0))
+        result = line_delete.validate(self._default_args(src_port=0))
         self.assertIsNotNone(result)
         self.assertEqual(result["error"], "invalid_input")
 
     def test_non_positive_dst_port_returns_error(self):
-        result = line_add.validate(self._default_args(dst_port=-1))
+        result = line_delete.validate(self._default_args(dst_port=-1))
         self.assertIsNotNone(result)
         self.assertEqual(result["error"], "invalid_input")
 
     def test_valid_args_returns_none(self):
-        result = line_add.validate(self._default_args())
+        result = line_delete.validate(self._default_args())
         self.assertIsNone(result)
 
 
-class LineAddExecuteTests(unittest.TestCase):
+class LineDeleteExecuteTests(unittest.TestCase):
     def _make_engine(self, **kwargs):
         defaults = {
             "loaded_models": ["m"],
@@ -71,13 +73,17 @@ class LineAddExecuteTests(unittest.TestCase):
             "library_sources": ["simulink/Gain"],
         }
         defaults.update(kwargs)
-        return FakeLineEngine(**defaults)
+        eng = FakeLineEngine(**defaults)
+        # pre-create the line so delete tests have something to delete
+        if "m" in defaults["loaded_models"] and "m/A" in defaults["blocks"] and "m/B" in defaults["blocks"]:
+            eng.add_line("m", "A/1", "B/1", nargout=1)
+        return eng
 
     def _run(self, args, engine=None):
         if engine is None:
             engine = self._make_engine()
-        with patch.object(line_add, "safe_connect_to_session", return_value=(engine, None)):
-            return line_add.execute(args)
+        with patch.object(line_delete, "safe_connect_to_session", return_value=(engine, None)):
+            return line_delete.execute(args)
 
     def _default_args(self, **overrides):
         args = {
@@ -87,84 +93,58 @@ class LineAddExecuteTests(unittest.TestCase):
         args.update(overrides)
         return args
 
-    def test_adds_line_successfully(self):
+    def test_deletes_line_successfully(self):
         result = self._run(self._default_args())
         self.assertNotIn("error", result)
-        self.assertEqual(result["action"], "line_add")
+        self.assertEqual(result["action"], "line_delete")
         self.assertEqual(result["model"], "m")
-        self.assertIsInstance(result["line_handle"], float)
-        self.assertTrue(result["verified"])
+        self.assertIn("src_block", result)
+        self.assertIn("dst_block", result)
 
     def test_model_not_found_returns_error(self):
-        eng = self._make_engine(loaded_models=[])
+        eng = FakeLineEngine()  # empty engine — no loaded models
         result = self._run(self._default_args(), engine=eng)
         self.assertEqual(result["error"], "model_not_found")
 
     def test_src_block_not_found_returns_error(self):
-        eng = self._make_engine(blocks=["m/B"])
+        eng = FakeLineEngine(loaded_models=["m"], blocks=["m/B"])
         result = self._run(self._default_args(), engine=eng)
         self.assertEqual(result["error"], "block_not_found")
         self.assertEqual(result["details"]["role"], "source")
 
     def test_dst_block_not_found_returns_error(self):
-        eng = self._make_engine(blocks=["m/A"])
+        eng = FakeLineEngine(loaded_models=["m"], blocks=["m/A"])
         result = self._run(self._default_args(), engine=eng)
         self.assertEqual(result["error"], "block_not_found")
         self.assertEqual(result["details"]["role"], "destination")
 
-    def test_line_already_exists_returns_error(self):
-        eng = self._make_engine()
-        eng.add_line("m", "A/1", "B/1", nargout=1)  # pre-create
+    def test_line_not_found_returns_error(self):
+        # blocks exist but no line between them
+        eng = FakeLineEngine(loaded_models=["m"], blocks=["m/A", "m/B"])
         result = self._run(self._default_args(), engine=eng)
-        self.assertEqual(result["error"], "line_already_exists")
+        self.assertEqual(result["error"], "line_not_found")
 
-    def test_port_not_found_returns_error(self):
+    def test_runtime_error_on_delete_failure(self):
         eng = self._make_engine()
         from simulink_cli import matlab_transport
         with patch.object(
-            matlab_transport, "add_line",
-            side_effect=RuntimeError("Invalid port number: port not found"),
-        ):
-            result = self._run(self._default_args(), engine=eng)
-        self.assertEqual(result["error"], "port_not_found")
-
-    def test_runtime_error_on_add_line_failure(self):
-        eng = self._make_engine()
-        from simulink_cli import matlab_transport
-        with patch.object(
-            matlab_transport, "add_line",
-            side_effect=RuntimeError("MATLAB crashed"),
+            matlab_transport, "delete_line",
+            side_effect=RuntimeError("MATLAB internal error"),
         ):
             result = self._run(self._default_args(), engine=eng)
         self.assertEqual(result["error"], "runtime_error")
-        self.assertIn("MATLAB crashed", result["details"]["cause"])
-
-    def test_verification_failed(self):
-        eng = self._make_engine()
-        from simulink_cli import matlab_transport
-        real_add_line = matlab_transport.add_line
-        def add_line_then_break_verify(engine, system, src, dst):
-            result = real_add_line(engine, system, src, dst)
-            handle = result["value"]
-            del engine._lines[handle]
-            return result
-        with patch.object(matlab_transport, "add_line", side_effect=add_line_then_break_verify):
-            result = self._run(self._default_args(), engine=eng)
-        self.assertEqual(result["error"], "verification_failed")
-        self.assertEqual(result["details"]["write_state"], "attempted")
+        self.assertIn("MATLAB internal error", result["details"]["cause"])
 
     def test_rollback_payload_structure(self):
         result = self._run(self._default_args())
         rollback = result["rollback"]
-        self.assertEqual(rollback["action"], "line_delete")
+        self.assertEqual(rollback["action"], "line_add")
         self.assertEqual(rollback["model"], "m")
-        self.assertEqual(rollback["src_block"], "A")
-        self.assertEqual(rollback["src_port"], 1)
-        self.assertEqual(rollback["dst_block"], "B")
-        self.assertEqual(rollback["dst_port"], 1)
+        self.assertIn("src_block", rollback)
+        self.assertIn("src_port", rollback)
+        self.assertIn("dst_block", rollback)
+        self.assertIn("dst_port", rollback)
         self.assertTrue(rollback["available"])
-        self.assertNotIn("line_handle", rollback)
-        self.assertNotIn("note", rollback)
 
     def test_session_passes_to_rollback(self):
         result = self._run(self._default_args(session="my_session"))
@@ -176,8 +156,8 @@ class LineAddExecuteTests(unittest.TestCase):
 
     def test_connection_error_propagates(self):
         error_response = {"error": "engine_unavailable", "message": "No MATLAB.", "details": {}}
-        with patch.object(line_add, "safe_connect_to_session", return_value=(None, error_response)):
-            result = line_add.execute(self._default_args())
+        with patch.object(line_delete, "safe_connect_to_session", return_value=(None, error_response)):
+            result = line_delete.execute(self._default_args())
         self.assertEqual(result["error"], "engine_unavailable")
 
 

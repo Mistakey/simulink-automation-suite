@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import patch
 
-from simulink_cli.actions import model_new, block_cmd, line_add, set_param, model_update, model_save, model_close
+from simulink_cli.actions import model_new, block_cmd, line_add, line_delete, block_delete, set_param, model_update, model_save, model_close, simulate_cmd
 
 
 class FakeWorkflowEngine:
@@ -100,6 +100,27 @@ class FakeWorkflowEngine:
             return
         return ("", "")
 
+    def delete_line(self, system, src, dst, nargout=0):
+        target_handle = None
+        for handle, (s, sr, ds) in self._lines.items():
+            if s == system and sr == src and ds == dst:
+                target_handle = handle
+                break
+        if target_handle is None:
+            raise RuntimeError(f"No line from '{src}' to '{dst}'")
+        del self._lines[target_handle]
+        self._dst_ports.discard((system, dst))
+
+    def delete_block(self, block_path, nargout=0):
+        if block_path not in self._blocks:
+            raise RuntimeError(f"Block '{block_path}' not found")
+        self._blocks.discard(block_path)
+
+    def sim(self, model, nargout=1):
+        if model not in self._loaded:
+            raise RuntimeError(f"Model '{model}' is not loaded")
+        return model
+
 
 class E2EWorkflowTests(unittest.TestCase):
     def test_full_create_to_close_workflow(self):
@@ -182,6 +203,62 @@ class E2EWorkflowTests(unittest.TestCase):
 
         # Verify model is actually closed
         self.assertNotIn("demo", eng._loaded)
+
+    def test_add_then_delete_workflow(self):
+        """block_add → line_add → line_delete → block_delete"""
+        eng = FakeWorkflowEngine()
+
+        def connect(mod):
+            return patch.object(mod, "safe_connect_to_session", return_value=(eng, None))
+
+        # Setup: create model + blocks + line
+        with connect(model_new):
+            model_new.execute({"name": "demo2", "session": None})
+        with connect(block_cmd):
+            block_cmd.execute({"source": "simulink/Sources/Sine Wave", "destination": "demo2/Sine", "session": None})
+        with connect(block_cmd):
+            block_cmd.execute({"source": "simulink/Math Operations/Gain", "destination": "demo2/Gain", "session": None})
+        with connect(line_add):
+            line_add.execute({"model": "demo2", "src_block": "Sine", "src_port": 1, "dst_block": "Gain", "dst_port": 1, "session": None})
+
+        # Delete line
+        with connect(line_delete):
+            result = line_delete.execute({"model": "demo2", "src_block": "Sine", "src_port": 1, "dst_block": "Gain", "dst_port": 1, "session": None})
+        self.assertNotIn("error", result, f"line_delete failed: {result}")
+        self.assertEqual(result["action"], "line_delete")
+        self.assertTrue(result["rollback"]["available"])
+
+        # Delete blocks
+        with connect(block_delete):
+            result = block_delete.execute({"destination": "demo2/Gain", "session": None})
+        self.assertNotIn("error", result, f"block_delete Gain failed: {result}")
+        self.assertTrue(result["verified"])
+
+        with connect(block_delete):
+            result = block_delete.execute({"destination": "demo2/Sine", "session": None})
+        self.assertNotIn("error", result, f"block_delete Sine failed: {result}")
+
+    def test_simulate_workflow(self):
+        """model_new → block_add → simulate → model_close"""
+        eng = FakeWorkflowEngine()
+
+        def connect(mod):
+            return patch.object(mod, "safe_connect_to_session", return_value=(eng, None))
+
+        with connect(model_new):
+            model_new.execute({"name": "sim_demo", "session": None})
+        with connect(block_cmd):
+            block_cmd.execute({"source": "simulink/Sources/Sine Wave", "destination": "sim_demo/Sine", "session": None})
+
+        with connect(simulate_cmd):
+            result = simulate_cmd.execute({"model": "sim_demo", "session": None})
+        self.assertNotIn("error", result, f"simulate failed: {result}")
+        self.assertEqual(result["action"], "simulate")
+        self.assertIn("warnings", result)
+
+        with connect(model_close):
+            result = model_close.execute({"model": "sim_demo", "force": False, "session": None})
+        self.assertNotIn("error", result, f"model_close failed: {result}")
 
 
 if __name__ == "__main__":

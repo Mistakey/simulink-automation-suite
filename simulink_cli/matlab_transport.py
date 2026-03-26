@@ -151,3 +151,18 @@ def close_system(engine, model):
 def update_diagram(engine, model):
     """Compile/update a Simulink model diagram."""
     return call_no_output(engine, "set_param", model, "SimulationCommand", "update")
+
+
+def delete_line(engine, system, src, dst):
+    """Delete a signal line between two block ports."""
+    return call_no_output(engine, "delete_line", system, src, dst)
+
+
+def delete_block(engine, block_path):
+    """Delete a block from a loaded model."""
+    return call_no_output(engine, "delete_block", block_path)
+
+
+def sim(engine, model):
+    """Run simulation on a loaded model."""
+    return call(engine, "sim", model)

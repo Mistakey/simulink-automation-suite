@@ -1,19 +1,13 @@
-"""block_add action — add a block to a loaded Simulink model."""
+"""block_delete action — delete a block from a loaded Simulink model."""
 
 from simulink_cli import matlab_transport
 from simulink_cli.errors import make_error
 from simulink_cli.validation import validate_matlab_name_field, validate_text_field
 from simulink_cli.session import safe_connect_to_session
 
-DESCRIPTION = "Add a block to a loaded Simulink model."
+DESCRIPTION = "Delete a block from a loaded Simulink model."
 
 FIELDS = {
-    "source": {
-        "type": "string",
-        "required": True,
-        "default": None,
-        "description": "Library source path (e.g. 'simulink/Math Operations/Gain').",
-    },
     "destination": {
         "type": "string",
         "required": True,
@@ -34,18 +28,14 @@ ERRORS = [
     "session_not_found",
     "session_required",
     "model_not_found",
-    "source_not_found",
-    "block_already_exists",
+    "block_not_found",
     "verification_failed",
     "runtime_error",
 ]
 
 
 def validate(args):
-    """Validate block_add arguments. Returns error dict or None."""
-    err = validate_matlab_name_field("source", args.get("source"))
-    if err is not None:
-        return err
+    """Validate block_delete arguments. Returns error dict or None."""
     err = validate_matlab_name_field("destination", args.get("destination"))
     if err is not None:
         return err
@@ -53,13 +43,6 @@ def validate(args):
     if err is not None:
         return err
 
-    source = args.get("source")
-    if source is None or (isinstance(source, str) and not source):
-        return make_error(
-            "invalid_input",
-            "Field 'source' is required.",
-            details={"field": "source"},
-        )
     destination = args.get("destination")
     if destination is None or (isinstance(destination, str) and not destination):
         return make_error(
@@ -71,12 +54,11 @@ def validate(args):
 
 
 def execute(args):
-    """Execute block_add: add a library block to a loaded model."""
+    """Execute block_delete: remove a block from a loaded model."""
     eng, err = safe_connect_to_session(args.get("session"))
     if err is not None:
         return err
 
-    source = args["source"]
     destination = args["destination"]
     model_root = destination.split("/")[0]
 
@@ -91,61 +73,56 @@ def execute(args):
             suggested_fix=f"Open the model first: {{\"action\":\"model_open\",\"path\":\"{model_root}.slx\"}}",
         )
 
-    # Precondition 2: source library block exists
-    try:
-        matlab_transport.get_param(eng, source, "Handle")
-    except Exception:
-        return make_error(
-            "source_not_found",
-            f"Library source '{source}' not found.",
-            details={"source": source},
-            suggested_fix="Check the library path. Use find_system to browse available library blocks.",
-        )
-
-    # Precondition 3: destination does not already exist
+    # Precondition 2: block exists
     try:
         matlab_transport.get_param(eng, destination, "Handle")
-        return make_error(
-            "block_already_exists",
-            f"Block '{destination}' already exists.",
-            details={"destination": destination},
-            suggested_fix="Use a different destination name or delete the existing block first.",
-        )
     except Exception:
-        pass  # Expected — block not found, proceed
+        return make_error(
+            "block_not_found",
+            f"Block '{destination}' not found.",
+            details={"destination": destination},
+            suggested_fix=f"Use scan or find to list blocks in '{model_root}'.",
+        )
 
     # Execute
     try:
-        matlab_transport.add_block(eng, source, destination)
+        matlab_transport.delete_block(eng, destination)
     except Exception as exc:
         return make_error(
             "runtime_error",
-            f"Failed to add block '{destination}'.",
-            details={"source": source, "destination": destination, "cause": str(exc)},
-            suggested_fix="Check the source library path and destination path for errors.",
+            f"Failed to delete block '{destination}'.",
+            details={"destination": destination, "cause": str(exc)},
+            suggested_fix="Verify the block path and that the model is not locked.",
         )
 
-    # Verify
+    # Verify — reverse check: block must no longer exist
     try:
         matlab_transport.get_param(eng, destination, "Handle")
-    except Exception:
+        # If get_param succeeds, block still exists — verification failed
         return make_error(
             "verification_failed",
-            f"Block '{destination}' was added but could not be verified.",
+            f"Block '{destination}' was targeted for deletion but still exists.",
             details={"destination": destination, "write_state": "verification_failed"},
         )
+    except Exception:
+        pass  # Expected — block is gone, deletion confirmed
 
     rollback = {
-        "action": "block_delete",
+        "action": "block_add",
         "destination": destination,
-        "available": True,
+        "available": False,
+        "note": (
+            "block_add requires the original library source; "
+            "use MATLAB add_block('<source>', '"
+            + destination
+            + "') manually to restore"
+        ),
     }
     if args.get("session") is not None:
         rollback["session"] = args["session"]
 
     return {
-        "action": "block_add",
-        "source": source,
+        "action": "block_delete",
         "destination": destination,
         "verified": True,
         "rollback": rollback,
