@@ -118,8 +118,40 @@ If a CLI command does not return within 60 seconds:
 
 ## Test Cleanup
 
-After all testing completes:
-- Note any models that were opened or created during testing
-- Inform user which models/files may need manual cleanup
-- If temporary .slx files were created by model_new, note their locations for deletion
-- model_close is not available as a CLI action — document this as a known limitation
+After all testing completes, **automatically** clean up all test artifacts — do not leave cleanup to the user.
+
+### Step 1: Close test models
+
+For each model created during the test (e.g. `LiveTest25`, `LiveTestModel`):
+
+```bash
+python -m simulink_cli --json '{"action":"model_close","model":"<name>","force":true}'
+```
+
+Close with `force=true` — the model state does not matter at this point.
+
+### Step 2: Find and delete .slx files
+
+Use the `inspect` action (or note from `model_save` context) to determine where the file was saved.
+If the path is unknown, use `model_new`'s save location, which is MATLAB's current working directory.
+Discover it via:
+
+```bash
+# Use list_opened before closing to find the model, then infer MATLAB pwd from known file paths
+# Or use PowerShell on Windows:
+powershell -NoProfile -Command "Get-ChildItem -Path C:\Users\$env:USERNAME,C:\work -Filter '<name>.slx' -Recurse -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName"
+```
+
+Delete the file once found:
+
+```bash
+rm "<path>/<name>.slx"
+```
+
+### Step 3: Verify cleanup
+
+```bash
+python -m simulink_cli --json '{"action":"list_opened"}'
+```
+
+Confirm no test models remain in the session. Report any that could not be cleaned up.

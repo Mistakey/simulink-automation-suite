@@ -1,3 +1,7 @@
+import io
+import sys
+
+
 def _result(value=None, warnings=None):
     return {
         "value": value,
@@ -66,12 +70,30 @@ def _attach_exception_warnings(exc, warnings):
 
 
 def _call_with_optional_nargout(fn, args, nargout):
+    _saved_out = sys.stdout
+    _saved_err = sys.stderr
+    _buf = io.StringIO()
+    sys.stdout = _buf
+    sys.stderr = _buf
     try:
-        return fn(*args, nargout=nargout)
-    except TypeError as exc:
-        if not _should_retry_without_nargout(exc):
-            raise
-    return fn(*args)
+        # Attempt 1: full MATLAB Engine kwargs — suppresses MATLAB C-level stdout.
+        try:
+            return fn(*args, nargout=nargout, stdout=_buf, stderr=_buf)
+        except TypeError as exc:
+            if not _should_retry_without_nargout(exc):
+                raise
+        # Attempt 2: without stdout/stderr kwargs (fake/legacy engines).
+        # sys.stdout redirect above still suppresses Python-level writes.
+        try:
+            return fn(*args, nargout=nargout)
+        except TypeError as exc:
+            if not _should_retry_without_nargout(exc):
+                raise
+        # Attempt 3: bare call (functions that refuse the nargout keyword).
+        return fn(*args)
+    finally:
+        sys.stdout = _saved_out
+        sys.stderr = _saved_err
 
 
 def call(engine, name, *args, nargout=1):

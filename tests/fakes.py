@@ -525,6 +525,25 @@ class FakeBlockEngine:
         self._blocks.discard(block_path)
 
 
+class StdoutPollutingEngine:
+    """Simulates MATLAB Engine writing diagnostic messages to sys.stdout.
+
+    Used to verify that matlab_transport suppresses engine output before
+    it reaches the process stdout.
+    """
+
+    def get_param(self, target, param, nargout=1):
+        import sys
+        sys.stdout.write(f"MATLAB diagnostic: {target} {param}\n")
+        sys.stderr.write(f"MATLAB stderr: {target}\n")
+        return "mock_value"
+
+    def lastwarn(self, *args, **kwargs):
+        if kwargs.get("nargout") == 2:
+            return ("", "")
+        return None
+
+
 class FakeLineEngine(FakeBlockEngine):
     """Fake engine for line_add action tests.
 

@@ -1,6 +1,8 @@
+import io
+import sys
 import unittest
 
-from tests.fakes import OutputSensitiveEngine
+from tests.fakes import OutputSensitiveEngine, StdoutPollutingEngine
 from simulink_cli import matlab_transport
 
 
@@ -104,3 +106,27 @@ class MatlabTransportTests(unittest.TestCase):
         result = matlab_transport.find_system(eng, "Type", "block_diagram")
         self.assertEqual(result["value"], [])
         self.assertEqual(result["warnings"], [])
+
+    def test_transport_suppresses_matlab_stdout_pollution(self):
+        """MATLAB Engine diagnostic messages must not leak to process stdout."""
+        eng = StdoutPollutingEngine()
+        captured = io.StringIO()
+        saved = sys.stdout
+        sys.stdout = captured
+        try:
+            matlab_transport.get_param(eng, "m/Block", "Gain")
+        finally:
+            sys.stdout = saved
+        self.assertEqual(captured.getvalue(), "", "MATLAB stdout must not reach process stdout")
+
+    def test_transport_suppresses_matlab_stderr_pollution(self):
+        """MATLAB Engine diagnostic messages must not leak to process stderr."""
+        eng = StdoutPollutingEngine()
+        captured = io.StringIO()
+        saved = sys.stderr
+        sys.stderr = captured
+        try:
+            matlab_transport.get_param(eng, "m/Block", "Gain")
+        finally:
+            sys.stderr = saved
+        self.assertEqual(captured.getvalue(), "", "MATLAB stderr must not reach process stderr")
