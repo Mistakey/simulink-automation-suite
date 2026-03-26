@@ -339,4 +339,16 @@ claude plugin validate .
 
 ## 路线图
 
-v2.5.0 已完成 14 项基础能力：创建、添加/删除模块、连接/断连信号、配置参数、运行仿真、编译、保存、关闭。后续开发按实际使用需求驱动，无预定计划。
+当前基础能力（v2.5.0）已覆盖模型生命周期、拓扑分析、参数读写、结构编辑和仿真运行。计划演进分为四个阶段：
+
+**Phase 1 — 参数解析**
+运行时读取 MATLAB 工作区变量实际数值（`workspace_read`），在 `inspect` 中将符号表达式（如 `Vdc*m`、`2*pi*fc*Ld`）内联解析为真实数值，支持任意 MATLAB 表达式求值（`eval`）。
+
+**Phase 2 — 仿真数据捕获**
+仿真前自动发现已记录信号（`find_logged_signals`），仿真后读取 To Workspace 块输出和 logsout 信号日志（`sim_results`），无需手动导出即可访问 Scope 数据。
+
+**Phase 3 — 自动化分析**
+自动计算动态响应指标（超调量、调节时间、振荡频率），检测信号异常（饱和、不稳定特征），支持通过 `simulate` 内联注入临时信号捕获，实现零配置仿真分析。
+
+**Phase 4 — 扩展诊断**
+`model_update` 返回结构化 warning/error 列表，读取嵌入式 MATLAB Function 块源代码，访问 Simulink Data Dictionary（`.sldd`）变量。

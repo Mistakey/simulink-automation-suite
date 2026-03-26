@@ -339,4 +339,16 @@ claude plugin validate .
 
 ## Roadmap
 
-The 14-action capability baseline is complete as of v2.5.0: create, add/delete blocks, connect/disconnect signals, configure parameters, run simulations, compile, save, and close models. Future work is driven by real usage — no pre-committed features.
+The current capability baseline (v2.5.0) covers model lifecycle, topology analysis, parameter read/write, structural editing, and simulation. Planned evolution is organized into four areas:
+
+**Phase 1 — Parameter Resolution**
+Read MATLAB workspace variable actual values at runtime (`workspace_read`), resolve symbolic block parameter expressions (e.g. `Vdc*m`, `2*pi*fc*Ld`) to real numbers inline with `inspect`, and evaluate arbitrary MATLAB expressions (`eval`).
+
+**Phase 2 — Simulation Data Capture**
+Discover logged signals before simulation (`find_logged_signals`), read `To Workspace` block outputs and `logsout` signal logs after simulation (`sim_results`), and access Scope block data without manual export.
+
+**Phase 3 — Automated Analysis**
+Compute dynamic response metrics automatically (overshoot, settling time, oscillation frequency), detect signal anomalies (saturation, instability patterns), and support zero-configuration signal capture via inline logging injection in `simulate`.
+
+**Phase 4 — Extended Diagnostics**
+Return structured warning/error lists from `model_update`, read embedded MATLAB Function block source code, and access Simulink Data Dictionary (`.sldd`) variables.
