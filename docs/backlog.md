@@ -9,6 +9,10 @@
 - `P2` 改善体验，较重要
 - `P3` 锦上添花
 
+**管理规则**
+- 已修复的条目直接从 backlog 中删除（修复记录在 git 历史中，不在此文件保留）。
+- 经审查合并或移除的条目保留在"已关闭 / 合并条目"表中，防止重复提出。
+
 ---
 
 ## 缺失功能（Missing Features）
@@ -67,7 +71,7 @@
 {"action": "block_copy", "src": "RefModel/PID_Subsystem", "dst": "MyModel/PID_Subsystem"}
 ```
 
-> **注**：原描述以 `powergui` 为例（"无法从 SPS 库直接添加，只能复制"）有误——`powergui` 可通过 `block_add` 从 `powerlib/powergui` 正常添加，当时失败的原因是库未加载（见 I-001）和不知道正确路径。`block_copy` 的真正场景是复制已配参数的子系统，但使用频率不高，且 F-001 实现后可通过 `run_matlab("add_block('src','dst')")` 替代，优先级由 P1 降为 P2。
+> **注**：原描述以 `powergui` 为例（"无法从 SPS 库直接添加，只能复制"）有误——`powergui` 可通过 `block_add` 从 `powerlib/powergui` 正常添加，当时失败的原因是库未加载和不知道正确路径。`block_copy` 的真正场景是复制已配参数的子系统，但使用频率不高，且 F-001 实现后可通过 `run_matlab("add_block('src','dst')")` 替代，优先级由 P1 降为 P2。
 
 ---
 
@@ -116,36 +120,12 @@
 
 ## 改进 / 优化（Improvements）
 
-### I-001 `block_add` 自动加载库 `已修复`
-**修复**：`block_add` 遇到 `source_not_found` 时自动提取库根名称并调用 `load_system` 重试。错误信息中包含 `auto_load_attempted` 字段和具体提示。
-
----
-
-### I-002 `block_add` source 路径换行符文档说明 `已修复`
-**修复**：`source` 字段 description 已更新，说明部分库路径含换行符及 JSON `\n` 转义用法，并标注库根自动加载行为。
-
----
-
 ### I-003 `model_update` 返回完整诊断信息 `P1`
 **场景**：模型存在警告或非致命错误时，当前 `model_update` 只返回 pass/fail。
 **建议**：返回完整 warning/error 列表，包含块路径、错误代码、描述文本，便于 AI 自动定位并修复问题：
 ```json
 {"warnings": [{"block": "BasicFOC/Iq_PI", "code": "SL_UNCONNECTED_INPUT", "message": "Input port 2 is unconnected"}]}
 ```
-
----
-
-### I-004 skill 文档补充通用使用模式 `已修复`
-**修复**：SKILL.md 新增 `Common Patterns`（Bus Selector 查询、库路径发现、端口连接查询）和 `Known Limitations`（端口类型、原子更新、物理连接、workspace 访问、MATLAB 执行）两个段落。
-
----
-
-## 发布流程问题（Release Process）
-
-### R-001 中英文 release 内容不一致 `已修复`
-**问题**：v2.0.1—v2.0.3 缺少中文部分（`## 中文说明`），v2.1.0 起才采用双语格式。
-**修复**：已为 v2.0.1、v2.0.2、v2.0.3 补齐中文说明，格式与 v2.1.0+ 一致。
-**后续**：`/release` skill 已要求双语格式，`build_release_notes.py` 的 fallback 生成仅产出英文——如需强制双语可在 `check_release_metadata.py` 中添加 `## 中文说明` 存在性检查。
 
 ---
 
@@ -179,7 +159,7 @@
 | 操作 | 根本原因 | 对应条目 |
 |---|---|---|
 | SPS 电气连接（LConn/RConn） | CLI 不支持物理端口名称 | F-003 |
-| powergui / SPS 库模块添加 | 库未自动加载 + 不知道正确路径（`powerlib/powergui`） | I-001 + F-001 |
+| powergui / SPS 库模块添加 | 库未自动加载 + 不知道正确路径（`powerlib/powergui`） | 已修复（I-001） + F-001 |
 | 多参数原子更新（如 PWM 载波） | 分步设置触发中间态校验报错 | F-006 |
 | 仿真结果读取 | CLI 不返回信号数据，workspace 不可访问 | F-001 |
 
