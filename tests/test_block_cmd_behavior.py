@@ -71,6 +71,27 @@ class BlockAddExecuteTests(unittest.TestCase):
         eng = self._make_engine(library_sources=[])
         result = self._run(self._default_args(), engine=eng)
         self.assertEqual(result["error"], "source_not_found")
+        self.assertIn("auto_load_attempted", result["details"])
+
+    def test_source_auto_loads_library_on_miss(self):
+        eng = self._make_engine(
+            library_sources=[],
+            loadable_libraries={"powerlib": ["powerlib/powergui"]},
+        )
+        result = self._run(
+            self._default_args(source="powerlib/powergui", destination="my_model/powergui"),
+            engine=eng,
+        )
+        self.assertNotIn("error", result)
+        self.assertEqual(result["action"], "block_add")
+        self.assertTrue(result["verified"])
+
+    def test_source_auto_load_no_retry_when_already_loaded(self):
+        """When the source is found on first try, load_system is not called."""
+        eng = self._make_engine()
+        result = self._run(self._default_args(), engine=eng)
+        self.assertNotIn("error", result)
+        self.assertTrue(result["verified"])
 
     def test_block_already_exists_returns_error(self):
         eng = self._make_engine(blocks=["my_model/Gain1"])

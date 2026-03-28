@@ -155,6 +155,11 @@ def save_system(engine, model):
     return call_no_output(engine, "save_system", model)
 
 
+def load_system(engine, name):
+    """Load a Simulink library or model into memory."""
+    return call_no_output(engine, "load_system", name)
+
+
 def add_block(engine, source, dest):
     """Add a library block to a loaded model."""
     return call_no_output(engine, "add_block", source, dest)

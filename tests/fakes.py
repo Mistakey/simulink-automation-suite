@@ -495,10 +495,21 @@ class FakeBlockEngine:
     Supports get_param (Handle) and add_block.
     """
 
-    def __init__(self, loaded_models=None, blocks=None, library_sources=None):
+    def __init__(self, loaded_models=None, blocks=None, library_sources=None, loadable_libraries=None):
         self._loaded = set(loaded_models or [])
         self._blocks = set(blocks or [])
         self._library_sources = set(library_sources or [])
+        self._loadable_libraries = dict(loadable_libraries or {})
+
+    def load_system(self, name, nargout=0):
+        if name in self._loadable_libraries:
+            self._library_sources.update(self._loadable_libraries.pop(name))
+            return
+        if name in self._loaded:
+            return
+        if any(s.split("/")[0] == name for s in self._library_sources):
+            return
+        raise RuntimeError(f"Cannot find '{name}'")
 
     def get_param(self, target, param, nargout=1):
         if param == "Handle":

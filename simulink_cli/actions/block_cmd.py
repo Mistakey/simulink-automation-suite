@@ -12,7 +12,7 @@ FIELDS = {
         "type": "string",
         "required": True,
         "default": None,
-        "description": "Library source path (e.g. 'simulink/Math Operations/Gain').",
+        "description": "Library source path (e.g. 'simulink/Math Operations/Gain'). Some library categories contain literal newlines in the path (e.g. 'simulink/Signal\\nRouting/Mux'); use JSON \\n escape. The library root is auto-loaded on first use.",
     },
     "destination": {
         "type": "string",
@@ -91,16 +91,24 @@ def execute(args):
             suggested_fix=f"Open the model first: {{\"action\":\"model_open\",\"path\":\"{model_root}.slx\"}}",
         )
 
-    # Precondition 2: source library block exists
+    # Precondition 2: source library block exists (auto-load library on miss)
     try:
         matlab_transport.get_param(eng, source, "Handle")
     except Exception:
-        return make_error(
-            "source_not_found",
-            f"Library source '{source}' not found.",
-            details={"source": source},
-            suggested_fix="Check the library path. Use find_system to browse available library blocks.",
-        )
+        library_root = source.split("/")[0]
+        try:
+            matlab_transport.load_system(eng, library_root)
+            matlab_transport.get_param(eng, source, "Handle")
+        except Exception:
+            return make_error(
+                "source_not_found",
+                f"Library source '{source}' not found.",
+                details={"source": source, "auto_load_attempted": library_root},
+                suggested_fix=(
+                    f"Attempted auto-load of '{library_root}' but source still not found. "
+                    f"Check the library path. Use find_system to browse available library blocks."
+                ),
+            )
 
     # Precondition 3: destination does not already exist
     try:

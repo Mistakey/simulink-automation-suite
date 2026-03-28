@@ -129,6 +129,48 @@ Error-driven next actions (consult `schema` for the full error code list):
 | `invalid_json` / `json_conflict` / `unknown_parameter` / `invalid_input` | Correct request payload per `schema`, retry |
 | `find` returns empty | Broaden name pattern, try different block_type, widen scope |
 
+## Common Patterns
+
+Recipes for tasks that combine multiple actions. These patterns use existing CLI capabilities — no additional tools required.
+
+### Query Bus Selector signal list
+
+The signal names live in the `InputSignals` parameter, which is populated only after model compilation:
+
+1. `model_update` — compile the model diagram.
+2. `inspect` with `--target MyModel/BusSel --param InputSignals` — returns the comma-separated signal list.
+
+### Discover library block paths
+
+Library paths vary by toolbox. `block_add` auto-loads the library root on first use, so you only need the correct path:
+
+- Standard library: `simulink/Math Operations/Gain`, `simulink/Sources/Step`
+- SPS / Simscape: `powerlib/powergui`, `spsUniversalBridgeLib/Universal Bridge`
+- Some paths contain literal newlines: `simulink/Signal\nRouting/Mux`. In JSON mode use the `\n` escape.
+
+When `source_not_found` persists after auto-load, verify the path in MATLAB documentation or via `find_system('<library>', 'Type', 'block')`.
+
+### Read block port connections
+
+To understand how a block is wired:
+
+1. `connections` with the block as target — returns upstream/downstream edges with numeric port indices.
+2. For port names on masked blocks, `inspect --param PortNames` or related mask parameters.
+
+**Note**: `connections` tracks Simulink signal lines only. SPS physical connections (LConn/RConn) are not visible — see Known Limitations.
+
+## Known Limitations
+
+Current CLI capability boundaries. For operations beyond these limits, use direct MATLAB Engine access or `run_matlab` (when available):
+
+| Limitation | Impact | Workaround |
+|---|---|---|
+| Integer ports only in `line_add` | SPS physical ports (`LConn1`, `RConn1`) cannot be connected. | `add_line(model, 'Src/RConn1', 'Dst/LConn1')` via MATLAB |
+| Single parameter per `set_param` | Interdependent parameters (e.g., `rep_seq_t` + `rep_seq_y`) fail on intermediate state. | `set_param(blk, 'p1', v1, 'p2', v2)` via MATLAB |
+| Signal lines only in `connections` | SPS electrical topology (physical connections) not reported. | Port handle queries via MATLAB |
+| No workspace access | Cannot read/write base workspace variables or simulation results. | `evalin`/`assignin` via MATLAB |
+| No arbitrary MATLAB execution | Complex operations (Stateflow API, Data Dictionary, custom scripts) not reachable. | Pending `run_matlab` action (backlog F-001) |
+
 ## Output Discipline
 
 - Ground claims in tool JSON output — do not hallucinate parameter values.
