@@ -20,6 +20,19 @@ FIELDS = {
         "default": None,
         "description": "Full block path in model (e.g. 'my_model/Gain1').",
     },
+    "position": {
+        "type": "array",
+        "items": "number",
+        "required": False,
+        "default": None,
+        "description": "Block position as [left, top, right, bottom] in pixels (e.g. [50, 100, 130, 130]).",
+    },
+    "auto_layout": {
+        "type": "boolean",
+        "required": False,
+        "default": False,
+        "description": "Run Simulink.BlockDiagram.arrangeSystem on the parent model after adding the block.",
+    },
     "session": {
         "type": "string",
         "required": False,
@@ -67,6 +80,20 @@ def validate(args):
             "Field 'destination' is required.",
             details={"field": "destination"},
         )
+
+    position = args.get("position")
+    if position is not None:
+        if (
+            not isinstance(position, list)
+            or len(position) != 4
+            or not all(isinstance(v, (int, float)) for v in position)
+        ):
+            return make_error(
+                "invalid_input",
+                "Field 'position' must be a 4-element numeric array [left, top, right, bottom].",
+                details={"field": "position", "value": position},
+            )
+
     return None
 
 
@@ -123,8 +150,9 @@ def execute(args):
         pass  # Expected — block not found, proceed
 
     # Execute
+    position = args.get("position")
     try:
-        matlab_transport.add_block(eng, source, destination)
+        matlab_transport.add_block(eng, source, destination, position=position)
     except Exception as exc:
         return make_error(
             "runtime_error",
@@ -143,6 +171,13 @@ def execute(args):
             details={"destination": destination, "write_state": "verification_failed"},
         )
 
+    # Auto-layout
+    if args.get("auto_layout"):
+        try:
+            matlab_transport.call_no_output(eng, "Simulink.BlockDiagram.arrangeSystem", model_root)
+        except Exception:
+            pass  # Best-effort; block was already added successfully
+
     rollback = {
         "action": "block_delete",
         "destination": destination,
@@ -151,10 +186,13 @@ def execute(args):
     if args.get("session") is not None:
         rollback["session"] = args["session"]
 
-    return {
+    result = {
         "action": "block_add",
         "source": source,
         "destination": destination,
         "verified": True,
         "rollback": rollback,
     }
+    if position is not None:
+        result["position"] = position
+    return result

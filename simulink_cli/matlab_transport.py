@@ -160,8 +160,10 @@ def load_system(engine, name):
     return call_no_output(engine, "load_system", name)
 
 
-def add_block(engine, source, dest):
-    """Add a library block to a loaded model."""
+def add_block(engine, source, dest, position=None):
+    """Add a library block to a loaded model, optionally at a given position."""
+    if position is not None:
+        return call_no_output(engine, "add_block", source, dest, "Position", position)
     return call_no_output(engine, "add_block", source, dest)
 
 
@@ -190,6 +192,9 @@ def delete_block(engine, block_path):
     return call_no_output(engine, "delete_block", block_path)
 
 
-def sim(engine, model):
-    """Run simulation on a loaded model."""
-    return call(engine, "sim", model)
+def sim(engine, model, **sim_params):
+    """Run simulation on a loaded model, with optional parameter overrides."""
+    args = [model]
+    for key, value in sim_params.items():
+        args.extend([key, str(value)])
+    return call(engine, "sim", *args)

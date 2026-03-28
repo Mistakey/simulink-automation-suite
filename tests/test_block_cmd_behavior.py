@@ -29,6 +29,38 @@ class BlockAddValidationTests(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+    def test_valid_position_returns_none(self):
+        result = block_cmd.validate(
+            {
+                "source": "simulink/Gain",
+                "destination": "m/G1",
+                "position": [50, 100, 130, 130],
+            }
+        )
+        self.assertIsNone(result)
+
+    def test_invalid_position_wrong_length(self):
+        result = block_cmd.validate(
+            {
+                "source": "simulink/Gain",
+                "destination": "m/G1",
+                "position": [50, 100],
+            }
+        )
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
+    def test_invalid_position_non_numeric(self):
+        result = block_cmd.validate(
+            {
+                "source": "simulink/Gain",
+                "destination": "m/G1",
+                "position": [50, "a", 130, 130],
+            }
+        )
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
 
 class BlockAddExecuteTests(unittest.TestCase):
     def _make_engine(self, **kwargs):
@@ -146,6 +178,20 @@ class BlockAddExecuteTests(unittest.TestCase):
     def test_session_absent_from_rollback_when_none(self):
         result = self._run(self._default_args(session=None))
         self.assertNotIn("session", result["rollback"])
+
+    def test_position_passed_to_result(self):
+        result = self._run(self._default_args(position=[50, 100, 130, 130]))
+        self.assertNotIn("error", result)
+        self.assertEqual(result["position"], [50, 100, 130, 130])
+
+    def test_position_absent_when_not_provided(self):
+        result = self._run(self._default_args())
+        self.assertNotIn("position", result)
+
+    def test_auto_layout_does_not_break_success(self):
+        result = self._run(self._default_args(auto_layout=True))
+        self.assertNotIn("error", result)
+        self.assertTrue(result["verified"])
 
     def test_connection_error_propagates(self):
         error_response = {

@@ -222,6 +222,25 @@ def build_effective_resolution_map(values, parameter_meta):
     return resolution_map
 
 
+def _parse_mask_value_string(eng, target_path, mask_names):
+    """Parse MaskValueString into a dict keyed by MaskNames.
+
+    Returns dict mapping mask param names to their values, or empty dict
+    if MaskValueString is unavailable.
+    """
+    if not mask_names:
+        return {}
+    try:
+        raw = str(matlab_transport.get_param(eng, target_path, "MaskValueString")["value"])
+    except Exception:
+        return {}
+    parts = raw.split("|")
+    result = {}
+    for idx, name in enumerate(mask_names):
+        result[name] = parts[idx] if idx < len(parts) else None
+    return result
+
+
 def _collect_dialog_values(eng, target_path, param_keys, warnings=None):
     values = {}
     for key in param_keys:
@@ -294,6 +313,7 @@ def _inspect_block(
         mask_names = _safe_get_param_list(eng, target_path, "MaskNames")
         mask_visibilities = _safe_get_param_list(eng, target_path, "MaskVisibilities")
         mask_enables = _safe_get_param_list(eng, target_path, "MaskEnables")
+        mask_values = _parse_mask_value_string(eng, target_path, mask_names)
         parameter_meta, meta_warnings = build_parameter_meta(
             param_keys, mask_names, mask_visibilities, mask_enables
         )
@@ -414,6 +434,8 @@ def _inspect_block(
                 "total_params": total_params,
                 "truncated": truncated,
             }
+            if mask_values:
+                output["mask_values"] = mask_values
             warnings = list(helper_warnings) + meta_warnings + conflict_warnings
             if warnings:
                 output["warnings"] = warnings
@@ -438,6 +460,8 @@ def _inspect_block(
             "total_params": total_params,
             "truncated": truncated,
         }
+        if mask_values:
+            output["mask_values"] = mask_values
 
         if summary:
             active_params = []

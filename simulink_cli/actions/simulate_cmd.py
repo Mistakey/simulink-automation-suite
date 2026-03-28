@@ -14,6 +14,18 @@ FIELDS = {
         "default": None,
         "description": "Model name to simulate.",
     },
+    "stop_time": {
+        "type": "number",
+        "required": False,
+        "default": None,
+        "description": "Override simulation stop time (seconds). Does not modify the model.",
+    },
+    "max_step": {
+        "type": "number",
+        "required": False,
+        "default": None,
+        "description": "Override solver maximum step size (seconds). Does not modify the model.",
+    },
     "session": {
         "type": "string",
         "required": False,
@@ -49,6 +61,16 @@ def validate(args):
             "Field 'model' is required.",
             details={"field": "model"},
         )
+
+    for field_name in ("stop_time", "max_step"):
+        value = args.get(field_name)
+        if value is not None and (not isinstance(value, (int, float)) or value <= 0):
+            return make_error(
+                "invalid_input",
+                f"Field '{field_name}' must be a positive number.",
+                details={"field": field_name, "value": value},
+            )
+
     return None
 
 
@@ -72,8 +94,14 @@ def execute(args):
         )
 
     # Execute simulation
+    sim_params = {}
+    if args.get("stop_time") is not None:
+        sim_params["StopTime"] = args["stop_time"]
+    if args.get("max_step") is not None:
+        sim_params["MaxStep"] = args["max_step"]
+
     try:
-        result = matlab_transport.sim(eng, model)
+        result = matlab_transport.sim(eng, model, **sim_params)
         warnings = result.get("warnings", [])
     except Exception as exc:
         msg = str(exc).lower()
@@ -90,8 +118,11 @@ def execute(args):
             details={"model": model, "cause": str(exc)},
         )
 
-    return {
+    response = {
         "action": "simulate",
         "model": model,
         "warnings": warnings,
     }
+    if sim_params:
+        response["overrides"] = {k: v for k, v in sim_params.items()}
+    return response

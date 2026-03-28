@@ -211,6 +211,40 @@ class InspectActiveTests(unittest.TestCase):
         self.assertEqual(set(active["values"].keys()), {"A", "B"})
         self.assertEqual(active["dropped_inactive"], [])
 
+    def test_mask_values_parsed_from_mask_value_string(self):
+        eng = FakeInspectEngine(
+            values={"Resistance": "100", "Inductance": "0.01"},
+            mask_names=["Resistance", "Inductance"],
+            mask_visibilities=["on", "on"],
+            mask_enables=["on", "on"],
+            mask_value_string="100|0.01",
+        )
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            result = inspect_block.execute(_inspect_args())
+        self.assertIn("mask_values", result)
+        self.assertEqual(result["mask_values"]["Resistance"], "100")
+        self.assertEqual(result["mask_values"]["Inductance"], "0.01")
+
+    def test_mask_values_absent_for_unmasked_block(self):
+        eng = FakeInspectEngine(values={"Gain": "5"})
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            result = inspect_block.execute(_inspect_args())
+        self.assertNotIn("mask_values", result)
+
+    def test_mask_values_present_in_active_only_mode(self):
+        eng = FakeInspectEngine(
+            values={"A": "1", "B": "2"},
+            mask_names=["A", "B"],
+            mask_visibilities=["on", "off"],
+            mask_enables=["on", "on"],
+            mask_value_string="1|2",
+        )
+        with patch.object(inspect_block, 'safe_connect_to_session', return_value=(eng, None)):
+            result = inspect_block.execute(_inspect_args(active_only=True))
+        self.assertIn("mask_values", result)
+        self.assertEqual(result["mask_values"]["A"], "1")
+        self.assertEqual(result["mask_values"]["B"], "2")
+
     def test_mask_array_length_mismatch_is_robust(self):
         eng = FakeInspectEngine(
             values={"A": "1", "B": "2"},

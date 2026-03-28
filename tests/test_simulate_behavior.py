@@ -22,6 +22,20 @@ class SimulateValidationTests(unittest.TestCase):
         result = simulate_cmd.validate({"model": "m", "session": None})
         self.assertIsNone(result)
 
+    def test_valid_stop_time_returns_none(self):
+        result = simulate_cmd.validate({"model": "m", "stop_time": 0.5})
+        self.assertIsNone(result)
+
+    def test_invalid_stop_time_returns_error(self):
+        result = simulate_cmd.validate({"model": "m", "stop_time": -1})
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
+    def test_invalid_max_step_string_returns_error(self):
+        result = simulate_cmd.validate({"model": "m", "max_step": "auto"})
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
 
 class SimulateExecuteTests(unittest.TestCase):
     def _run(self, args, engine=None):
@@ -64,6 +78,28 @@ class SimulateExecuteTests(unittest.TestCase):
         eng.sim = failing_sim
         result = self._run(self._default_args(), engine=eng)
         self.assertEqual(result["error"], "runtime_error")
+
+    def test_stop_time_override_in_response(self):
+        result = self._run(self._default_args(stop_time=0.1))
+        self.assertNotIn("error", result)
+        self.assertIn("overrides", result)
+        self.assertEqual(result["overrides"]["StopTime"], 0.1)
+
+    def test_max_step_override_in_response(self):
+        result = self._run(self._default_args(max_step=1e-4))
+        self.assertNotIn("error", result)
+        self.assertIn("overrides", result)
+        self.assertEqual(result["overrides"]["MaxStep"], 1e-4)
+
+    def test_both_overrides_in_response(self):
+        result = self._run(self._default_args(stop_time=0.5, max_step=1e-3))
+        self.assertNotIn("error", result)
+        self.assertEqual(result["overrides"]["StopTime"], 0.5)
+        self.assertEqual(result["overrides"]["MaxStep"], 1e-3)
+
+    def test_no_overrides_key_when_not_provided(self):
+        result = self._run(self._default_args())
+        self.assertNotIn("overrides", result)
 
     def test_connection_error_propagates(self):
         error_response = {"error": "engine_unavailable", "message": "No MATLAB.", "details": {}}

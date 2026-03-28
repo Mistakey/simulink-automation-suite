@@ -207,12 +207,14 @@ class FakeInspectEngine:
         mask_names=None,
         mask_visibilities=None,
         mask_enables=None,
+        mask_value_string=None,
         valid_paths=None,
     ):
         self.values = values
         self.mask_names = mask_names
         self.mask_visibilities = mask_visibilities
         self.mask_enables = mask_enables
+        self.mask_value_string = mask_value_string
         self.valid_paths = set(valid_paths or ["m/b"])
 
     def get_param(self, block_path, param_name):
@@ -234,6 +236,10 @@ class FakeInspectEngine:
             if self.mask_enables is None:
                 raise RuntimeError("not a masked block")
             return self.mask_enables
+        if param_name == "MaskValueString":
+            if self.mask_value_string is None:
+                raise RuntimeError("no MaskValueString")
+            return self.mask_value_string
         if param_name in self.values:
             return self.values[param_name]
         raise RuntimeError(f"unknown param {param_name}")
@@ -474,7 +480,7 @@ class FakeModelEngine:
             return
         raise RuntimeError(f"Unsupported set_param: {param}={value}")
 
-    def sim(self, model, nargout=1):
+    def sim(self, model, *args, nargout=1):
         if model not in self._loaded:
             raise RuntimeError(f"Model '{model}' is not loaded")
         return model
@@ -522,7 +528,7 @@ class FakeBlockEngine:
             raise RuntimeError(f"Invalid Simulink object name: {target}")
         raise RuntimeError(f"Parameter '{param}' not found")
 
-    def add_block(self, source, dest, nargout=0):
+    def add_block(self, source, dest, *args, nargout=0):
         model_root = dest.split("/")[0]
         if model_root not in self._loaded:
             raise RuntimeError(f"Model '{model_root}' is not loaded")
