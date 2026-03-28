@@ -59,6 +59,7 @@ The following actions are handled directly without dispatching the agent:
 | `line_delete` | Write operation; signal disconnection |
 | `block_delete` | Write operation; structural removal (also removes connected lines) |
 | `simulate` | Operational; runs model simulation |
+| `matlab_eval` | Operational; executes arbitrary MATLAB code |
 
 ### Delegate to simulink-analyzer agent
 
@@ -125,6 +126,8 @@ Error-driven next actions (consult `schema` for the full error code list):
 | `line_not_found` | Verify src/dst block and port names with `connections`; confirm the line exists before deleting |
 | `simulation_failed` | Check model for errors with `model_update`; fix unconnected ports or type mismatches, then retry |
 | `update_failed` | Check model for errors (unconnected ports, type mismatches); fix with `set_param` or `line_add`, retry |
+| `eval_failed` | Check MATLAB code syntax and referenced variables/functions; retry with corrected code |
+| `eval_timeout` | Increase timeout or simplify the code; avoid infinite loops |
 | `state_write_failed` / `state_clear_failed` | Check plugin state-file permissions or pass explicit `--session` |
 | `invalid_json` / `json_conflict` / `unknown_parameter` / `invalid_input` | Correct request payload per `schema`, retry |
 | `find` returns empty | Broaden name pattern, try different block_type, widen scope |

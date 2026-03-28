@@ -16,6 +16,7 @@ from simulink_cli.actions import (
     line_add,
     line_delete,
     list_opened,
+    matlab_eval,
     model_close,
     model_new,
     model_open,
@@ -47,6 +48,7 @@ _ACTIONS = {
     "line_add": line_add,
     "line_delete": line_delete,
     "simulate": simulate_cmd,
+    "matlab_eval": matlab_eval,
 }
 
 _FRAMEWORK_ERRORS = {

@@ -70,6 +70,8 @@ class DocsContractTests(unittest.TestCase):
             "line_not_found",
             "simulation_failed",
             "update_failed",
+            "eval_failed",
+            "eval_timeout",
         ]
         for code in required_codes:
             self.assertIn(code, text, f"Recovery routing missing: {code}")
@@ -213,6 +215,11 @@ class DocsContractTests(unittest.TestCase):
     def test_handoff_direct_bucket_covers_v2_5_actions(self):
         handoff_text = self._get_handoff_text()
         for action in ["line_delete", "block_delete", "simulate"]:
+            self.assertIn(action, handoff_text, f"Direct bucket missing: {action}")
+
+    def test_handoff_direct_bucket_covers_v2_6_actions(self):
+        handoff_text = self._get_handoff_text()
+        for action in ["matlab_eval"]:
             self.assertIn(action, handoff_text, f"Direct bucket missing: {action}")
 
     def test_handoff_declares_composite_request_rule(self):

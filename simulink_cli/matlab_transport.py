@@ -198,3 +198,23 @@ def sim(engine, model, **sim_params):
     for key, value in sim_params.items():
         args.extend([key, str(value)])
     return call(engine, "sim", *args)
+
+
+def eval_code(engine, code, timeout=30):
+    """Execute arbitrary MATLAB code via evalc, returning captured text output.
+
+    Uses async execution for timeout support.  Falls back to synchronous
+    evalc when the engine does not support async calls (e.g. test fakes).
+    """
+    _reset_lastwarn(engine)
+    try:
+        if hasattr(engine, "evalc_async"):
+            future = engine.evalc_async(code, nargout=1)
+            value = future.result(timeout=timeout)
+        else:
+            value = engine.evalc(code, nargout=1)
+    except Exception as exc:
+        _attach_exception_warnings(exc, _drain_warnings(engine))
+        raise
+    warnings = _drain_warnings(engine)
+    return _result(value=value, warnings=warnings)
