@@ -17,31 +17,6 @@
 
 ## 缺失功能（Missing Features）
 
-### F-001 `run_matlab` / `eval` action `P0`
-**场景**：复杂模型搭建、参数表达式求值、一次性计算（电压裕量、带宽验算等）。
-**问题**：没有执行任意 MATLAB 代码的途径，所有非标准操作（原子参数设置、库加载、仿真脚本、表达式计算）都必须绕到 CLI 外的 Python 脚本中完成。
-**建议接口**：
-```json
-{"action": "run_matlab", "code": "2*pi*50*8.5e-3", "capture_output": true}
-```
-返回 `ans` / stdout 内容，支持多行代码块。也可细分为两个 action：`run_matlab`（多行脚本）+ `eval`（单行表达式求值），二者底层相同。
-
-**杠杆效应**：此功能为整个 backlog 的核心枢纽，实现后直接解锁以下能力（无需独立 action）：
-| 能力 | 实现方式 |
-|---|---|
-| workspace 读写（原 F-002） | `evalin('base','Vdc')` / `assignin('base','Vdc',300)` |
-| 仿真结果读取（原 F-007a） | `run_matlab("simout.signals(1).values")` |
-| 参数表达式求值（原 I-002） | `run_matlab("2*pi*fc*Ld1")` |
-| Bus Selector 信号查询（原 F-009） | `run_matlab("get_param('m/BusSel','InputSignals')")` |
-| 端口信息查询（原 F-010） | `run_matlab("get_param('m/Block','PortHandles')")` |
-| MATLAB Function 源码读取（原 F-011） | 通过 Stateflow API：`sfroot` → `EMChart` → `Script` |
-| Data Dictionary 访问（原 F-012） | 通过 `Simulink.data.dictionary.open` API |
-| 库路径发现 | `find_system('simulink','Type','block')` / `which('ee_lib')` |
-
-> **注**：MathWorks 官方 MATLAB MCP Core Server 的核心 tool 也是 `evaluate_matlab_code`——通用代码执行能力，而非为每种操作提供专用 tool。这验证了 `run_matlab` 作为单一通用入口的设计方向是正确的。
-
----
-
 ### F-003 `line_add` 支持 LConn/RConn 物理电气端口 `P0`
 **场景**：SPS（SimPowerSystems）所有电气连接使用 `LConn1`、`RConn1` 等物理端口名称。
 **问题**：`line_add` 仅支持整数端口号，直流母线、逆变器、PMSM 之间的电气连接全部无法通过 CLI 完成。
@@ -49,17 +24,6 @@
 ```json
 {"action": "line_add", "model": "m", "src": "DC_Source/RConn1", "dst": "Ground1/LConn1"}
 ```
-
----
-
-### F-004 `block_add` 支持 `position` 参数 `P1`
-**场景**：搭建任何模型。
-**问题**：`block_add` 不支持指定模块位置，所有模块堆在默认坐标，信号线全部交叉，模型完全不可读。
-**建议**：
-```json
-{"action": "block_add", "source": "simulink/Sources/Step", "dest": "MyModel/Speed_Ref", "position": [50, 100, 130, 130]}
-```
-同时建议增加 `auto_layout` 选项，调用 `Simulink.BlockDiagram.arrangeSystem` 自动排布。
 
 ---
 
@@ -85,15 +49,7 @@
 
 ---
 
-### F-007 `simulate` 增强 `P1`
-
-**7a — `stop_time` / `max_step` 临时覆盖**
-诊断性短仿真与完整仿真频繁切换需要反复修改模型参数。建议支持临时覆盖，不修改模型本身：
-```json
-{"action": "simulate", "model": "BasicFOC", "stop_time": 0.1, "max_step": 1e-4}
-```
-
-**7b — `log_signals` 零配置信号捕获 `P3`**
+### F-007b `log_signals` 零配置信号捕获 `P3`
 需要诊断中间信号时，必须手动添加/删除 ToWorkspace 块，流程繁琐。建议 `simulate` 支持：
 ```json
 {"action": "simulate", "log_signals": ["MyModel/Speed_PI/1", "MyModel/Park_Iq/1"]}
@@ -109,12 +65,6 @@
 ### B-001 SPS 物理连接无法通过 `connections` 追踪 `P2`
 **问题**：`connections` 只追踪 Simulink 信号线，无法追踪 SPS LConn/RConn 物理电气连接，电气拓扑完全不可见。
 **建议**：扩展 `connections` 支持物理连接，或新增 `electrical_connections` action。
-
----
-
-### B-002 `inspect` 对 SPS 掩码模块参数不结构化 `P2`
-**问题**：`inspect --param All` 对 SPS 掩码模块返回的 `MaskValueString` 是竖线分隔字符串，需手动对照 MaskNames 解析，不可直接使用。
-**建议**：对带 Mask 的模块，`inspect` 将 MaskNames + MaskValues 配对输出为结构化字典。
 
 ---
 
@@ -159,9 +109,7 @@
 | 操作 | 根本原因 | 对应条目 |
 |---|---|---|
 | SPS 电气连接（LConn/RConn） | CLI 不支持物理端口名称 | F-003 |
-| powergui / SPS 库模块添加 | 库未自动加载 + 不知道正确路径（`powerlib/powergui`） | 已修复（I-001） + F-001 |
 | 多参数原子更新（如 PWM 载波） | 分步设置触发中间态校验报错 | F-006 |
-| 仿真结果读取 | CLI 不返回信号数据，workspace 不可访问 | F-001 |
 
 ### SPS 常用模块信息（经验积累）
 | 信息 | 内容 |

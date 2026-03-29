@@ -10,7 +10,7 @@ class SchemaActionTests(unittest.TestCase):
         self.schema = build_schema_payload()
 
     def test_schema_returns_version(self):
-        self.assertEqual(self.schema["version"], "2.5")
+        self.assertEqual(self.schema["version"], "2.6")
 
     def test_all_actions_present_with_description_and_fields(self):
         expected = {

@@ -70,7 +70,7 @@ def build_schema_payload():
         }
         all_errors.update(mod.ERRORS)
     return {
-        "version": "2.5",
+        "version": "2.6",
         "actions": {"schema": {"description": "Return machine-readable command contract and error-code catalog.", "fields": {}}, **actions},
         "error_codes": sorted(all_errors),
     }
