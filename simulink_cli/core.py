@@ -18,6 +18,7 @@ from simulink_cli.actions import (
     list_opened,
     matlab_eval,
     model_close,
+    model_copy,
     model_new,
     model_open,
     model_save,
@@ -42,6 +43,7 @@ _ACTIONS = {
     "model_open": model_open,
     "model_save": model_save,
     "model_close": model_close,
+    "model_copy": model_copy,
     "model_update": model_update,
     "block_add": block_cmd,
     "block_delete": block_delete,
@@ -70,7 +72,7 @@ def build_schema_payload():
         }
         all_errors.update(mod.ERRORS)
     return {
-        "version": "2.8",
+        "version": "2.9",
         "actions": {"schema": {"description": "Return machine-readable command contract and error-code catalog.", "fields": {}}, **actions},
         "error_codes": sorted(all_errors),
     }
@@ -183,6 +185,11 @@ def build_parser():
         dest="json_payload",
         help="JSON request payload. Mutually exclusive with flag mode.",
     )
+    parser.add_argument(
+        "--json-file",
+        dest="json_file",
+        help="Path to a JSON file containing the request payload. Mutually exclusive with --json and flag mode.",
+    )
     subparsers = parser.add_subparsers(dest="action", required=True)
     subparsers.add_parser(
         "schema", help="Return machine-readable command contract"
@@ -237,21 +244,48 @@ def _extract_json_payload(argv):
     if argv is None:
         argv = sys.argv[1:]
     argv = list(argv)
-    if "--json" not in argv:
+
+    has_json = "--json" in argv
+    has_json_file = "--json-file" in argv
+
+    if has_json and has_json_file:
+        raise ValueError("json_conflict: --json and --json-file are mutually exclusive")
+
+    if not has_json and not has_json_file:
         return None, argv
 
-    json_positions = [i for i, t in enumerate(argv) if t == "--json"]
-    if len(json_positions) > 1:
-        raise ValueError("json_conflict: --json can only be provided once")
+    if has_json:
+        json_positions = [i for i, t in enumerate(argv) if t == "--json"]
+        if len(json_positions) > 1:
+            raise ValueError("json_conflict: --json can only be provided once")
+        idx = json_positions[0]
+        if idx >= len(argv) - 1:
+            raise ValueError("invalid_json: --json requires a payload")
+        if len(argv) != 2 or idx != 0:
+            raise ValueError(
+                "json_conflict: --json cannot be mixed with flags arguments"
+            )
+        return argv[idx + 1], None
 
-    idx = json_positions[0]
+    # --json-file
+    json_file_positions = [i for i, t in enumerate(argv) if t == "--json-file"]
+    if len(json_file_positions) > 1:
+        raise ValueError("json_conflict: --json-file can only be provided once")
+    idx = json_file_positions[0]
     if idx >= len(argv) - 1:
-        raise ValueError("invalid_json: --json requires a payload")
+        raise ValueError("invalid_json: --json-file requires a file path")
     if len(argv) != 2 or idx != 0:
         raise ValueError(
-            "json_conflict: --json cannot be mixed with flags arguments"
+            "json_conflict: --json-file cannot be mixed with flags arguments"
         )
-    return argv[idx + 1], None
+    file_path = argv[idx + 1]
+    try:
+        with open(file_path, encoding="utf-8") as f:
+            return f.read(), None
+    except FileNotFoundError:
+        raise ValueError(f"invalid_input: file not found: {file_path}")
+    except OSError as exc:
+        raise ValueError(f"invalid_input: cannot read file: {exc}")
 
 
 def _parse_flag_mode(argv):

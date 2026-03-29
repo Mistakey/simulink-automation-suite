@@ -8,7 +8,7 @@ class JsonArgumentParser(argparse.ArgumentParser):
 
 
 def emit_json(payload):
-    print(json.dumps(payload, ensure_ascii=True, default=str))
+    print(json.dumps(payload, ensure_ascii=False, default=str))
 
 
 def as_list(value):

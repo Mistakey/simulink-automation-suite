@@ -88,13 +88,22 @@ class FakeWorkflowEngine:
             raise RuntimeError(f"Model '{model_root}' is not loaded")
         self._params[f"{target}::{param}"] = value
 
-    def evalc(self, code, nargout=1):
+    def evalc(self, code, nargout=1, background=False):
         import re
+        if background:
+            raise TypeError("FakeWorkflowEngine does not support background evalc")
         if "SimulationCommand" in code and "update" in code:
             match = re.search(r"'(\w+)'", code)
             if match:
                 model = match.group(1)
                 self.set_param(model, "SimulationCommand", "update", nargout=0)
+            return ""
+        if code.startswith("sl_sim_result = sim("):
+            match = re.search(r"sim\('(\w+)'", code)
+            if match:
+                model = match.group(1)
+                if model not in self._loaded:
+                    raise RuntimeError(f"Model '{model}' is not loaded")
             return ""
         raise RuntimeError(f"Unsupported evalc: {code}")
 

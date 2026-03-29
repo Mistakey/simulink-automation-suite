@@ -10,6 +10,7 @@ Simulink Automation Suite 是一个基于 MATLAB Engine for Python 的 Claude Co
 
 - 插件标准名称：`simulink-automation-suite`
 - **只读分析** — `simulink-analyzer` agent 自主探索模型拓扑、追踪连接、审计参数，并返回结构化分析结果，不会污染对话上下文。
+- **仿真后分析** — `sim-analyst` agent 从 `sl_sim_result` 中提取信号、评估动态性能（上升时间、超调量、调节时间），返回结构化结论，不向主对话暴露原始波形数据。
 - **写入自动化** — `simulink-automation` 技能引导安全的参数修改，提供 dry-run 预览、前置条件守卫和回滚支持。
 - 运行时 Python 模块路径：`simulink_cli`（统一 CLI 入口）
 
@@ -318,7 +319,8 @@ simulink_cli/           # 统一 CLI 包（单一入口）
     ├── simulate_cmd.py
     └── session_cmd.py
 agents/                 # 已发布的 Agent 定义
-└── simulink-analyzer.md  # 只读分析 Agent（拓扑、搜索、连接、参数审计）
+├── simulink-analyzer.md  # 只读分析 Agent（拓扑、搜索、连接、参数审计）
+└── sim-analyst.md        # 仿真后分析 Agent（信号提取、波形分析、动态性能）
 skills/                 # 插件技能定义（仅文档，无 Python 代码）
 └── simulink_automation/  # 写入自动化 + 元查询技能
     ├── SKILL.md

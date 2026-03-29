@@ -26,6 +26,12 @@ FIELDS = {
         "default": None,
         "description": "Override solver maximum step size (seconds). Does not modify the model.",
     },
+    "timeout": {
+        "type": "number",
+        "required": False,
+        "default": None,
+        "description": "Simulation timeout in seconds. Long SPS simulations may need 120-600s. No timeout by default.",
+    },
     "session": {
         "type": "string",
         "required": False,
@@ -41,6 +47,7 @@ ERRORS = [
     "session_required",
     "model_not_found",
     "simulation_failed",
+    "simulation_timeout",
     "runtime_error",
 ]
 
@@ -62,7 +69,7 @@ def validate(args):
             details={"field": "model"},
         )
 
-    for field_name in ("stop_time", "max_step"):
+    for field_name in ("stop_time", "max_step", "timeout"):
         value = args.get(field_name)
         if value is not None and (not isinstance(value, (int, float)) or value <= 0):
             return make_error(
@@ -95,14 +102,32 @@ def execute(args):
 
     # Execute simulation
     sim_params = {}
+    sim_args = [f"'{model}'"]
     if args.get("stop_time") is not None:
+        sim_args.append(f"'StopTime', '{args['stop_time']}'")
         sim_params["StopTime"] = args["stop_time"]
     if args.get("max_step") is not None:
+        sim_args.append(f"'MaxStep', '{args['max_step']}'")
         sim_params["MaxStep"] = args["max_step"]
 
+    sim_code = (
+        f"sl_sim_result = sim({', '.join(sim_args)}); "
+        f"assignin('base', 'sl_sim_result', sl_sim_result);"
+    )
+
+    timeout = args.get("timeout")
+    effective_timeout = timeout if timeout is not None else 120
+
     try:
-        result = matlab_transport.sim(eng, model, **sim_params)
+        result = matlab_transport.eval_code(eng, sim_code, timeout=effective_timeout)
         warnings = result.get("warnings", [])
+    except TimeoutError:
+        return make_error(
+            "simulation_timeout",
+            f"Simulation timed out after {timeout}s for model '{model}'.",
+            details={"model": model, "timeout": timeout},
+            suggested_fix="Increase timeout, reduce StopTime, or increase MaxStep to speed up simulation.",
+        )
     except Exception as exc:
         msg = str(exc).lower()
         if "simulation" in msg or "solver" in msg or "algebraic" in msg:
@@ -125,4 +150,6 @@ def execute(args):
     }
     if sim_params:
         response["overrides"] = {k: v for k, v in sim_params.items()}
+    if timeout is not None:
+        response["timeout"] = timeout
     return response

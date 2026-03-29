@@ -10,6 +10,7 @@ Simulink Automation Suite is a Claude Code plugin for Simulink automation workfl
 
 - Canonical plugin name: `simulink-automation-suite`
 - **Read Analysis** — the `simulink-analyzer` agent autonomously explores model topology, traces connections, audits parameters, and returns structured findings without polluting conversation context.
+- **Post-Simulation Analysis** — the `sim-analyst` agent extracts signals from `sl_sim_result`, evaluates dynamic performance (rise time, overshoot, settling time), and returns structured conclusions without exposing raw waveform data to the main conversation.
 - **Write Automation** — the `simulink-automation` skill guides safe parameter modification with dry-run preview, precondition guards, and rollback support.
 - Runtime Python module path: `simulink_cli` (unified CLI entrypoint)
 
@@ -318,7 +319,8 @@ simulink_cli/           # Unified CLI package (single entrypoint)
     ├── simulate_cmd.py
     └── session_cmd.py
 agents/                 # Published agent definitions
-└── simulink-analyzer.md  # Read-analysis agent (topology, search, connections, inspection)
+├── simulink-analyzer.md  # Read-analysis agent (topology, search, connections, inspection)
+└── sim-analyst.md        # Post-simulation analysis agent (signals, waveforms, performance)
 skills/                 # Plugin skill definitions (docs only, no Python code)
 └── simulink_automation/  # Write automation + meta-query skill
     ├── SKILL.md

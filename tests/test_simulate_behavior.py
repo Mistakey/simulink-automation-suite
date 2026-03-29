@@ -36,6 +36,15 @@ class SimulateValidationTests(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertEqual(result["error"], "invalid_input")
 
+    def test_valid_timeout_returns_none(self):
+        result = simulate_cmd.validate({"model": "m", "timeout": 120})
+        self.assertIsNone(result)
+
+    def test_invalid_timeout_returns_error(self):
+        result = simulate_cmd.validate({"model": "m", "timeout": -5})
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
 
 class SimulateExecuteTests(unittest.TestCase):
     def _run(self, args, engine=None):
@@ -45,7 +54,7 @@ class SimulateExecuteTests(unittest.TestCase):
             return simulate_cmd.execute(args)
 
     def _default_args(self, **overrides):
-        args = {"model": "m", "session": None}
+        args = {"model": "m", "session": None, "timeout": None}
         args.update(overrides)
         return args
 
@@ -64,18 +73,21 @@ class SimulateExecuteTests(unittest.TestCase):
 
     def test_simulation_failed_returns_error(self):
         eng = FakeModelEngine(loaded_models=["m"])
-        original_sim = eng.sim
-        def failing_sim(model, nargout=1):
+        def failing_evalc(code, nargout=1, background=False):
+            if background:
+                raise TypeError("no background")
             raise RuntimeError("Simulation error: algebraic loop detected")
-        eng.sim = failing_sim
+        eng.evalc = failing_evalc
         result = self._run(self._default_args(), engine=eng)
         self.assertEqual(result["error"], "simulation_failed")
 
     def test_runtime_error_on_engine_failure(self):
         eng = FakeModelEngine(loaded_models=["m"])
-        def failing_sim(model, nargout=1):
+        def failing_evalc(code, nargout=1, background=False):
+            if background:
+                raise TypeError("no background")
             raise RuntimeError("MATLAB engine crashed")
-        eng.sim = failing_sim
+        eng.evalc = failing_evalc
         result = self._run(self._default_args(), engine=eng)
         self.assertEqual(result["error"], "runtime_error")
 
@@ -101,11 +113,37 @@ class SimulateExecuteTests(unittest.TestCase):
         result = self._run(self._default_args())
         self.assertNotIn("overrides", result)
 
+    def test_timeout_passed_to_response(self):
+        result = self._run(self._default_args(timeout=120))
+        self.assertNotIn("error", result)
+        self.assertEqual(result["timeout"], 120)
+
+    def test_no_timeout_key_when_not_provided(self):
+        result = self._run(self._default_args())
+        self.assertNotIn("timeout", result)
+
+    def test_simulation_timeout_returns_error(self):
+        eng = FakeModelEngine(loaded_models=["m"])
+        def timeout_evalc(code, nargout=1, background=False):
+            if background:
+                raise TypeError("no background")
+            raise TimeoutError("timed out")
+        eng.evalc = timeout_evalc
+        result = self._run(self._default_args(timeout=10), engine=eng)
+        self.assertEqual(result["error"], "simulation_timeout")
+        self.assertIn("10", result["message"])
+
     def test_connection_error_propagates(self):
         error_response = {"error": "engine_unavailable", "message": "No MATLAB.", "details": {}}
         with patch.object(simulate_cmd, "safe_connect_to_session", return_value=(None, error_response)):
             result = simulate_cmd.execute(self._default_args())
         self.assertEqual(result["error"], "engine_unavailable")
+
+    def test_simulate_stores_result_in_workspace(self):
+        eng = FakeModelEngine(loaded_models=["m"])
+        result = self._run(self._default_args(), engine=eng)
+        self.assertNotIn("error", result)
+        self.assertIn("sl_sim_result", eng._workspace)
 
 
 if __name__ == "__main__":

@@ -16,27 +16,33 @@ FIELDS = {
     },
     "src_block": {
         "type": "string",
-        "required": True,
+        "required": False,
         "default": None,
         "description": "Source block name (local to model, must not contain '/').",
     },
     "src_port": {
         "type": "port",
-        "required": True,
+        "required": False,
         "default": None,
         "description": "Source port — integer (signal) or string name (physical, e.g. 'RConn1').",
     },
     "dst_block": {
         "type": "string",
-        "required": True,
+        "required": False,
         "default": None,
         "description": "Destination block name (local to model, must not contain '/').",
     },
     "dst_port": {
         "type": "port",
-        "required": True,
+        "required": False,
         "default": None,
         "description": "Destination port — integer (signal) or string name (physical, e.g. 'LConn1').",
+    },
+    "lines": {
+        "type": "array",
+        "required": False,
+        "default": None,
+        "description": "Batch mode: array of {src_block, src_port, dst_block, dst_port} objects. Mutually exclusive with individual src_block/src_port/dst_block/dst_port.",
     },
     "session": {
         "type": "string",
@@ -60,8 +66,8 @@ ERRORS = [
 ]
 
 
-def validate(args):
-    """Validate line_add arguments. Returns error dict or None."""
+def _validate_single_line(args):
+    """Validate single-line args. Returns error dict or None."""
     err = validate_matlab_name_field("model", args.get("model"))
     if err is not None:
         return err
@@ -133,18 +139,71 @@ def validate(args):
     return None
 
 
-def execute(args):
-    """Execute line_add: connect two block ports with a signal line."""
-    eng, err = safe_connect_to_session(args.get("session"))
-    if err is not None:
-        return err
+def _validate_batch_lines(lines):
+    """Validate batch lines array. Returns error dict or None."""
+    if not isinstance(lines, list) or len(lines) == 0:
+        return make_error(
+            "invalid_input",
+            "Field 'lines' must be a non-empty array.",
+            details={"field": "lines"},
+        )
+    if len(lines) > 100:
+        return make_error(
+            "invalid_input",
+            "Field 'lines' exceeds maximum of 100 items.",
+            details={"field": "lines", "count": len(lines)},
+        )
+    for i, item in enumerate(lines):
+        if not isinstance(item, dict):
+            return make_error(
+                "invalid_input",
+                f"Field 'lines[{i}]' must be an object.",
+                details={"field": "lines", "index": i},
+            )
+        for key in ("src_block", "src_port", "dst_block", "dst_port"):
+            if key not in item:
+                return make_error(
+                    "invalid_input",
+                    f"Field 'lines[{i}].{key}' is required.",
+                    details={"field": "lines", "index": i, "missing_key": key},
+                )
+    return None
 
-    model = args["model"]
-    src_block = args["src_block"]
-    src_port = args["src_port"]
-    dst_block = args["dst_block"]
-    dst_port = args["dst_port"]
 
+def validate(args):
+    """Validate line_add arguments. Returns error dict or None."""
+    lines = args.get("lines")
+    has_single = any(
+        args.get(f) is not None
+        for f in ("src_block", "src_port", "dst_block", "dst_port")
+    )
+
+    if lines is not None and has_single:
+        return make_error(
+            "invalid_input",
+            "Field 'lines' is mutually exclusive with 'src_block', 'src_port', 'dst_block', and 'dst_port'.",
+            details={"field": "lines"},
+        )
+
+    if lines is not None:
+        # Still validate model
+        err = validate_matlab_name_field("model", args.get("model"))
+        if err is not None:
+            return err
+        model = args.get("model")
+        if model is None or (isinstance(model, str) and not model):
+            return make_error(
+                "invalid_input",
+                "Field 'model' is required.",
+                details={"field": "model"},
+            )
+        return _validate_batch_lines(lines)
+
+    return _validate_single_line(args)
+
+
+def _connect_one_line(eng, model, src_block, src_port, dst_block, dst_port):
+    """Connect a single line using a pre-connected engine. Returns result or error dict."""
     # Precondition 1: model is loaded
     try:
         matlab_transport.get_param(eng, model, "Handle")
@@ -216,6 +275,25 @@ def execute(args):
             details={"write_state": "attempted"},
         )
 
+    return {"line_handle": line_handle, "verified": True}
+
+
+def _execute_single(args):
+    """Execute line_add for a single line."""
+    eng, err = safe_connect_to_session(args.get("session"))
+    if err is not None:
+        return err
+
+    model = args["model"]
+    src_block = args["src_block"]
+    src_port = args["src_port"]
+    dst_block = args["dst_block"]
+    dst_port = args["dst_port"]
+
+    inner = _connect_one_line(eng, model, src_block, src_port, dst_block, dst_port)
+    if "error" in inner:
+        return inner
+
     rollback = {
         "action": "line_delete",
         "model": model,
@@ -231,7 +309,84 @@ def execute(args):
     return {
         "action": "line_add",
         "model": model,
-        "line_handle": line_handle,
+        "line_handle": inner["line_handle"],
         "verified": True,
         "rollback": rollback,
     }
+
+
+def _execute_batch(args):
+    """Execute line_add for a batch of lines. Stops on first failure."""
+    eng, err = safe_connect_to_session(args.get("session"))
+    if err is not None:
+        return err
+
+    model = args["model"]
+    lines = args["lines"]
+
+    # Check model is loaded upfront
+    try:
+        matlab_transport.get_param(eng, model, "Handle")
+    except Exception:
+        return {
+            "action": "line_add",
+            "model": model,
+            "completed": 0,
+            "total": len(lines),
+            "results": [],
+            "error": {
+                "index": 0,
+                "error": "model_not_found",
+                "message": f"Model '{model}' is not loaded.",
+                "item": lines[0],
+            },
+        }
+
+    results = []
+    for i, item in enumerate(lines):
+        inner = _connect_one_line(
+            eng,
+            model,
+            item["src_block"],
+            item["src_port"],
+            item["dst_block"],
+            item["dst_port"],
+        )
+
+        if "error" in inner:
+            return {
+                "action": "line_add",
+                "model": model,
+                "completed": i,
+                "total": len(lines),
+                "results": results,
+                "error": {
+                    "index": i,
+                    "error": inner["error"],
+                    "message": inner.get("message", ""),
+                    "item": item,
+                },
+            }
+
+        results.append({
+            "src_block": item["src_block"],
+            "src_port": item["src_port"],
+            "dst_block": item["dst_block"],
+            "dst_port": item["dst_port"],
+            "verified": True,
+        })
+
+    return {
+        "action": "line_add",
+        "model": model,
+        "completed": len(lines),
+        "total": len(lines),
+        "results": results,
+    }
+
+
+def execute(args):
+    """Execute line_add: connect a line or batch of lines."""
+    if args.get("lines") is not None:
+        return _execute_batch(args)
+    return _execute_single(args)

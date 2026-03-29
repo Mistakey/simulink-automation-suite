@@ -9,7 +9,8 @@
     "./skills/"
   ],
   "agents": [
-    "./agents/simulink-analyzer.md"
+    "./agents/simulink-analyzer.md",
+    "./agents/sim-analyst.md"
   ],
   "keywords": [
     "simulink",

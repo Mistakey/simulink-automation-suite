@@ -28,7 +28,7 @@ Schema output is the authoritative reference for command syntax. Do not rely on 
 1. **Discover** — `list_opened` to see available models; `session list` if multiple MATLAB sessions exist.
 2. **Quick lookup** — `inspect` with a specific target and specific param for single-value checks; `highlight` for visual location.
 3. **Deep analysis** — delegate to `simulink-analyzer` agent (see Responsibility & Handoff).
-4. **Modify** — `set_param` with dry-run preview before any write; `block_add` for placing new blocks; `line_add` for connecting ports; `line_delete` to remove a signal connection; `block_delete` to remove a block (also silently removes connected lines). See Write Safety Model below.
+4. **Modify** — `set_param` with dry-run preview before any write; `block_add` for placing new blocks (note: some library source paths contain literal newlines — use JSON `\n` escape, common in SPS libraries); `line_add` for connecting ports (supports both numeric signal ports and physical port names like `LConn1`/`RConn1` for SPS connections); `line_delete` to remove a signal connection; `block_delete` to remove a block (also silently removes connected lines). See Write Safety Model below.
 5. **Simulate** — `simulate` to run the model simulation after the modeling workflow is complete.
 6. **Update** — `model_update` to compile/update diagram after structural changes.
 7. **Verify** — `inspect` the target after write to confirm the change took effect.
@@ -74,6 +74,16 @@ The following actions are delegated to the analyzer agent for context isolation:
 | Multi-step read analysis workflows | Workflow-level context isolation |
 
 Before dispatching, resolve session and model via direct `session current` or `list_opened`, then provide them explicitly to the agent.
+
+### Delegate to sim-analyst agent
+
+| Action | Reason |
+|--------|--------|
+| Post-simulation signal analysis | Waveform data can be millions of points; isolate from main context |
+| Dynamic performance evaluation | Rise time, overshoot, settling time, steady-state error |
+| Multi-signal comparison | Cross-correlation, phase analysis |
+
+Before dispatching, ensure `simulate` has been run (so `sl_sim_result` exists in workspace). Provide session, model, and specific analysis goals.
 
 ### Composite Requests
 
@@ -153,6 +163,39 @@ Library paths vary by toolbox. `block_add` auto-loads the library root on first 
 
 When `source_not_found` persists after auto-load, verify the path in MATLAB documentation or via `find_system('<library>', 'Type', 'block')`.
 
+### SPS physical connections
+
+SPS (Simscape / Specialized Power Systems) blocks use physical ports (`LConn1`, `RConn1`, etc.) instead of numbered signal ports. `line_add` supports these directly:
+
+```json
+{"action": "line_add", "model": "MyModel", "src_block": "DC_Source", "src_port": "LConn1", "dst_block": "Inverter", "dst_port": "LConn1"}
+```
+
+Use `connections` on a block to discover its physical port names — they appear in `physical_neighbors` with `"type": "physical"`.
+
+### Multi-line MATLAB code via matlab_eval
+
+`matlab_eval` accepts multi-line code as a single JSON string. Use `\n` for line breaks in the JSON payload:
+
+```json
+{"action": "matlab_eval", "code": "x = 42;\nfprintf('value = %d\\n', x);\ndisp(x)"}
+```
+
+Key points:
+- Output is captured via MATLAB `evalc` — both `disp()` and `fprintf()` output appear in the `output` field.
+- MATLAB `\n` in `fprintf` format strings must be double-escaped in JSON: `\\n` (so MATLAB receives `\n`).
+- Use `timeout` to guard long-running code (default: 30s).
+
+### Access simulation results
+
+After `simulate` runs, the `SimulationOutput` object is stored in the base workspace as `sl_sim_result`. Use `matlab_eval` to query it:
+
+```json
+{"action": "matlab_eval", "code": "signals = sl_sim_result.logsout.getElementNames; for i=1:numel(signals), fprintf('%s\\n', signals{i}); end"}
+```
+
+For detailed waveform analysis, dispatch the `sim-analyst` agent (see Responsibility & Handoff).
+
 ### Read block port connections
 
 To understand how a block is wired:
@@ -175,7 +218,8 @@ Current CLI capability boundaries. For operations beyond these limits, use direc
 - Keep stdout to a single JSON payload; warnings must not leak as raw text.
 - Keep outputs compact: selected model, scan root, key findings.
 - Do not dump full recursive trees unless explicitly requested.
-- JSON mode (`--json`) is first-class and mutually exclusive with flag-mode arguments.
+- JSON mode (`--json` / `--json-file`) is first-class and mutually exclusive with flag-mode arguments.
+- Both JSON mode and flag mode produce JSON output on stdout. Flag mode is not plain-text — it returns the same JSON envelope as `--json`.
 
 ## Related Docs
 

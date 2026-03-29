@@ -490,6 +490,7 @@ class FakeModelEngine:
         self._saved = set()
         self._dirty = set(dirty_models or [])
         self._update_output = update_output
+        self._workspace = {}
 
     def new_system(self, name, nargout=1):
         if name in self._loaded:
@@ -503,10 +504,14 @@ class FakeModelEngine:
         model_name = path.rsplit("/", 1)[-1].replace(".slx", "")
         self._loaded.add(model_name)
 
-    def save_system(self, model, nargout=0):
+    def save_system(self, model, *args, nargout=0):
         if model not in self._loaded:
             raise RuntimeError(f"Model '{model}' is not loaded")
-        self._saved.add(model)
+        if args:
+            # save_system(model, dest) — copy mode
+            self._saved.add(args[0])
+        else:
+            self._saved.add(model)
 
     def get_param(self, target, param, nargout=1):
         if param == "Dirty":
@@ -530,14 +535,32 @@ class FakeModelEngine:
             return
         raise RuntimeError(f"Unsupported set_param: {param}={value}")
 
-    def evalc(self, code, nargout=1):
+    def evalc(self, code, nargout=1, background=False):
         import re
+        if background:
+            raise TypeError("FakeModelEngine does not support background evalc")
         if "SimulationCommand" in code and "update" in code:
             match = re.search(r"'(\w+)'", code)
             if match:
                 model = match.group(1)
                 self.set_param(model, "SimulationCommand", "update", nargout=0)
             return self._update_output
+        if code.startswith("sl_sim_result = sim("):
+            match = re.search(r"sim\('(\w+)'", code)
+            if match:
+                model = match.group(1)
+                if model not in self._loaded:
+                    raise RuntimeError(f"Model '{model}' is not loaded")
+                self._workspace["sl_sim_result"] = "sim_output"
+            return ""
+        if "save_system(" in code and "copyfile(" in code:
+            match = re.search(r"save_system\('(\w+)'\)", code)
+            if match:
+                model = match.group(1)
+                if model not in self._loaded:
+                    raise RuntimeError(f"Model '{model}' is not loaded")
+                self._saved.add(model)
+            return ""
         raise RuntimeError(f"Unsupported evalc: {code}")
 
     def sim(self, model, *args, nargout=1):
@@ -587,6 +610,13 @@ class FakeBlockEngine:
                 return 1.0
             raise RuntimeError(f"Invalid Simulink object name: {target}")
         raise RuntimeError(f"Parameter '{param}' not found")
+
+    def find_system(self, *args, nargout=1):
+        """Return library sources that start with the given root."""
+        if args:
+            root = args[0]
+            return [s for s in sorted(self._library_sources) if s.startswith(root)]
+        return []
 
     def add_block(self, source, dest, *args, nargout=0):
         model_root = dest.split("/")[0]

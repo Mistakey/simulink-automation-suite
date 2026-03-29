@@ -158,8 +158,14 @@ def open_system(engine, path):
     return call_no_output(engine, "open_system", path)
 
 
-def save_system(engine, model):
-    """Save a loaded Simulink model to disk."""
+def save_system(engine, model, dest=None):
+    """Save a loaded Simulink model to disk.
+
+    When *dest* is provided, saves a copy to that path (MATLAB
+    ``save_system(model, dest)``).
+    """
+    if dest is not None:
+        return call_no_output(engine, "save_system", model, dest)
     return call_no_output(engine, "save_system", model)
 
 
@@ -206,12 +212,35 @@ def delete_block(engine, block_path):
     return call_no_output(engine, "delete_block", block_path)
 
 
-def sim(engine, model, **sim_params):
-    """Run simulation on a loaded model, with optional parameter overrides."""
+def sim(engine, model, timeout=None, **sim_params):
+    """Run simulation on a loaded model, with optional parameter overrides.
+
+    Uses async execution (background=True) for timeout support when a
+    timeout is specified.  Falls back to synchronous call when the engine
+    does not support background calls (e.g. test fakes).
+    """
     args = [model]
     for key, value in sim_params.items():
         args.extend([key, str(value)])
-    return call(engine, "sim", *args)
+
+    if timeout is None:
+        return call(engine, "sim", *args)
+
+    # Async execution with timeout
+    _reset_lastwarn(engine)
+    fn = getattr(engine, "sim")
+    try:
+        try:
+            future = fn(*args, nargout=1, background=True)
+            value = future.result(timeout=timeout)
+        except TypeError:
+            # Engine does not support background — fall back to synchronous
+            value = _call_with_optional_nargout(fn, args, 1)
+    except Exception as exc:
+        _attach_exception_warnings(exc, _drain_warnings(engine))
+        raise
+    warnings = _drain_warnings(engine)
+    return _result(value=value, warnings=warnings)
 
 
 def eval_code(engine, code, timeout=30):

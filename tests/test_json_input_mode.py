@@ -1,5 +1,7 @@
 import io
 import json
+import os
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -216,6 +218,75 @@ class JsonInputModeTests(unittest.TestCase):
                 '{"action":"set_param","target":"m/B","params":["Gain","2.0"]}'
             )
         self.assertIn("invalid_json", str(ctx.exception))
+
+    # -- --json-file mode ---------------------------------------------------------
+
+    def test_json_file_mode_reads_payload_from_file(self):
+        payload = '{"action":"schema"}'
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False, encoding="utf-8"
+        ) as f:
+            f.write(payload)
+            f.flush()
+            path = f.name
+        try:
+            buf = io.StringIO()
+            with patch("sys.stdout", buf):
+                code = main(["--json-file", path])
+            self.assertEqual(code, 0)
+            output = json.loads(buf.getvalue())
+            self.assertIn("actions", output)
+        finally:
+            os.unlink(path)
+
+    def test_json_file_mode_rejects_missing_file(self):
+        buf = io.StringIO()
+        with patch("sys.stdout", buf):
+            code = main(["--json-file", "/nonexistent/path.json"])
+        self.assertEqual(code, 1)
+        output = json.loads(buf.getvalue())
+        self.assertEqual(output["error"], "invalid_input")
+
+    def test_json_file_mode_rejects_mixed_with_json(self):
+        buf = io.StringIO()
+        with patch("sys.stdout", buf):
+            code = main(["--json", '{"action":"schema"}', "--json-file", "f.json"])
+        self.assertEqual(code, 1)
+        output = json.loads(buf.getvalue())
+        self.assertEqual(output["error"], "json_conflict")
+
+    def test_json_file_mode_rejects_mixed_with_flags(self):
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False, encoding="utf-8"
+        ) as f:
+            f.write('{"action":"schema"}')
+            f.flush()
+            path = f.name
+        try:
+            buf = io.StringIO()
+            with patch("sys.stdout", buf):
+                code = main(["scan", "--json-file", path])
+            self.assertEqual(code, 1)
+            output = json.loads(buf.getvalue())
+            self.assertEqual(output["error"], "json_conflict")
+        finally:
+            os.unlink(path)
+
+    def test_parse_json_block_add_batch(self):
+        action, args = parse_json_request(
+            '{"action":"block_add","blocks":[{"source":"simulink/Gain","destination":"m/G1"}]}'
+        )
+        self.assertEqual(action, "block_add")
+        self.assertIsInstance(args["blocks"], list)
+        self.assertIsNone(args["source"])
+
+    def test_parse_json_line_add_batch(self):
+        action, args = parse_json_request(
+            '{"action":"line_add","model":"m","lines":[{"src_block":"A","src_port":1,"dst_block":"B","dst_port":1}]}'
+        )
+        self.assertEqual(action, "line_add")
+        self.assertIsInstance(args["lines"], list)
+        self.assertIsNone(args["src_block"])
 
 
 if __name__ == "__main__":
