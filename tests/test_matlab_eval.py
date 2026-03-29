@@ -10,12 +10,17 @@ from simulink_cli.actions import matlab_eval
 class EvalCodeTransportTests(unittest.TestCase):
     def test_eval_code_returns_output_and_warnings(self):
         engine = MagicMock(spec=["evalc", "lastwarn"])
-        engine.evalc = MagicMock(return_value="ans =\n    3.1416\n")
+
+        def evalc_sync_only(code, nargout=1, **kwargs):
+            if kwargs.get("background"):
+                raise TypeError("unexpected keyword argument 'background'")
+            return "ans =\n    3.1416\n"
+
+        engine.evalc = MagicMock(side_effect=evalc_sync_only)
         engine.lastwarn = MagicMock(side_effect=TypeError)
 
         result = matlab_transport.eval_code(engine, "pi")
 
-        engine.evalc.assert_called_once_with("pi", nargout=1)
         self.assertEqual(result["value"], "ans =\n    3.1416\n")
         self.assertIsInstance(result["warnings"], list)
 
@@ -23,13 +28,13 @@ class EvalCodeTransportTests(unittest.TestCase):
         engine = MagicMock()
         future = MagicMock()
         future.result = MagicMock(side_effect=TimeoutError("timed out"))
-        engine.evalc_async = MagicMock(return_value=future)
+        engine.evalc = MagicMock(return_value=future)
         engine.lastwarn = MagicMock(side_effect=TypeError)
 
         with self.assertRaises(TimeoutError):
             matlab_transport.eval_code(engine, "while true; end", timeout=1)
 
-        engine.evalc_async.assert_called_once_with("while true; end", nargout=1)
+        engine.evalc.assert_called_once_with("while true; end", nargout=1, background=True)
         future.result.assert_called_once_with(timeout=1)
 
 
@@ -114,10 +119,10 @@ class MatlabEvalExecuteTests(unittest.TestCase):
         self.assertIn("foo", result["message"])
 
     def test_eval_timeout(self):
-        engine = MagicMock(spec=["evalc_async", "lastwarn"])
+        engine = MagicMock(spec=["evalc", "lastwarn"])
         future = MagicMock()
         future.result = MagicMock(side_effect=TimeoutError("timed out"))
-        engine.evalc_async = MagicMock(return_value=future)
+        engine.evalc = MagicMock(return_value=future)
         engine.lastwarn = MagicMock(side_effect=TypeError)
         result = self._run(self._default_args(timeout=1), engine=engine)
         self.assertEqual(result["error"], "eval_timeout")

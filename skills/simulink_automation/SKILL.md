@@ -34,7 +34,7 @@ Schema output is the authoritative reference for command syntax. Do not rely on 
 7. **Verify** — `inspect` the target after write to confirm the change took effect.
 8. **Finalize** — `model_save` then `model_close` when done.
 
-One parameter per `set_param` invocation. Always read and understand the model before modifying.
+Both single-param (`param`/`value`) and multi-param (`params` object) modes available. Always read and understand the model before modifying.
 
 ## Responsibility & Handoff
 
@@ -160,7 +160,7 @@ To understand how a block is wired:
 1. `connections` with the block as target — returns upstream/downstream edges with numeric port indices.
 2. For port names on masked blocks, `inspect --param PortNames` or related mask parameters.
 
-**Note**: `connections` tracks Simulink signal lines only. SPS physical connections (LConn/RConn) are not visible — see Known Limitations.
+**Note**: `connections` tracks Simulink signal lines only. SPS physical connections (LConn/RConn) are not visible via `connections`, but can be created/deleted via `line_add`/`line_delete` using string port names (e.g. `"RConn1"`, `"LConn1"`).
 
 ## Known Limitations
 
@@ -168,11 +168,8 @@ Current CLI capability boundaries. For operations beyond these limits, use direc
 
 | Limitation | Impact | Workaround |
 |---|---|---|
-| Integer ports only in `line_add` | SPS physical ports (`LConn1`, `RConn1`) cannot be connected. | `add_line(model, 'Src/RConn1', 'Dst/LConn1')` via MATLAB |
-| Single parameter per `set_param` | Interdependent parameters (e.g., `rep_seq_t` + `rep_seq_y`) fail on intermediate state. | `set_param(blk, 'p1', v1, 'p2', v2)` via MATLAB |
-| Signal lines only in `connections` | SPS electrical topology (physical connections) not reported. | Port handle queries via MATLAB |
-| No workspace access | Cannot read/write base workspace variables or simulation results. | `evalin`/`assignin` via MATLAB |
-| No arbitrary MATLAB execution | Complex operations (Stateflow API, Data Dictionary, custom scripts) not reachable. | Pending `run_matlab` action (backlog F-001) |
+| Signal lines only in `connections` | SPS electrical topology (physical connections) not reported. | Port handle queries via MATLAB or `matlab_eval` |
+| No workspace access | Cannot read/write base workspace variables or simulation results. | `evalin`/`assignin` via `matlab_eval` |
 
 ## Output Discipline
 

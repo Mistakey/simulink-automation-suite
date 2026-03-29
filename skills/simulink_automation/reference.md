@@ -158,10 +158,7 @@ Rollback uses `block_delete`. If the original request used an explicit `session`
 {
   "action": "line_add",
   "model": "my_model",
-  "src_block": "Sine",
-  "src_port": 1,
-  "dst_block": "Gain",
-  "dst_port": 1,
+  "line_handle": 145.0001,
   "verified": true,
   "rollback": {
     "action": "line_delete",
@@ -169,7 +166,8 @@ Rollback uses `block_delete`. If the original request used an explicit `session`
     "src_block": "Sine",
     "src_port": 1,
     "dst_block": "Gain",
-    "dst_port": 1
+    "dst_port": 1,
+    "available": true
   }
 }
 ```

@@ -171,7 +171,12 @@ def load_system(engine, name):
 def add_block(engine, source, dest, position=None):
     """Add a library block to a loaded model, optionally at a given position."""
     if position is not None:
-        return call_no_output(engine, "add_block", source, dest, "Position", position)
+        try:
+            import matlab
+            pos = matlab.double(position)
+        except (ImportError, TypeError):
+            pos = position
+        return call_no_output(engine, "add_block", source, dest, "Position", pos)
     return call_no_output(engine, "add_block", source, dest)
 
 
@@ -212,15 +217,16 @@ def sim(engine, model, **sim_params):
 def eval_code(engine, code, timeout=30):
     """Execute arbitrary MATLAB code via evalc, returning captured text output.
 
-    Uses async execution for timeout support.  Falls back to synchronous
-    evalc when the engine does not support async calls (e.g. test fakes).
+    Uses async execution (background=True) for timeout support.  Falls back
+    to synchronous evalc when the engine does not support background calls
+    (e.g. test fakes).
     """
     _reset_lastwarn(engine)
     try:
-        if hasattr(engine, "evalc_async"):
-            future = engine.evalc_async(code, nargout=1)
+        try:
+            future = engine.evalc(code, nargout=1, background=True)
             value = future.result(timeout=timeout)
-        else:
+        except TypeError:
             value = engine.evalc(code, nargout=1)
     except Exception as exc:
         _attach_exception_warnings(exc, _drain_warnings(engine))
