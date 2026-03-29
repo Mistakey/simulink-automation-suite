@@ -71,6 +71,24 @@ class ModelUpdateExecuteTests(unittest.TestCase):
             result = model_update.execute(self._default_args())
         self.assertEqual(result["error"], "engine_unavailable")
 
+    def test_success_includes_diagnostics_field(self):
+        result = self._run(self._default_args())
+        self.assertIn("diagnostics", result)
+        self.assertIsInstance(result["diagnostics"], list)
+
+    def test_diagnostics_captures_output(self):
+        eng = FakeModelEngine(
+            loaded_models=["m"],
+            update_output="Warning: Block 'm/Gain1' has unconnected input port 2.\n",
+        )
+        result = self._run(self._default_args(), engine=eng)
+        self.assertEqual(len(result["diagnostics"]), 1)
+        self.assertIn("unconnected", result["diagnostics"][0])
+
+    def test_empty_diagnostics_on_clean_update(self):
+        result = self._run(self._default_args())
+        self.assertEqual(result["diagnostics"], [])
+
 
 if __name__ == "__main__":
     unittest.main()

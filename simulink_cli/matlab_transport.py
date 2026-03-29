@@ -128,6 +128,14 @@ def set_param(engine, target, param, value):
     return call_no_output(engine, "set_param", target, param, value)
 
 
+def set_param_multi(engine, target, params_dict):
+    """Set multiple parameters atomically in a single MATLAB call."""
+    args = []
+    for k, v in params_dict.items():
+        args.extend([k, str(v)])
+    return call_no_output(engine, "set_param", target, *args)
+
+
 def find_system(engine, *args):
     return call(engine, "find_system", *args)
 
@@ -178,8 +186,9 @@ def close_system(engine, model):
 
 
 def update_diagram(engine, model):
-    """Compile/update a Simulink model diagram."""
-    return call_no_output(engine, "set_param", model, "SimulationCommand", "update")
+    """Compile/update a Simulink model diagram, capturing diagnostic output."""
+    code = f"set_param('{model}', 'SimulationCommand', 'update')"
+    return eval_code(engine, code, timeout=120)
 
 
 def delete_line(engine, system, src, dst):

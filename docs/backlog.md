@@ -17,16 +17,6 @@
 
 ## 缺失功能（Missing Features）
 
-### F-003 `line_add` 支持 LConn/RConn 物理电气端口 `P0`
-**场景**：SPS（SimPowerSystems）所有电气连接使用 `LConn1`、`RConn1` 等物理端口名称。
-**问题**：`line_add` 仅支持整数端口号，直流母线、逆变器、PMSM 之间的电气连接全部无法通过 CLI 完成。
-**建议**：端口字段支持字符串名称：
-```json
-{"action": "line_add", "model": "m", "src": "DC_Source/RConn1", "dst": "Ground1/LConn1"}
-```
-
----
-
 ### F-005 `block_copy` action `P2`
 **场景**：工程中需要复用参考模型中已配好参数的子系统。
 **问题**：缺少从已有模型复制模块的 action。`block_add` 只能从库添加（默认参数），无法复制已配置的模块。
@@ -36,16 +26,6 @@
 ```
 
 > **注**：原描述以 `powergui` 为例（"无法从 SPS 库直接添加，只能复制"）有误——`powergui` 可通过 `block_add` 从 `powerlib/powergui` 正常添加，当时失败的原因是库未加载和不知道正确路径。`block_copy` 的真正场景是复制已配参数的子系统，但使用频率不高，且 F-001 实现后可通过 `run_matlab("add_block('src','dst')")` 替代，优先级由 P1 降为 P2。
-
----
-
-### F-006 `set_param` 原子多参数更新 `P1`
-**场景**：Repeating Sequence 的 `rep_seq_t` 和 `rep_seq_y` 必须同时更新；任何参数组合有依赖关系时均会触发此问题。
-**问题**：CLI 每次只设一个参数，分步设置触发中间态校验报错（如 `Length of time vector and output vector must be the same`）。
-**建议**：`set_param` 支持 `params` 对象，一次提交多个 key-value：
-```json
-{"action": "set_param", "target": "m/PWM_Carrier", "params": {"rep_seq_t": "[0 5e-5 1e-4]", "rep_seq_y": "[-1 1 -1]"}}
-```
 
 ---
 
@@ -68,23 +48,15 @@
 
 ---
 
-## 改进 / 优化（Improvements）
-
-### I-003 `model_update` 返回完整诊断信息 `P1`
-**场景**：模型存在警告或非致命错误时，当前 `model_update` 只返回 pass/fail。
-**建议**：返回完整 warning/error 列表，包含块路径、错误代码、描述文本，便于 AI 自动定位并修复问题：
-```json
-{"warnings": [{"block": "BasicFOC/Iq_PI", "code": "SL_UNCONNECTED_INPUT", "message": "Input port 2 is unconnected"}]}
-```
-
----
-
 ## 已关闭 / 合并条目（Closed / Merged）
 
 > 以下条目经审查后合并到其他条目或判定为不需要，保留记录以避免重复提出。
 
 | 原编号 | 标题 | 处置 | 说明 |
 |--------|------|------|------|
+| F-003 | `line_add` 支持 LConn/RConn 物理端口 | 已修复 v2.7.0 | port 类型接受整数和字符串端口名 |
+| F-006 | `set_param` 原子多参数更新 | 已修复 v2.7.0 | `params` 对象字段，一次写入多个参数 |
+| I-003 | `model_update` 返回完整诊断信息 | 已修复 v2.7.0 | 通过 evalc 捕获编译输出，返回 diagnostics 数组 |
 | F-002 | `workspace_read/write` | 合并入 F-001 | `evalin`/`assignin` 通过 `run_matlab` 实现 |
 | F-007a | `simulate` 返回仿真输出 | 合并入 F-001 | 仿真结果通过 `run_matlab` 读取 workspace 变量获得 |
 | F-008 | `sim_results` 动态指标分析 | 移除 | 超调量、调节时间等指标 AI 从原始数据自行计算，不应嵌入 CLI |
@@ -105,11 +77,11 @@
 
 > 来源：2026-03 FOC 模型搭建过程，与具体模型无关，下次搭建仍有效。
 
-### 需要绕道 MATLAB engine 的操作（因上述缺失功能导致）
-| 操作 | 根本原因 | 对应条目 |
-|---|---|---|
-| SPS 电气连接（LConn/RConn） | CLI 不支持物理端口名称 | F-003 |
-| 多参数原子更新（如 PWM 载波） | 分步设置触发中间态校验报错 | F-006 |
+### 需要绕道 MATLAB engine 的操作（历史记录，均已修复）
+| 操作 | 根本原因 | 对应条目 | 状态 |
+|---|---|---|---|
+| SPS 电气连接（LConn/RConn） | CLI 不支持物理端口名称 | F-003 | 已修复 v2.7.0 |
+| 多参数原子更新（如 PWM 载波） | 分步设置触发中间态校验报错 | F-006 | 已修复 v2.7.0 |
 
 ### SPS 常用模块信息（经验积累）
 | 信息 | 内容 |

@@ -154,6 +154,33 @@ class JsonInputModeTests(unittest.TestCase):
         output = json.loads(buf.getvalue())
         self.assertEqual(output["error"], "json_conflict")
 
+    # -- Port type fields (line_add) -------------------------------------------
+
+    def test_parse_json_line_add_with_string_port(self):
+        action, args = parse_json_request(
+            '{"action":"line_add","model":"m","src_block":"A","src_port":"RConn1",'
+            '"dst_block":"B","dst_port":"LConn1"}'
+        )
+        self.assertEqual(action, "line_add")
+        self.assertEqual(args["src_port"], "RConn1")
+        self.assertEqual(args["dst_port"], "LConn1")
+
+    def test_parse_json_line_add_integer_port_still_works(self):
+        action, args = parse_json_request(
+            '{"action":"line_add","model":"m","src_block":"A","src_port":1,'
+            '"dst_block":"B","dst_port":1}'
+        )
+        self.assertEqual(args["src_port"], 1)
+        self.assertEqual(args["dst_port"], 1)
+
+    def test_parse_json_line_add_rejects_float_port(self):
+        with self.assertRaises(ValueError) as ctx:
+            parse_json_request(
+                '{"action":"line_add","model":"m","src_block":"A","src_port":1.5,'
+                '"dst_block":"B","dst_port":1}'
+            )
+        self.assertIn("invalid_json", str(ctx.exception))
+
     def test_rejects_mixed_json_and_flags_set_param(self):
         buf = io.StringIO()
         with patch("sys.stdout", buf):
@@ -165,6 +192,30 @@ class JsonInputModeTests(unittest.TestCase):
         self.assertEqual(code, 1)
         output = json.loads(buf.getvalue())
         self.assertEqual(output["error"], "json_conflict")
+
+    def test_parse_json_set_param_multi_request(self):
+        action, args = parse_json_request(
+            '{"action":"set_param","target":"m/B",'
+            '"params":{"rep_seq_t":"[0 5e-5 1e-4]","rep_seq_y":"[-1 1 -1]"}}'
+        )
+        self.assertEqual(action, "set_param")
+        self.assertEqual(args["params"]["rep_seq_t"], "[0 5e-5 1e-4]")
+        self.assertIsNone(args["param"])
+
+    def test_parse_json_set_param_multi_with_expected_current_values(self):
+        action, args = parse_json_request(
+            '{"action":"set_param","target":"m/B",'
+            '"params":{"Gain":"2.0"},"dry_run":false,'
+            '"expected_current_values":{"Gain":"1.5"}}'
+        )
+        self.assertEqual(args["expected_current_values"]["Gain"], "1.5")
+
+    def test_parse_json_set_param_rejects_params_as_list(self):
+        with self.assertRaises(ValueError) as ctx:
+            parse_json_request(
+                '{"action":"set_param","target":"m/B","params":["Gain","2.0"]}'
+            )
+        self.assertIn("invalid_json", str(ctx.exception))
 
 
 if __name__ == "__main__":

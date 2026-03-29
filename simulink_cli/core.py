@@ -70,7 +70,7 @@ def build_schema_payload():
         }
         all_errors.update(mod.ERRORS)
     return {
-        "version": "2.6",
+        "version": "2.7",
         "actions": {"schema": {"description": "Return machine-readable command contract and error-code catalog.", "fields": {}}, **actions},
         "error_codes": sorted(all_errors),
     }
@@ -271,6 +271,18 @@ def _parse_flag_mode(argv):
     for field_name, field_meta in _ACTIONS[action_name].FIELDS.items():
         if field_meta.get("type") == "array" and isinstance(args.get(field_name), str):
             args[field_name] = [s.strip() for s in args[field_name].split(",") if s.strip()]
+        if field_meta.get("type") == "port" and isinstance(args.get(field_name), str):
+            try:
+                args[field_name] = int(args[field_name])
+            except ValueError:
+                pass
+        if field_meta.get("type") == "object" and isinstance(args.get(field_name), str):
+            try:
+                args[field_name] = json.loads(args[field_name])
+            except json.JSONDecodeError as exc:
+                raise ValueError(
+                    f"invalid_json: field '{field_name}' must be a valid JSON object: {exc.msg}"
+                ) from exc
     return action_name, args
 
 

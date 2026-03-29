@@ -74,6 +74,7 @@ def execute(args):
     # Execute update
     try:
         result = matlab_transport.update_diagram(eng, model)
+        output = result.get("value", "") or ""
         warnings = result.get("warnings", [])
     except Exception as exc:
         msg = str(exc).lower()
@@ -90,8 +91,15 @@ def execute(args):
             details={"model": model, "cause": str(exc)},
         )
 
+    diagnostics = (
+        [line.strip() for line in output.split("\n") if line.strip()]
+        if output
+        else []
+    )
+
     return {
         "action": "model_update",
         "model": model,
+        "diagnostics": diagnostics,
         "warnings": warnings,
     }

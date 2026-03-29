@@ -335,11 +335,13 @@ class FakeSetParamEngine:
             raise RuntimeError(f"Parameter '{param}' not found on '{path}'")
         return self._params[key]
 
-    def set_param(self, path, param, value):
-        key = f"{path}::{param}"
-        if key not in self._params:
-            raise RuntimeError(f"Parameter '{param}' not found on '{path}'")
-        self._params[key] = value
+    def set_param(self, path, *args):
+        for i in range(0, len(args), 2):
+            param, value = args[i], args[i + 1]
+            key = f"{path}::{param}"
+            if key not in self._params:
+                raise RuntimeError(f"Parameter '{param}' not found on '{path}'")
+            self._params[key] = value
 
     def force_param_value(self, path, param, value):
         self._params[f"{path}::{param}"] = value
@@ -399,12 +401,14 @@ class OutputSensitiveEngine:
             return 1.0
         return self.params[f"{target}::{param}"]
 
-    def set_param(self, target, param, value, nargout=1):
-        self.calls.append(("set_param", target, param, value, nargout))
-        if nargout != 0:
+    def set_param(self, target, *args, nargout=1):
+        for i in range(0, len(args), 2):
+            param, value = args[i], args[i + 1]
+            self.calls.append(("set_param", target, param, value, nargout))
+            if nargout != 0:
+                self.params[f"{target}::{param}"] = value
+                raise RuntimeError("Too many output arguments")
             self.params[f"{target}::{param}"] = value
-            raise RuntimeError("Too many output arguments")
-        self.params[f"{target}::{param}"] = value
 
     def find_system(self, *args, nargout=1):
         self.calls.append(("find_system", args, nargout))
@@ -414,9 +418,11 @@ class OutputSensitiveEngine:
 
 
 class WriteThenFailEngine(OutputSensitiveEngine):
-    def set_param(self, target, param, value, nargout=1):
-        self.calls.append(("set_param", target, param, value, nargout))
-        self.params[f"{target}::{param}"] = value
+    def set_param(self, target, *args, nargout=1):
+        for i in range(0, len(args), 2):
+            param, value = args[i], args[i + 1]
+            self.calls.append(("set_param", target, param, value, nargout))
+            self.params[f"{target}::{param}"] = value
         raise RuntimeError("Persistent write failure")
 
 
@@ -435,11 +441,12 @@ class FakeModelEngine:
     save_system, and get_param (Handle-only for existence checks).
     """
 
-    def __init__(self, loaded_models=None, filesystem=None, dirty_models=None):
+    def __init__(self, loaded_models=None, filesystem=None, dirty_models=None, update_output=""):
         self._loaded = set(loaded_models or [])
         self._filesystem = set(filesystem or [])
         self._saved = set()
         self._dirty = set(dirty_models or [])
+        self._update_output = update_output
 
     def new_system(self, name, nargout=1):
         if name in self._loaded:
@@ -479,6 +486,16 @@ class FakeModelEngine:
                 raise RuntimeError(f"Model '{target}' is not loaded")
             return
         raise RuntimeError(f"Unsupported set_param: {param}={value}")
+
+    def evalc(self, code, nargout=1):
+        import re
+        if "SimulationCommand" in code and "update" in code:
+            match = re.search(r"'(\w+)'", code)
+            if match:
+                model = match.group(1)
+                self.set_param(model, "SimulationCommand", "update", nargout=0)
+            return self._update_output
+        raise RuntimeError(f"Unsupported evalc: {code}")
 
     def sim(self, model, *args, nargout=1):
         if model not in self._loaded:

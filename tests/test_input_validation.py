@@ -214,6 +214,38 @@ class InputValidationTests(unittest.TestCase):
         self.assertIn("version", result)
         self.assertIn("actions", result)
 
+    def test_validate_json_type_port_accepts_integer(self):
+        from simulink_cli.validation import validate_json_type
+        validate_json_type("line_add", "src_port", 1, {"type": "port"})
+
+    def test_validate_json_type_port_accepts_string(self):
+        from simulink_cli.validation import validate_json_type
+        validate_json_type("line_add", "src_port", "RConn1", {"type": "port"})
+
+    def test_validate_json_type_port_rejects_bool(self):
+        from simulink_cli.validation import validate_json_type
+        with self.assertRaises(ValueError):
+            validate_json_type("line_add", "src_port", True, {"type": "port"})
+
+    def test_validate_json_type_port_rejects_float(self):
+        from simulink_cli.validation import validate_json_type
+        with self.assertRaises(ValueError):
+            validate_json_type("line_add", "src_port", 1.5, {"type": "port"})
+
+    def test_validate_json_type_object_accepts_dict(self):
+        from simulink_cli.validation import validate_json_type
+        validate_json_type("set_param", "params", {"k": "v"}, {"type": "object"})
+
+    def test_validate_json_type_object_rejects_string(self):
+        from simulink_cli.validation import validate_json_type
+        with self.assertRaises(ValueError):
+            validate_json_type("set_param", "params", "not_dict", {"type": "object"})
+
+    def test_validate_json_type_object_rejects_list(self):
+        from simulink_cli.validation import validate_json_type
+        with self.assertRaises(ValueError):
+            validate_json_type("set_param", "params", ["a"], {"type": "object"})
+
 
 if __name__ == "__main__":
     unittest.main()

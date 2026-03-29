@@ -104,3 +104,13 @@ def validate_json_type(action, field_name, value, field_meta):
             raise ValueError(
                 f"invalid_json: field '{field_name}' for action '{action}' must be an array of strings"
             )
+    if field_type == "port":
+        if isinstance(value, bool) or not isinstance(value, (int, str)) or (isinstance(value, int) and value < 1):
+            raise ValueError(
+                f"invalid_json: field '{field_name}' for action '{action}' must be a positive integer or port name string"
+            )
+    if field_type == "object":
+        if not isinstance(value, dict):
+            raise ValueError(
+                f"invalid_json: field '{field_name}' for action '{action}' must be an object"
+            )

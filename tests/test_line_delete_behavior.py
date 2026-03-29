@@ -64,6 +64,24 @@ class LineDeleteValidationTests(unittest.TestCase):
         result = line_delete.validate(self._default_args())
         self.assertIsNone(result)
 
+    def test_string_src_port_valid(self):
+        result = line_delete.validate(self._default_args(src_port="RConn1"))
+        self.assertIsNone(result)
+
+    def test_string_dst_port_valid(self):
+        result = line_delete.validate(self._default_args(dst_port="LConn1"))
+        self.assertIsNone(result)
+
+    def test_empty_string_src_port_returns_error(self):
+        result = line_delete.validate(self._default_args(src_port=""))
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
+    def test_bool_src_port_returns_error(self):
+        result = line_delete.validate(self._default_args(src_port=True))
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
 
 class LineDeleteExecuteTests(unittest.TestCase):
     def _make_engine(self, **kwargs):
@@ -159,6 +177,28 @@ class LineDeleteExecuteTests(unittest.TestCase):
         with patch.object(line_delete, "safe_connect_to_session", return_value=(None, error_response)):
             result = line_delete.execute(self._default_args())
         self.assertEqual(result["error"], "engine_unavailable")
+
+    def test_deletes_line_with_string_ports(self):
+        eng = FakeLineEngine(loaded_models=["m"], blocks=["m/A", "m/B"])
+        eng.add_line("m", "A/RConn1", "B/LConn1", nargout=1)
+        with patch.object(line_delete, "safe_connect_to_session", return_value=(eng, None)):
+            result = line_delete.execute({
+                "model": "m", "src_block": "A", "src_port": "RConn1",
+                "dst_block": "B", "dst_port": "LConn1", "session": None,
+            })
+        self.assertNotIn("error", result)
+        self.assertEqual(result["action"], "line_delete")
+
+    def test_rollback_preserves_string_port(self):
+        eng = FakeLineEngine(loaded_models=["m"], blocks=["m/A", "m/B"])
+        eng.add_line("m", "A/RConn1", "B/LConn1", nargout=1)
+        with patch.object(line_delete, "safe_connect_to_session", return_value=(eng, None)):
+            result = line_delete.execute({
+                "model": "m", "src_block": "A", "src_port": "RConn1",
+                "dst_block": "B", "dst_port": "LConn1", "session": None,
+            })
+        self.assertEqual(result["rollback"]["src_port"], "RConn1")
+        self.assertEqual(result["rollback"]["dst_port"], "LConn1")
 
 
 if __name__ == "__main__":

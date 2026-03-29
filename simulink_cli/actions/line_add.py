@@ -21,10 +21,10 @@ FIELDS = {
         "description": "Source block name (local to model, must not contain '/').",
     },
     "src_port": {
-        "type": "integer",
+        "type": "port",
         "required": True,
         "default": None,
-        "description": "Source output port number.",
+        "description": "Source port — integer (signal) or string name (physical, e.g. 'RConn1').",
     },
     "dst_block": {
         "type": "string",
@@ -33,10 +33,10 @@ FIELDS = {
         "description": "Destination block name (local to model, must not contain '/').",
     },
     "dst_port": {
-        "type": "integer",
+        "type": "port",
         "required": True,
         "default": None,
-        "description": "Destination input port number.",
+        "description": "Destination port — integer (signal) or string name (physical, e.g. 'LConn1').",
     },
     "session": {
         "type": "string",
@@ -100,10 +100,30 @@ def validate(args):
                 f"Field '{field}' is required.",
                 details={"field": field},
             )
-        if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+        if isinstance(value, bool):
             return make_error(
                 "invalid_input",
-                f"Field '{field}' must be a positive integer.",
+                f"Field '{field}' must be a positive integer or port name string.",
+                details={"field": field},
+            )
+        if isinstance(value, int):
+            if value < 1:
+                return make_error(
+                    "invalid_input",
+                    f"Field '{field}' must be a positive integer or port name string.",
+                    details={"field": field},
+                )
+        elif isinstance(value, str):
+            if not value:
+                return make_error(
+                    "invalid_input",
+                    f"Field '{field}' must not be empty.",
+                    details={"field": field},
+                )
+        else:
+            return make_error(
+                "invalid_input",
+                f"Field '{field}' must be a positive integer or port name string.",
                 details={"field": field},
             )
 

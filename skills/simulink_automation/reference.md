@@ -77,6 +77,60 @@ If current value changed after preview, `apply_payload` replay returns `precondi
 
 Use the `rollback` payload from any response to restore the prior value. If the original write used an explicit `session`, the rollback payload preserves the same `session` field.
 
+## set_param Multi-Param Response Shapes
+
+### Dry-Run (Multi-Param Preview)
+
+```json
+{
+  "action": "set_param",
+  "dry_run": true,
+  "write_state": "not_attempted",
+  "target": "m/PWM_Carrier",
+  "changes": [
+    {"param": "rep_seq_t", "current_value": "[0 1]", "proposed_value": "[0 5e-5 1e-4]"},
+    {"param": "rep_seq_y", "current_value": "[0 1]", "proposed_value": "[-1 1 -1]"}
+  ],
+  "apply_payload": {
+    "action": "set_param",
+    "target": "m/PWM_Carrier",
+    "params": {"rep_seq_t": "[0 5e-5 1e-4]", "rep_seq_y": "[-1 1 -1]"},
+    "dry_run": false,
+    "expected_current_values": {"rep_seq_t": "[0 1]", "rep_seq_y": "[0 1]"}
+  },
+  "rollback": {
+    "action": "set_param",
+    "target": "m/PWM_Carrier",
+    "params": {"rep_seq_t": "[0 1]", "rep_seq_y": "[0 1]"},
+    "dry_run": false
+  }
+}
+```
+
+### Execute (Multi-Param)
+
+Replay `apply_payload` from multi-param preview verbatim in JSON mode.
+
+```json
+{
+  "action": "set_param",
+  "dry_run": false,
+  "write_state": "verified",
+  "target": "m/PWM_Carrier",
+  "changes": [
+    {"param": "rep_seq_t", "previous_value": "[0 1]", "new_value": "[0 5e-5 1e-4]"},
+    {"param": "rep_seq_y", "previous_value": "[0 1]", "new_value": "[-1 1 -1]"}
+  ],
+  "verified": true,
+  "rollback": {
+    "action": "set_param",
+    "target": "m/PWM_Carrier",
+    "params": {"rep_seq_t": "[0 1]", "rep_seq_y": "[0 1]"},
+    "dry_run": false
+  }
+}
+```
+
 ## block_add Response Shapes
 
 ### Success
@@ -116,6 +170,26 @@ Rollback uses `block_delete`. If the original request used an explicit `session`
     "src_port": 1,
     "dst_block": "Gain",
     "dst_port": 1
+  }
+}
+```
+
+### Success (Physical Port)
+
+```json
+{
+  "action": "line_add",
+  "model": "my_model",
+  "line_handle": 145.0001,
+  "verified": true,
+  "rollback": {
+    "action": "line_delete",
+    "model": "my_model",
+    "src_block": "DC_Source",
+    "src_port": "RConn1",
+    "dst_block": "Ground1",
+    "dst_port": "LConn1",
+    "available": true
   }
 }
 ```
@@ -246,11 +320,27 @@ If the model has unsaved changes and `force` is not `true`:
 {
   "action": "model_update",
   "model": "my_model",
+  "diagnostics": [],
   "warnings": []
 }
 ```
 
-The `warnings` field is a list of warning messages from the MATLAB compilation process. Empty list means no warnings.
+The `warnings` field is a list of warning messages from the MATLAB compilation process. The `diagnostics` field contains parsed lines from MATLAB command window output during compilation. Both are empty lists on a clean update.
+
+### Diagnostics
+
+The `diagnostics` field contains parsed MATLAB compilation output lines. Each entry is a trimmed non-empty line from the MATLAB command window during model update.
+
+```json
+{
+  "action": "model_update",
+  "model": "my_model",
+  "diagnostics": [
+    "Warning: Block 'my_model/Gain1' has unconnected input port 2."
+  ],
+  "warnings": ["Block 'my_model/Gain1' has unconnected input port 2."]
+}
+```
 
 ## Failure Semantics
 
@@ -259,7 +349,7 @@ The `warnings` field is a list of warning messages from the MATLAB compilation p
 - `set_param_failed` — MATLAB rejected the write call.
 
 All failure payloads include:
-- `write_state`: `not_attempted` | `attempted` | `verified` | `failed_verification`
+- `write_state`: `not_attempted` | `attempted` | `verified` | `verification_failed`
 - `safe_to_retry`: boolean
 - `recommended_recovery`: machine-readable recovery hint
 - `details.rollback`: rollback payload for restoring prior value

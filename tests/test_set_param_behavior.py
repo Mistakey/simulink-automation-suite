@@ -174,6 +174,174 @@ class SetParamBehaviorTests(unittest.TestCase):
             result = set_param.execute(_set_param_args(dry_run=True))
         self.assertEqual(result["action"], "set_param")
 
+    def test_multi_param_fake_engine_sets_both_params(self):
+        eng = FakeSetParamEngine(
+            params={"m/B::rep_seq_t": "[0 1]", "m/B::rep_seq_y": "[0 1]"},
+            valid_handles={"m/B"},
+        )
+        eng.set_param("m/B", "rep_seq_t", "[0 5e-5 1e-4]", "rep_seq_y", "[-1 1 -1]")
+        self.assertEqual(eng.get_param("m/B", "rep_seq_t"), "[0 5e-5 1e-4]")
+        self.assertEqual(eng.get_param("m/B", "rep_seq_y"), "[-1 1 -1]")
+
+
+class SetParamMultiValidationTests(unittest.TestCase):
+    def test_params_and_param_mutually_exclusive(self):
+        result = set_param.validate({
+            "target": "m/B", "param": "Gain", "value": "2.0",
+            "params": {"Gain": "2.0"}, "dry_run": True,
+            "session": None, "expected_current_value": None,
+            "expected_current_values": None,
+        })
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
+    def test_neither_param_nor_params_returns_error(self):
+        result = set_param.validate({
+            "target": "m/B", "param": None, "value": None,
+            "params": None, "dry_run": True,
+            "session": None, "expected_current_value": None,
+            "expected_current_values": None,
+        })
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
+    def test_params_valid(self):
+        result = set_param.validate({
+            "target": "m/B", "param": None, "value": None,
+            "params": {"rep_seq_t": "[0 1]", "rep_seq_y": "[0 1]"},
+            "dry_run": True, "session": None,
+            "expected_current_value": None,
+            "expected_current_values": None,
+        })
+        self.assertIsNone(result)
+
+    def test_params_empty_returns_error(self):
+        result = set_param.validate({
+            "target": "m/B", "param": None, "value": None,
+            "params": {}, "dry_run": True, "session": None,
+            "expected_current_value": None,
+            "expected_current_values": None,
+        })
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
+    def test_params_non_string_value_returns_error(self):
+        result = set_param.validate({
+            "target": "m/B", "param": None, "value": None,
+            "params": {"Gain": 123}, "dry_run": True, "session": None,
+            "expected_current_value": None,
+            "expected_current_values": None,
+        })
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
+    def test_single_param_mode_still_works(self):
+        result = set_param.validate({
+            "target": "m/B", "param": "Gain", "value": "2.0",
+            "params": None, "dry_run": True, "session": None,
+            "expected_current_value": None,
+            "expected_current_values": None,
+        })
+        self.assertIsNone(result)
+
+
+class SetParamMultiExecuteTests(unittest.TestCase):
+    def _make_engine(self):
+        return FakeSetParamEngine(
+            params={
+                "m/B::rep_seq_t": "[0 1]",
+                "m/B::rep_seq_y": "[0 1]",
+            },
+            valid_handles={"m/B"},
+        )
+
+    def _multi_args(self, **overrides):
+        args = {
+            "target": "m/B",
+            "param": None, "value": None,
+            "params": {"rep_seq_t": "[0 5e-5 1e-4]", "rep_seq_y": "[-1 1 -1]"},
+            "dry_run": True, "session": None,
+            "expected_current_value": None,
+            "expected_current_values": None,
+        }
+        args.update(overrides)
+        return args
+
+    def test_dry_run_returns_changes(self):
+        eng = self._make_engine()
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            result = set_param.execute(self._multi_args(dry_run=True))
+        self.assertNotIn("error", result)
+        self.assertTrue(result["dry_run"])
+        self.assertEqual(result["write_state"], "not_attempted")
+        self.assertEqual(len(result["changes"]), 2)
+        self.assertIn("apply_payload", result)
+        self.assertIn("rollback", result)
+
+    def test_dry_run_apply_payload_has_expected_current_values(self):
+        eng = self._make_engine()
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            result = set_param.execute(self._multi_args(dry_run=True))
+        apply = result["apply_payload"]
+        self.assertIn("expected_current_values", apply)
+        self.assertEqual(apply["expected_current_values"]["rep_seq_t"], "[0 1]")
+
+    def test_execute_writes_and_verifies(self):
+        eng = self._make_engine()
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            result = set_param.execute(self._multi_args(dry_run=False))
+        self.assertNotIn("error", result)
+        self.assertFalse(result["dry_run"])
+        self.assertEqual(result["write_state"], "verified")
+        self.assertTrue(result["verified"])
+        self.assertEqual(len(result["changes"]), 2)
+
+    def test_execute_updates_all_params(self):
+        eng = self._make_engine()
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            set_param.execute(self._multi_args(dry_run=False))
+        self.assertEqual(eng.get_param("m/B", "rep_seq_t"), "[0 5e-5 1e-4]")
+        self.assertEqual(eng.get_param("m/B", "rep_seq_y"), "[-1 1 -1]")
+
+    def test_rollback_captures_original_values(self):
+        eng = self._make_engine()
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            result = set_param.execute(self._multi_args(dry_run=False))
+        rollback = result["rollback"]
+        self.assertEqual(rollback["params"]["rep_seq_t"], "[0 1]")
+        self.assertEqual(rollback["params"]["rep_seq_y"], "[0 1]")
+
+    def test_block_not_found(self):
+        eng = FakeSetParamEngine(params={}, valid_handles=set())
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            result = set_param.execute(self._multi_args(target="m/Missing"))
+        self.assertEqual(result["error"], "block_not_found")
+
+    def test_param_not_found(self):
+        eng = FakeSetParamEngine(
+            params={"m/B::rep_seq_t": "[0 1]"},
+            valid_handles={"m/B"},
+        )
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            result = set_param.execute(self._multi_args())
+        self.assertEqual(result["error"], "param_not_found")
+
+    def test_precondition_check_rejects_stale_values(self):
+        eng = self._make_engine()
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            preview = set_param.execute(self._multi_args(dry_run=True))
+        eng.force_param_value("m/B", "rep_seq_t", "[changed]")
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            result = set_param.execute(preview["apply_payload"])
+        self.assertEqual(result["error"], "precondition_failed")
+        self.assertEqual(result["details"]["write_state"], "not_attempted")
+
+    def test_session_in_rollback(self):
+        eng = self._make_engine()
+        with patch.object(set_param, "safe_connect_to_session", return_value=(eng, None)):
+            result = set_param.execute(self._multi_args(dry_run=False, session="S1"))
+        self.assertEqual(result["rollback"]["session"], "S1")
+
 
 if __name__ == "__main__":
     unittest.main()

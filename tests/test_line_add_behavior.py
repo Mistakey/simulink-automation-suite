@@ -62,6 +62,24 @@ class LineAddValidationTests(unittest.TestCase):
         result = line_add.validate(self._default_args())
         self.assertIsNone(result)
 
+    def test_string_src_port_valid(self):
+        result = line_add.validate(self._default_args(src_port="RConn1"))
+        self.assertIsNone(result)
+
+    def test_string_dst_port_valid(self):
+        result = line_add.validate(self._default_args(dst_port="LConn1"))
+        self.assertIsNone(result)
+
+    def test_empty_string_src_port_returns_error(self):
+        result = line_add.validate(self._default_args(src_port=""))
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
+    def test_bool_src_port_returns_error(self):
+        result = line_add.validate(self._default_args(src_port=True))
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "invalid_input")
+
 
 class LineAddExecuteTests(unittest.TestCase):
     def _make_engine(self, **kwargs):
@@ -173,6 +191,18 @@ class LineAddExecuteTests(unittest.TestCase):
     def test_session_absent_from_rollback_when_none(self):
         result = self._run(self._default_args(session=None))
         self.assertNotIn("session", result["rollback"])
+
+    def test_adds_line_with_string_ports(self):
+        result = self._run(self._default_args(src_port="RConn1", dst_port="LConn1"))
+        self.assertNotIn("error", result)
+        self.assertEqual(result["action"], "line_add")
+        self.assertTrue(result["verified"])
+
+    def test_rollback_preserves_string_port(self):
+        result = self._run(self._default_args(src_port="RConn1", dst_port="LConn1"))
+        rollback = result["rollback"]
+        self.assertEqual(rollback["src_port"], "RConn1")
+        self.assertEqual(rollback["dst_port"], "LConn1")
 
     def test_connection_error_propagates(self):
         error_response = {"error": "engine_unavailable", "message": "No MATLAB.", "details": {}}
