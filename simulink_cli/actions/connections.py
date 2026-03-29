@@ -182,6 +182,7 @@ def _collect_block_edges(eng, block_path, warnings=None):
                         "dst_port": dst_info["port"],
                         "signal_name": signal_name,
                         "line_handle": line_handle,
+                        "physical": False,
                     }
                 )
 
@@ -211,8 +212,43 @@ def _collect_block_edges(eng, block_path, warnings=None):
                         "dst_port": dst_info["port"],
                         "signal_name": signal_name,
                         "line_handle": line_handle,
+                        "physical": False,
                     }
                 )
+
+    # Physical ports (SPS LConn/RConn) — bidirectional, no signal direction semantics
+    lconn_ports = _extract_block_port_handles(port_handles, "LConn")
+    rconn_ports = _extract_block_port_handles(port_handles, "RConn")
+    for phys_port in lconn_ports + rconn_ports:
+        line_result = matlab_transport.get_param(eng, phys_port, "Line")
+        if warnings is not None:
+            warnings.extend(line_result["warnings"])
+        line_handles = _extract_handles(line_result["value"])
+        if not line_handles:
+            continue
+        for line_handle in line_handles:
+            src_result = matlab_transport.get_param(eng, line_handle, "SrcPortHandle")
+            dst_result = matlab_transport.get_param(eng, line_handle, "DstPortHandle")
+            if warnings is not None:
+                warnings.extend(src_result["warnings"])
+                warnings.extend(dst_result["warnings"])
+            src_ports = _extract_handles(src_result["value"])
+            dst_ports_ph = _extract_handles(dst_result["value"])
+            for sp in src_ports:
+                for dp in dst_ports_ph:
+                    src_info = _read_port_info(eng, sp, warnings)
+                    dst_info = _read_port_info(eng, dp, warnings)
+                    edges.append(
+                        {
+                            "src_block": src_info["block"],
+                            "src_port": src_info["port"],
+                            "dst_block": dst_info["block"],
+                            "dst_port": dst_info["port"],
+                            "signal_name": "",
+                            "line_handle": line_handle,
+                            "physical": True,
+                        }
+                    )
 
     return edges
 
@@ -236,6 +272,7 @@ def _project_connection_edges(edges, detail, include_handles):
             "dst_block": edge["dst_block"],
             "dst_port": edge["dst_port"],
             "signal_name": edge.get("signal_name", ""),
+            "type": "physical" if edge.get("physical") else "signal",
         }
         if detail == "lines" and include_handles:
             row["line_handle"] = edge["line_handle"]
@@ -368,6 +405,7 @@ def execute(args):
         visited = {target_path}
         upstream_blocks = set()
         downstream_blocks = set()
+        physical_blocks = set()
         edges = []
         edge_keys = set()
 
@@ -378,28 +416,41 @@ def execute(args):
             for node in sorted(frontier):
                 node_edges = _collect_block_edges(eng, node, warnings)
                 for edge in node_edges:
-                    if use_downstream and edge["src_block"] == node:
+                    if edge.get("physical"):
+                        # Physical edges are bidirectional — always include
                         edge_key = _edge_key(edge)
                         if edge_key not in edge_keys:
                             edge_keys.add(edge_key)
                             edges.append(edge)
-                        dst_block = edge["dst_block"]
-                        if dst_block != target_path:
-                            downstream_blocks.add(dst_block)
-                        if dst_block not in visited:
-                            visited.add(dst_block)
-                            next_frontier.add(dst_block)
-                    if use_upstream and edge["dst_block"] == node:
-                        edge_key = _edge_key(edge)
-                        if edge_key not in edge_keys:
-                            edge_keys.add(edge_key)
-                            edges.append(edge)
-                        src_block = edge["src_block"]
-                        if src_block != target_path:
-                            upstream_blocks.add(src_block)
-                        if src_block not in visited:
-                            visited.add(src_block)
-                            next_frontier.add(src_block)
+                        other = edge["dst_block"] if edge["src_block"] == node else edge["src_block"]
+                        if other != target_path:
+                            physical_blocks.add(other)
+                        if other not in visited:
+                            visited.add(other)
+                            next_frontier.add(other)
+                    else:
+                        if use_downstream and edge["src_block"] == node:
+                            edge_key = _edge_key(edge)
+                            if edge_key not in edge_keys:
+                                edge_keys.add(edge_key)
+                                edges.append(edge)
+                            dst_block = edge["dst_block"]
+                            if dst_block != target_path:
+                                downstream_blocks.add(dst_block)
+                            if dst_block not in visited:
+                                visited.add(dst_block)
+                                next_frontier.add(dst_block)
+                        if use_upstream and edge["dst_block"] == node:
+                            edge_key = _edge_key(edge)
+                            if edge_key not in edge_keys:
+                                edge_keys.add(edge_key)
+                                edges.append(edge)
+                            src_block = edge["src_block"]
+                            if src_block != target_path:
+                                upstream_blocks.add(src_block)
+                            if src_block not in visited:
+                                visited.add(src_block)
+                                next_frontier.add(src_block)
             frontier = next_frontier
 
         output = {
@@ -410,6 +461,8 @@ def execute(args):
             "upstream_blocks": sorted(upstream_blocks),
             "downstream_blocks": sorted(downstream_blocks),
         }
+        if physical_blocks:
+            output["physical_neighbors"] = sorted(physical_blocks)
         if detail in {"ports", "lines"}:
             projected_edges = _project_connection_edges(
                 edges, detail, include_handles

@@ -131,6 +131,49 @@ class FakeConnectionsEngine:
         raise RuntimeError(f"unsupported param: {param_name}")
 
 
+class FakeSPSConnectionsEngine:
+    """Fake engine for SPS physical connections tests.
+
+    Models a star topology: PSrc connected to PLoad1 and PLoad2 via physical lines.
+      PSrc.LConn1 (port 51) -- line 2001 -- PLoad1.LConn1 (port 61)
+      PSrc.RConn1 (port 52) -- line 2002 -- PLoad2.LConn1 (port 71)
+    """
+
+    def __init__(self):
+        self.blocks = {"m1/PSrc", "m1/PLoad1", "m1/PLoad2"}
+        self.port_handles = {
+            "m1/PSrc":  {"LConn": [51], "RConn": [52]},
+            "m1/PLoad1": {"LConn": [61]},
+            "m1/PLoad2": {"LConn": [71]},
+        }
+        self.port_line = {51: 2001, 52: 2002, 61: 2001, 71: 2002}
+        self.line_meta = {
+            2001: {"SrcPortHandle": 51, "DstPortHandle": [61], "Name": ""},
+            2002: {"SrcPortHandle": 52, "DstPortHandle": [71], "Name": ""},
+        }
+        self.port_parent = {51: "m1/PSrc", 52: "m1/PSrc", 61: "m1/PLoad1", 71: "m1/PLoad2"}
+        self.port_number = {51: 1, 52: 1, 61: 1, 71: 1}
+
+    def get_param(self, target, param_name):
+        if isinstance(target, str) and param_name == "Handle":
+            if target not in self.blocks:
+                raise RuntimeError("not found")
+            return 1
+        if isinstance(target, str) and param_name == "PortHandles":
+            return self.port_handles[target]
+        if isinstance(target, (int, float)):
+            key = int(target)
+            if param_name == "Line":
+                return self.port_line.get(key, -1)
+            if key in self.line_meta:
+                return self.line_meta[key][param_name]
+            if param_name == "Parent":
+                return self.port_parent[key]
+            if param_name == "PortNumber":
+                return self.port_number[key]
+        raise RuntimeError(f"unsupported param: {param_name}")
+
+
 class FakeStrictMatlabHandleEngine:
     """Emulates MATLAB engine behavior that rejects Python int handles.
 

@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from simulink_cli.actions import connections
-from tests.fakes import FakeConnectionsEngine, FakeStrictMatlabHandleEngine
+from tests.fakes import FakeConnectionsEngine, FakeSPSConnectionsEngine, FakeStrictMatlabHandleEngine
 
 
 def _conn_args(target, model=None, direction="both", depth=1, detail="summary",
@@ -111,6 +111,44 @@ class ConnectionsBehaviorTests(unittest.TestCase):
         self.assertNotIn("error", result)
         self.assertEqual(result["upstream_blocks"], ["m1/A"])
         self.assertEqual(result["downstream_blocks"], ["m1/C"])
+
+
+class PhysicalConnectionsTests(unittest.TestCase):
+    def test_physical_neighbors_appear_in_dedicated_field(self):
+        eng = FakeSPSConnectionsEngine()
+        with patch.object(connections, 'safe_connect_to_session', return_value=(eng, None)):
+            result = connections.execute(_conn_args(target="m1/PSrc"))
+        self.assertNotIn("error", result)
+        self.assertIn("physical_neighbors", result)
+        self.assertEqual(sorted(result["physical_neighbors"]), ["m1/PLoad1", "m1/PLoad2"])
+
+    def test_physical_edges_have_type_physical_in_detail_ports(self):
+        eng = FakeSPSConnectionsEngine()
+        with patch.object(connections, 'safe_connect_to_session', return_value=(eng, None)):
+            result = connections.execute(_conn_args(target="m1/PSrc", detail="ports"))
+        self.assertNotIn("error", result)
+        physical_edges = [e for e in result["edges"] if e.get("type") == "physical"]
+        self.assertEqual(len(physical_edges), 2)
+
+    def test_signal_edges_have_type_signal_in_detail_ports(self):
+        eng = FakeConnectionsEngine()
+        with patch.object(connections, 'safe_connect_to_session', return_value=(eng, None)):
+            result = connections.execute(_conn_args(target="m1/B", detail="ports"))
+        self.assertTrue(all(e.get("type") == "signal" for e in result["edges"]))
+
+    def test_physical_neighbors_found_regardless_of_direction(self):
+        eng = FakeSPSConnectionsEngine()
+        with patch.object(connections, 'safe_connect_to_session', return_value=(eng, None)):
+            result = connections.execute(_conn_args(target="m1/PSrc", direction="downstream"))
+        self.assertIn("physical_neighbors", result)
+        self.assertEqual(len(result["physical_neighbors"]), 2)
+
+    def test_physical_neighbors_not_mixed_into_upstream_downstream(self):
+        eng = FakeSPSConnectionsEngine()
+        with patch.object(connections, 'safe_connect_to_session', return_value=(eng, None)):
+            result = connections.execute(_conn_args(target="m1/PSrc"))
+        self.assertEqual(result["upstream_blocks"], [])
+        self.assertEqual(result["downstream_blocks"], [])
 
 
 if __name__ == "__main__":

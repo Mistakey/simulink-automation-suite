@@ -157,10 +157,9 @@ When `source_not_found` persists after auto-load, verify the path in MATLAB docu
 
 To understand how a block is wired:
 
-1. `connections` with the block as target — returns upstream/downstream edges with numeric port indices.
-2. For port names on masked blocks, `inspect --param PortNames` or related mask parameters.
-
-**Note**: `connections` tracks Simulink signal lines only. SPS physical connections (LConn/RConn) are not visible via `connections`, but can be created/deleted via `line_add`/`line_delete` using string port names (e.g. `"RConn1"`, `"LConn1"`).
+1. `connections` with the block as target — returns upstream/downstream signal edges and physical neighbors.
+2. Signal edges carry `"type": "signal"` with numeric port indices. SPS physical connections carry `"type": "physical"` and appear in `physical_neighbors` (direction-agnostic).
+3. For port names on masked blocks, `inspect --param PortNames` or related mask parameters.
 
 ## Known Limitations
 
@@ -168,7 +167,6 @@ Current CLI capability boundaries. For operations beyond these limits, use direc
 
 | Limitation | Impact | Workaround |
 |---|---|---|
-| Signal lines only in `connections` | SPS electrical topology (physical connections) not reported. | Port handle queries via MATLAB or `matlab_eval` |
 | No workspace access | Cannot read/write base workspace variables or simulation results. | `evalin`/`assignin` via `matlab_eval` |
 
 ## Output Discipline
